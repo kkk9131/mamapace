@@ -1,12 +1,14 @@
 import { View, Text, Switch, Pressable, Animated, Alert } from 'react-native';
 import { useTheme } from '../theme/theme';
 import { BlurView } from 'expo-blur';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function SettingsScreen({ onLogoutNavigate }: { onLogoutNavigate?: () => void }) {
   const theme = useTheme() as any;
   const { colors } = theme;
   const fade = new Animated.Value(0);
   Animated.timing(fade, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+  const { logout, refreshToken } = useAuth();
 
   const Section = ({ title, children }: any) => (
     <View style={{ borderRadius: theme.radius.lg, overflow: 'hidden', ...theme.shadow.card }}>
@@ -55,7 +57,41 @@ export default function SettingsScreen({ onLogoutNavigate }: { onLogoutNavigate?
         <View style={{ height: theme.spacing(4) }} />
       </View>
       <View style={{ position: 'absolute', left: theme.spacing(2), right: theme.spacing(2), bottom: 72 }}>
-        <Pressable onPress={() => { Alert.alert('確認','本当にログアウトしますか？',[{ text:'キャンセル', style:'cancel' },{ text:'ログアウト', style:'destructive', onPress: () => onLogoutNavigate && onLogoutNavigate() }]); }} style={({ pressed }) => [{ backgroundColor: colors.surface, borderRadius: theme.radius.md, paddingVertical: 12, alignItems: 'center', transform: [{ scale: pressed ? 0.98 : 1 }], ...theme.shadow.card }]}> 
+        <Pressable
+          onPress={async () => {
+            try {
+              const ok = await refreshToken();
+              Alert.alert('トークン更新', ok ? '成功しました' : '失敗しました');
+            } catch (e) {
+              Alert.alert('トークン更新', 'エラーが発生しました');
+            }
+          }}
+          style={({ pressed }) => [{ backgroundColor: colors.surface, borderRadius: theme.radius.md, paddingVertical: 12, alignItems: 'center', transform: [{ scale: pressed ? 0.98 : 1 }], marginBottom: 8, ...theme.shadow.card }]}
+        > 
+          <Text style={{ color: colors.pink, fontWeight: '700' }}>トークン更新（デバッグ）</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            Alert.alert(
+              '確認',
+              '本当にログアウトしますか？',
+              [
+                { text: 'キャンセル', style: 'cancel' },
+                {
+                  text: 'ログアウト',
+                  style: 'destructive',
+                  onPress: () => {
+                    // 実際のログアウト処理（コンテキスト）
+                    logout();
+                    // 追加のナビゲーションが必要なら呼び出し側で実装
+                    onLogoutNavigate && onLogoutNavigate();
+                  }
+                }
+              ]
+            );
+          }}
+          style={({ pressed }) => [{ backgroundColor: colors.surface, borderRadius: theme.radius.md, paddingVertical: 12, alignItems: 'center', transform: [{ scale: pressed ? 0.98 : 1 }], ...theme.shadow.card }]}
+        > 
           <Text style={{ color: colors.danger, fontWeight: '700' }}>ログアウト</Text>
         </Pressable>
       </View>

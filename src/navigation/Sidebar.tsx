@@ -20,6 +20,7 @@ export default function Sidebar({ open, onClose, onNavigate }: { open: boolean; 
 
   const dock = [
     { key: 'home', label: 'ホーム', icon: '🏠' },
+    { key: 'search', label: '検索', icon: '🔎' },
     { key: 'chats', label: 'チャット', icon: '💬' },
     { key: 'anon', label: '愚痴もたまには、、、', icon: '💭' },
     { key: 'createRoom', label: '作成', icon: '🆕' },
@@ -36,7 +37,7 @@ export default function Sidebar({ open, onClose, onNavigate }: { open: boolean; 
         <BlurView intensity={30} tint="dark" style={{ flex: 1, paddingTop: 16, paddingHorizontal: 0, backgroundColor: '#101217AA', borderRightColor: '#22252B', borderRightWidth: 1, flexDirection: 'row' }}>
           <View style={{ width: 72, alignItems: 'center', paddingTop: 24 }}>
             {dock.map(it => (
-              <Pressable key={it.key} onPress={() => { setActive(it.key); onNavigate(it.key); }} style={({ pressed }) => [{ width: 48, height: 48, borderRadius: 24, backgroundColor: active===it.key ? '#ffffff24' : pressed ? '#ffffff12' : '#ffffff10', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }]}>
+              <Pressable key={it.key} accessibilityRole="button" accessibilityLabel={it.label} onPress={() => { setActive(it.key); onNavigate(it.key); }} style={({ pressed }) => [{ width: 48, height: 48, borderRadius: 24, backgroundColor: active===it.key ? '#ffffff24' : pressed ? '#ffffff12' : '#ffffff10', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }]}>
                 <Text style={{ fontSize: 20 }}>{it.icon}</Text>
               </Pressable>
             ))}
