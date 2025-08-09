@@ -14,15 +14,27 @@
         "@modelcontextprotocol/server-fetch"
       ]
     },
-    "github": {
+    "supabase": {
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-github"
+        "@modelcontextprotocol/server-supabase"
       ],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>"
+        "SUPABASE_URL": "${SUPABASE_URL}",
+        "SUPABASE_ANON_KEY": "${SUPABASE_ANON_KEY}"
       }
-    }
+    },
+    "serena": {
+        "command": "uvx",
+        "args": [
+          "--directory",
+          ".",
+          "serena-mcp"
+        ],
+        "env": {
+          "UV_PYTHON": "python3.12"
+        }
+      }
   }
 }

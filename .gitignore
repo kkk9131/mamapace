@@ -31,6 +31,9 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
+.env.*
+!.env.example
 .env*.local
 
 # typescript
@@ -46,3 +49,20 @@ docs/
 .eslintrc.json
 CLAUDE.md
 CRUSH.md
+
+# YoYo AI version control directory
+.yoyo/
+
+# Editors/IDE
+.vscode/
+.idea/
+
+# Expo shared caches
+.expo-shared/
+
+# Test outputs
+coverage/
+junit.xml
+
+# Android keystores
+*.keystore

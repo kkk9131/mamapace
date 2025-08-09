@@ -11,6 +11,8 @@ import ChatScreen from '../screens/ChatScreen';
 import { Pressable, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/theme';
+import { useAuth } from '../contexts/AuthContext';
+import AuthGuard from '../components/AuthGuard';
 
 import ComposeScreen from '../screens/ComposeScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -22,6 +24,7 @@ import FollowersListScreen from '../screens/FollowersListScreen';
 import FollowingListScreen from '../screens/FollowingListScreen';
 import LikedPostsListScreen from '../screens/LikedPostsListScreen';
 import LoginScreen from '../screens/LoginScreen';
+import SearchScreen from '../screens/SearchScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 
 const tabs = [
@@ -51,60 +54,73 @@ function TextButton({ label, active, onPress, onLongPress }: { label: string; ac
 export default function CustomTabs() {
   const theme = useTheme() as any;
   const { colors } = theme;
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [active, setActive] = useState<any>('home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Authentication flow - show login/signup screens when not authenticated
+  if (!isLoading && !isAuthenticated) {
+    if (active === 'signup') {
+      return <SignUpScreen onLogin={() => setActive('login' as any)} />;
+    } else {
+      return <LoginScreen onSignup={() => setActive('signup' as any)} />;
+    }
+  }
+  
+  // Handle compose screen (no auth guard needed as it's already protected by the above check)
   if (active === 'compose') return <ComposeScreen onClose={() => setActive('home' as any)} />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onNavigate={(key) => {
-        setActive(key as any);
-        setSidebarOpen(false);
-      }} />
-      <View style={{ flex: 1 }}>
-        {active === 'compose' ? (
-          <ComposeScreen />
-        ) : active === 'home' ? (
-          <HomeScreen onCompose={() => setActive('compose' as any)} onComment={() => setActive('comments' as any)} />
-        ) : active === 'rooms' ? (
-          <RoomsScreen />
-        ) : active === 'createRoom' ? (
-          <CreateRoomScreen />
-        ) : active === 'chats' ? (
-          <ChatsListScreen onOpen={() => setActive('chat' as any)} />
-        ) : active === 'anon' ? (
-          <AnonFeedScreen onComment={() => setActive('comment' as any)} onOpenPost={() => setActive('comments' as any)} />
-        ) : active === 'chat' ? (
-          <ChatScreen />
-        ) : active === 'noti' ? (
-          <NotificationsScreen />
-        ) : active === 'settings' ? (
-          <SettingsScreen onLogoutNavigate={() => setActive('login' as any)} />
-        ) : active === 'roomsList' ? (
-          <RoomsListScreen />
-        ) : active === 'comment' ? (
-          <CommentComposeScreen onClose={() => setActive('home' as any)} />
-        ) : active === 'comments' ? (
-          <CommentsListScreen onCompose={() => setActive('comment' as any)} />
-        ) : active === 'followers' ? (
-          <FollowersListScreen />
-        ) : active === 'following' ? (
-          <FollowingListScreen />
-        ) : active === 'liked' ? (
-          <LikedPostsListScreen onOpen={() => setActive('comments' as any)} />
-        ) : active === 'login' ? (
-          <LoginScreen onSignup={() => setActive('signup' as any)} />
-        ) : active === 'signup' ? (
-          <SignUpScreen onLogin={() => setActive('login' as any)} />
-        ) : (
-          <ProfileScreen onNavigate={(key: string) => setActive(key as any)} />
-        )}
+    <AuthGuard>
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onNavigate={(key) => {
+          setActive(key as any);
+          setSidebarOpen(false);
+        }} />
+        <View style={{ flex: 1 }}>
+          {active === 'home' ? (
+            <HomeScreen onCompose={() => setActive('compose' as any)} onComment={() => setActive('comments' as any)} />
+          ) : active === 'search' ? (
+            <SearchScreen />
+          ) : active === 'rooms' ? (
+            <RoomsScreen />
+          ) : active === 'createRoom' ? (
+            <CreateRoomScreen />
+          ) : active === 'chats' ? (
+            <ChatsListScreen onOpen={() => setActive('chat' as any)} />
+          ) : active === 'anon' ? (
+            <AnonFeedScreen onComment={() => setActive('comment' as any)} onOpenPost={() => setActive('comments' as any)} />
+          ) : active === 'chat' ? (
+            <ChatScreen />
+          ) : active === 'noti' ? (
+            <NotificationsScreen />
+          ) : active === 'settings' ? (
+            <SettingsScreen onLogoutNavigate={() => {
+              // Logout will be handled by AuthContext, which will trigger re-render
+              // and show login screen due to !isAuthenticated check above
+            }} />
+          ) : active === 'roomsList' ? (
+            <RoomsListScreen />
+          ) : active === 'comment' ? (
+            <CommentComposeScreen onClose={() => setActive('home' as any)} />
+          ) : active === 'comments' ? (
+            <CommentsListScreen onCompose={() => setActive('comment' as any)} />
+          ) : active === 'followers' ? (
+            <FollowersListScreen />
+          ) : active === 'following' ? (
+            <FollowingListScreen />
+          ) : active === 'liked' ? (
+            <LikedPostsListScreen onOpen={() => setActive('comments' as any)} />
+          ) : (
+            <ProfileScreen onNavigate={(key: string) => setActive(key as any)} />
+          )}
+        </View>
+        <View style={{ position: 'absolute', left: 12, right: 12, bottom: 8, height: 56, borderRadius: 16, flexDirection: 'row', backgroundColor: colors.card + '88', borderColor: '#22252B', borderWidth: 1, overflow: 'hidden' }}>
+          {(['me','noti','home'] as const).map((k) => (
+            <TextButton key={k} label={k==='me'?'👤':k==='noti'?'🔔':'🏠'} active={active===k} onPress={() => k==='home'? setActive('home'): setActive(k)} onLongPress={k==='home'? () => setSidebarOpen(true): undefined} />
+          ))}
+        </View>
       </View>
-      <View style={{ position: 'absolute', left: 12, right: 12, bottom: 8, height: 56, borderRadius: 16, flexDirection: 'row', backgroundColor: colors.card + '88', borderColor: '#22252B', borderWidth: 1, overflow: 'hidden' }}>
-        {(['me','noti','home'] as const).map((k) => (
-          <TextButton key={k} label={k==='me'?'👤':k==='noti'?'🔔':'🏠'} active={active===k} onPress={() => k==='home'? setActive('home'): setActive(k)} onLongPress={k==='home'? () => setSidebarOpen(true): undefined} />
-        ))}
-      </View>
-    </View>
+    </AuthGuard>
   );
 }
