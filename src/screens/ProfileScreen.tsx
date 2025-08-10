@@ -1,12 +1,48 @@
 import { View, Text, Pressable, Animated, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
+import MyPostsListScreen from './MyPostsListScreen';
+import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useState } from 'react';
+import { getSupabaseClient } from '../services/supabaseClient';
 
 export default function ProfileScreen({ onNavigate }: { onNavigate?: (key: string) => void }) {
   const theme = useTheme() as any;
   const { colors } = theme;
   const fade = new Animated.Value(0);
   Animated.timing(fade, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+  const { user } = useAuth();
+  const [myPostCount, setMyPostCount] = useState<number>(0);
+  useEffect(() => {
+    (async () => {
+      try {
+        const client = getSupabaseClient();
+        if (!user?.id) return;
+        let countVal = 0;
+        try {
+          const { data, error } = await client.rpc('get_user_post_count', { p_user_id: user.id });
+          if (!error && typeof data !== 'undefined' && data !== null) {
+            countVal = Number(data);
+          } else {
+            // Fallback to direct count if RPC unavailable or no permission
+            const { count, error: cErr } = await client
+              .from('posts')
+              .select('id', { count: 'exact', head: true })
+              .eq('user_id', user.id);
+            if (!cErr) countVal = count ?? 0;
+          }
+        } catch {
+          // Fallback path
+          const { count } = await client
+            .from('posts')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+          countVal = count ?? 0;
+        }
+        setMyPostCount(countVal);
+      } catch {}
+    })();
+  }, [user?.id]);
   const rooms = [
     { id: 'r1', name: 'ねんね相談', members: 124 },
     { id: 'r2', name: 'ごはん/離乳食', members: 88 },
@@ -52,12 +88,12 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (key: strin
 
       <View style={{ marginTop: theme.spacing(1.5), borderRadius: theme.radius.lg, overflow: 'hidden', ...theme.shadow.card }}>
         <BlurView intensity={20} tint="dark" style={{ padding: theme.spacing(1.5), backgroundColor: '#ffffff10' }}>
-          <Text style={{ color: colors.subtext, fontSize: 12, marginBottom: 8 }}>あなたのポスト</Text>
-          {[{id:'m1', text:'今日は抱っこマン…腰が…'},{id:'m2', text:'ねんねトレーニング、少し成果でたかも'}].map(p => (
-            <View key={p.id} style={{ paddingVertical: 10 }}>
-              <Text style={{ color: colors.text }}>{p.text}</Text>
-            </View>
-          ))}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text accessibilityRole="text" accessibilityLabel={`あなたのポストは${myPostCount}件`} style={{ color: colors.subtext, fontSize: 12 }}>あなたのポスト（{myPostCount}）</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="あなたのポストをすべて見る" onPress={() => onNavigate && onNavigate('myPosts')} style={({ pressed }) => [{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.surface, borderRadius: 999, transform: [{ scale: pressed ? 0.97 : 1 }] }]}> 
+              <Text style={{ color: colors.pink, fontWeight: '700' }}>すべて見る</Text>
+            </Pressable>
+          </View>
         </BlurView>
       </View>
     </Animated.View>
