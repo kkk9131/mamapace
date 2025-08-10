@@ -28,7 +28,7 @@ export default function LikedPostsListScreen({ commentDeltas, onOpen }: { commen
     try {
       const before = opts?.refresh ? null : cursor;
       if (!user?.id) return;
-      const res = await fetchLikedPosts({ before, userId: user.id });
+      const res = await fetchLikedPosts({ before });
       setItems((prev) => (opts?.refresh ? res.items : [...prev, ...res.items]));
       setCursor(res.nextCursor);
     } finally {
@@ -57,7 +57,7 @@ export default function LikedPostsListScreen({ commentDeltas, onOpen }: { commen
     } else {
       setItems(prev => prev.map(p => p.id === postId ? { ...p, reaction_summary: { reactedByMe: true, count: p.reaction_summary.count + 1 } } : p));
     }
-    try { if (user?.id) await toggleReaction(user.id, postId, current); } catch (e) { notifyError('操作に失敗しました。時間をおいて再度お試しください'); }
+    try { if (user?.id) await toggleReaction(postId, current); } catch (e) { notifyError('操作に失敗しました。時間をおいて再度お試しください'); }
   };
   return (
     <Animated.View style={{ flex: 1, backgroundColor: 'transparent', paddingTop: 40, opacity: fade }}>

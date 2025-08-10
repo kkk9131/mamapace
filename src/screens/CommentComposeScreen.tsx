@@ -58,7 +58,7 @@ export default function CommentComposeScreen({ postId, onClose, onPosted }: { po
             setSubmitting(true);
             try {
               if (!user?.id) throw new Error('ログインが必要です');
-              await createComment(user.id, postId, body.trim());
+              await createComment(postId, body.trim());
               Keyboard.dismiss();
               if (onPosted) onPosted(); else onClose && onClose();
             } catch (e: any) {

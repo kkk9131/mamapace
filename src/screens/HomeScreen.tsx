@@ -31,7 +31,7 @@ export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpe
     setLoading(true);
     try {
       const before = opts?.refresh ? null : cursor;
-      const res = await fetchHomeFeed({ before, currentUserId: user?.id });
+      const res = await fetchHomeFeed({ before });
       setItems((prev) => (opts?.refresh ? res.items : [...prev, ...res.items]));
       setCursor(res.nextCursor);
     } finally {
@@ -112,7 +112,7 @@ export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpe
     } : p));
     try {
       if (!user?.id) throw new Error('not logged in');
-      await toggleReaction(user.id, postId, current);
+      await toggleReaction(postId, current);
     } catch (e) {
       // rollback on error
       setItems((prev) => prev.map(p => p.id === postId ? {
@@ -129,7 +129,7 @@ export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpe
   const handleDelete = async (postId: string) => {
     try {
       if (!user?.id) return;
-      await deletePost(user.id, postId);
+      await deletePost(postId);
       setItems(prev => prev.filter(p => p.id !== postId));
     } catch (e: any) {
       notifyError(e?.message || '削除に失敗しました');

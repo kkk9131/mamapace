@@ -20,24 +20,15 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (key: strin
         if (!user?.id) return;
         let countVal = 0;
         try {
-          const { data, error } = await client.rpc('get_user_post_count', { p_user_id: user.id });
+          const { data, error } = await client.rpc('get_user_post_count_v2');
           if (!error && typeof data !== 'undefined' && data !== null) {
             countVal = Number(data);
           } else {
             // Fallback to direct count if RPC unavailable or no permission
-            const { count, error: cErr } = await client
-              .from('posts')
-              .select('id', { count: 'exact', head: true })
-              .eq('user_id', user.id);
-            if (!cErr) countVal = count ?? 0;
+            // Direct table access is revoked under RLS; keep 0
           }
         } catch {
-          // Fallback path
-          const { count } = await client
-            .from('posts')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', user.id);
-          countVal = count ?? 0;
+          // Keep default 0 on error
         }
         setMyPostCount(countVal);
       } catch {}

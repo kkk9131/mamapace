@@ -3,7 +3,7 @@ import { useTheme } from '../theme/theme';
 import { useEffect, useRef, useState } from 'react';
 import PostCard from '../components/PostCard';
 import { PostWithMeta } from '../types/post';
-import { fetchUserPosts, toggleReaction } from '../services/postService';
+import { fetchMyPosts, toggleReaction } from '../services/postService';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function MyPostsListScreen() {
@@ -23,7 +23,7 @@ export default function MyPostsListScreen() {
     setLoading(true);
     try {
       if (!user?.id) return;
-      const res = await fetchUserPosts(user.id, { before: opts?.refresh ? null : cursor });
+      const res = await fetchMyPosts({ before: opts?.refresh ? null : cursor });
       setItems(prev => opts?.refresh ? res.items : [...prev, ...res.items]);
       setCursor(res.nextCursor);
     } finally {
