@@ -23,6 +23,7 @@ import CommentsListScreen from '../screens/CommentsListScreen';
 import FollowersListScreen from '../screens/FollowersListScreen';
 import FollowingListScreen from '../screens/FollowingListScreen';
 import LikedPostsListScreen from '../screens/LikedPostsListScreen';
+import MyPostsListScreen from '../screens/MyPostsListScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SignUpScreen from '../screens/SignUpScreen';
@@ -56,6 +57,9 @@ export default function CustomTabs() {
   const { colors } = theme;
   const { isAuthenticated, isLoading, user } = useAuth();
   const [active, setActive] = useState<any>('home');
+  const [homeRefreshKey, setHomeRefreshKey] = useState<number>(0);
+  const [activePostId, setActivePostId] = useState<string | null>(null);
+  const [commentsRefreshKey, setCommentsRefreshKey] = useState<number>(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Authentication flow - show login/signup screens when not authenticated
@@ -68,7 +72,12 @@ export default function CustomTabs() {
   }
   
   // Handle compose screen (no auth guard needed as it's already protected by the above check)
-  if (active === 'compose') return <ComposeScreen onClose={() => setActive('home' as any)} />;
+  if (active === 'compose') return (
+    <ComposeScreen 
+      onPosted={() => { setActive('home' as any); setHomeRefreshKey((k: number) => k + 1); }}
+      onClose={() => setActive('home' as any)}
+    />
+  );
 
   return (
     <AuthGuard>
@@ -79,7 +88,7 @@ export default function CustomTabs() {
         }} />
         <View style={{ flex: 1 }}>
           {active === 'home' ? (
-            <HomeScreen onCompose={() => setActive('compose' as any)} onComment={() => setActive('comments' as any)} />
+            <HomeScreen refreshKey={homeRefreshKey} onCompose={() => setActive('compose' as any)} onOpenPost={(postId) => { setActivePostId(postId); setActive('comments' as any); }} />
           ) : active === 'search' ? (
             <SearchScreen />
           ) : active === 'rooms' ? (
@@ -102,15 +111,20 @@ export default function CustomTabs() {
           ) : active === 'roomsList' ? (
             <RoomsListScreen />
           ) : active === 'comment' ? (
-            <CommentComposeScreen onClose={() => setActive('home' as any)} />
+            activePostId ? <CommentComposeScreen postId={activePostId} onPosted={() => { 
+              setActive('comments' as any); 
+              setCommentsRefreshKey((k: number) => k + 1);
+            }} onClose={() => setActive('comments' as any)} /> : null
           ) : active === 'comments' ? (
-            <CommentsListScreen onCompose={() => setActive('comment' as any)} />
+            activePostId ? <CommentsListScreen refreshKey={commentsRefreshKey} postId={activePostId} onCompose={() => setActive('comment' as any)} /> : null
           ) : active === 'followers' ? (
             <FollowersListScreen />
           ) : active === 'following' ? (
             <FollowingListScreen />
           ) : active === 'liked' ? (
-            <LikedPostsListScreen onOpen={() => setActive('comments' as any)} />
+            <LikedPostsListScreen onOpen={(postId) => { setActivePostId(postId); setActive('comments' as any); }} />
+          ) : active === 'myPosts' ? (
+            <MyPostsListScreen />
           ) : (
             <ProfileScreen onNavigate={(key: string) => setActive(key as any)} />
           )}
