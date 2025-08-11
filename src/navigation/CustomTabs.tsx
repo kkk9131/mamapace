@@ -27,6 +27,7 @@ import MyPostsListScreen from '../screens/MyPostsListScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SignUpScreen from '../screens/SignUpScreen';
+import ProfileEditScreen from '../screens/ProfileEditScreen';
 
 const tabs = [
   { key: 'me', label: 'あなた', Component: ProfileScreen },
@@ -125,6 +126,8 @@ export default function CustomTabs() {
             <LikedPostsListScreen onOpen={(postId) => { setActivePostId(postId); setActive('comments' as any); }} />
           ) : active === 'myPosts' ? (
             <MyPostsListScreen />
+          ) : active === 'profileEdit' ? (
+            <ProfileEditScreen navigation={{ goBack: () => setActive('me' as any) }} />
           ) : (
             <ProfileScreen onNavigate={(key: string) => setActive(key as any)} />
           )}

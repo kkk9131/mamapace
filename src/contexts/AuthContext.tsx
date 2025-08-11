@@ -116,6 +116,9 @@ interface AuthContextValue extends AuthContextType {
   
   // Service status
   getServiceHealth: () => Promise<any>;
+  
+  // Dispatch for profile updates
+  dispatch: React.Dispatch<AuthAction>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -470,7 +473,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     clearError,
     refreshToken,
-    getServiceHealth
+    getServiceHealth,
+    dispatch
   };
 
   // =====================================================
