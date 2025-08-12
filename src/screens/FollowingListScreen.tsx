@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useEffect, useState, useCallback } from 'react';
 import { getFollowing, unfollowUser } from '../services/profileService';
 import { FollowUser } from '../services/profileService';
+import { secureLogger } from '../utils/privacyProtection';
 
 export default function FollowingListScreen() {
   const theme = useTheme() as any;
@@ -40,7 +41,7 @@ export default function FollowingListScreen() {
       
       setNextCursor(result.nextCursor);
     } catch (error) {
-      console.error('Failed to load following:', error);
+      secureLogger.error('Failed to load following:', error);
       Alert.alert('エラー', 'フォロー中の取得に失敗しました');
     } finally {
       setLoading(false);
@@ -67,7 +68,7 @@ export default function FollowingListScreen() {
               await unfollowUser(targetUserId);
               setFollowing(prev => prev.filter(f => f.user_id !== targetUserId));
             } catch (error: any) {
-              console.error('Failed to unfollow:', error);
+              secureLogger.error('Failed to unfollow:', error);
               Alert.alert('エラー', error.message || 'フォロー解除に失敗しました');
             }
           }

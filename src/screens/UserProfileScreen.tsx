@@ -9,6 +9,7 @@ import { getFollowCounts, isFollowing, followUser, unfollowUser, getUserProfile 
 import { PublicUserProfile } from '../types/auth';
 import { fetchHomeFeed } from '../services/postService';
 import { Alert } from 'react-native';
+import { secureLogger } from '../utils/privacyProtection';
 
 export default function UserProfileScreen({ userId, onBack }: { userId: string; onBack?: () => void }) {
   const theme = useTheme() as any;
@@ -36,7 +37,7 @@ export default function UserProfileScreen({ userId, onBack }: { userId: string; 
         const profile = await getUserProfile(userId);
         setUserData(profile);
       } catch (profileError) {
-        console.warn('Failed to load profile via RPC, falling back to post data:', profileError);
+        secureLogger.warn('Failed to load profile via RPC, falling back to post data:', profileError);
         // Fallback to extracting from posts if RPC fails
         const feed = await fetchHomeFeed({ before: null });
         const userPosts = feed.items.filter(post => post.user_id === userId);
@@ -85,7 +86,7 @@ export default function UserProfileScreen({ userId, onBack }: { userId: string; 
       setPosts(userPosts);
       
     } catch (error: any) {
-      console.error('Failed to load user data:', error);
+      secureLogger.error('Failed to load user data:', error);
       Alert.alert('エラー', 'ユーザー情報の読み込みに失敗しました');
     } finally {
       setLoading(false);
@@ -104,7 +105,7 @@ export default function UserProfileScreen({ userId, onBack }: { userId: string; 
         setCounts(prev => ({ ...prev, followers: prev.followers + 1 }));
       }
     } catch (error: any) {
-      console.error('Failed to toggle follow:', error);
+      secureLogger.error('Failed to toggle follow:', error);
       Alert.alert('エラー', 'フォロー操作に失敗しました');
     }
   };

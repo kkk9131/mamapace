@@ -1,5 +1,6 @@
 import { getSupabaseClient } from './supabaseClient';
 import { PublicUserProfile } from '../types/auth';
+import { secureLogger } from '../utils/privacyProtection';
 
 // Types for follow features
 export interface FollowUser {
@@ -28,7 +29,7 @@ export async function getMyProfile(): Promise<PublicUserProfile> {
   const { data, error } = await client.rpc('get_my_profile_v2');
   
   if (error) {
-    console.error('Failed to fetch profile:', error);
+    secureLogger.error('Failed to fetch profile:', error);
     throw new Error('プロフィールの取得に失敗しました');
   }
   
@@ -46,7 +47,7 @@ export async function getUserProfile(userId: string): Promise<PublicUserProfile>
   });
   
   if (error) {
-    console.error('Failed to fetch user profile:', error);
+    secureLogger.error('Failed to fetch user profile:', error);
     throw new Error('ユーザープロフィールの取得に失敗しました');
   }
   
@@ -81,7 +82,7 @@ export async function updateMyProfile(input: ProfileUpdateInput): Promise<Public
   });
   
   if (error) {
-    console.error('Failed to update profile:', error);
+    secureLogger.error('Failed to update profile:', error);
     throw new Error('プロフィールの更新に失敗しました');
   }
   
@@ -109,7 +110,7 @@ export async function getFollowers(
   });
   
   if (error) {
-    console.error('Failed to fetch followers:', error);
+    secureLogger.error('Failed to fetch followers:', error);
     throw new Error('フォロワーの取得に失敗しました');
   }
   
@@ -134,7 +135,7 @@ export async function getFollowing(
   });
   
   if (error) {
-    console.error('Failed to fetch following:', error);
+    secureLogger.error('Failed to fetch following:', error);
     throw new Error('フォロー中の取得に失敗しました');
   }
   
@@ -151,7 +152,7 @@ export async function followUser(targetUserId: string): Promise<boolean> {
   });
   
   if (error) {
-    console.error('Failed to follow user:', error);
+    secureLogger.error('Failed to follow user:', error);
     throw new Error('フォローに失敗しました');
   }
   
@@ -165,7 +166,7 @@ export async function unfollowUser(targetUserId: string): Promise<boolean> {
   });
   
   if (error) {
-    console.error('Failed to unfollow user:', error);
+    secureLogger.error('Failed to unfollow user:', error);
     throw new Error('フォロー解除に失敗しました');
   }
   
@@ -179,7 +180,7 @@ export async function getFollowCounts(userId: string): Promise<FollowCounts> {
   });
   
   if (error) {
-    console.error('Failed to fetch follow counts:', error);
+    secureLogger.error('Failed to fetch follow counts:', error);
     throw new Error('フォロー数の取得に失敗しました');
   }
   
@@ -201,7 +202,7 @@ export async function isFollowing(targetUserId: string): Promise<boolean> {
   });
   
   if (error) {
-    console.error('Failed to check follow status:', error);
+    secureLogger.error('Failed to check follow status:', error);
     return false;
   }
   

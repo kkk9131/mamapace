@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useEffect, useState, useCallback } from 'react';
 import { getFollowers, followUser, unfollowUser, isFollowing } from '../services/profileService';
 import { FollowUser } from '../services/profileService';
+import { secureLogger } from '../utils/privacyProtection';
 
 export default function FollowersListScreen() {
   const theme = useTheme() as any;
@@ -50,7 +51,7 @@ export default function FollowersListScreen() {
       }
       setFollowStatus(prev => ({ ...prev, ...statusMap }));
     } catch (error) {
-      console.error('Failed to load followers:', error);
+      secureLogger.error('Failed to load followers:', error);
       Alert.alert('エラー', 'フォロワーの取得に失敗しました');
     } finally {
       setLoading(false);
@@ -75,7 +76,7 @@ export default function FollowersListScreen() {
         setFollowStatus(prev => ({ ...prev, [targetUserId]: true }));
       }
     } catch (error: any) {
-      console.error('Failed to toggle follow:', error);
+      secureLogger.error('Failed to toggle follow:', error);
       Alert.alert('エラー', error.message || 'フォロー操作に失敗しました');
     }
   };

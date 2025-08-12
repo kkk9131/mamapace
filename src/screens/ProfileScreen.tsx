@@ -9,6 +9,7 @@ import { getMyProfile, getFollowCounts } from '../services/profileService';
 import { PublicUserProfile } from '../types/auth';
 import { FollowCounts } from '../services/profileService';
 import { useFocusEffect } from '@react-navigation/native';
+import { secureLogger } from '../utils/privacyProtection';
 
 export default function ProfileScreen({ onNavigate }: { onNavigate?: (key: string) => void }) {
   const theme = useTheme() as any;
@@ -43,7 +44,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (key: strin
         // Keep default 0 on error
       }
     } catch (error) {
-      console.error('Failed to load profile data:', error);
+      secureLogger.error('Failed to load profile data:', error);
     }
   }, [user?.id]);
   

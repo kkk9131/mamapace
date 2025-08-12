@@ -4,6 +4,7 @@ import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { updateMyProfile } from '../services/profileService';
+import { secureLogger } from '../utils/privacyProtection';
 
 const EMOJI_OPTIONS = ['👩‍🍼', '👶', '🍼', '👨‍👩‍👧', '🌸', '💝', '🌈', '☕', '🎈', '🌟'];
 
@@ -43,7 +44,7 @@ export default function ProfileEditScreen({ navigation }: any) {
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     } catch (error: any) {
-      console.error('Failed to save profile:', error);
+      secureLogger.error('Failed to save profile:', error);
       Alert.alert('エラー', error.message || 'プロフィールの更新に失敗しました');
     } finally {
       setSaving(false);
