@@ -341,10 +341,11 @@ class ValidationService {
   ): Promise<UsernameValidation> {
     const startTime = Date.now();
     this.stats.totalValidations++;
+    
+    // Client-side validation first
+    const clientResult = this.validateUsernameClient(username);
 
     try {
-      // Client-side validation first
-      const clientResult = this.validateUsernameClient(username);
       if (!clientResult.isValid) {
         return {
           ...clientResult,
@@ -404,14 +405,15 @@ class ValidationService {
    */
   async validatePasswordServer(
     password: string,
-    context?: { username?: string; action?: 'registration' | 'change' }
+    context?: { username?: string; action?: 'registration' | 'update' }
   ): Promise<PasswordValidation> {
     const startTime = Date.now();
     this.stats.totalValidations++;
+    
+    // Client-side validation first
+    const clientResult = this.validatePasswordClient(password);
 
     try {
-      // Client-side validation first
-      const clientResult = this.validatePasswordClient(password);
       if (!clientResult.isValid) {
         return clientResult;
       }

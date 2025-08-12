@@ -13,6 +13,7 @@ import {
   PublicUserProfile,
   AuthContext as AuthContextType,
   AuthResponse,
+  AuthErrorResponse,
   RegistrationRequest,
   LoginRequest,
   SecurityActionType,
@@ -285,9 +286,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Set up session monitoring for new user
         setupSessionMonitoring();
       } else {
-        dispatch({ type: 'SET_ERROR', payload: response.error });
+        const errorResponse = response as AuthErrorResponse;
+        dispatch({ type: 'SET_ERROR', payload: errorResponse.error });
         dispatch({ type: 'SET_LOADING', payload: false });
-        secureLogger.warn('Registration failed', { error: response.error });
+        secureLogger.warn('Registration failed', { error: errorResponse.error });
       }
       
       return response;
@@ -378,9 +380,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Set up session monitoring for authenticated user
         setupSessionMonitoring();
       } else {
-        dispatch({ type: 'SET_ERROR', payload: response.error });
+        const errorResponse = response as AuthErrorResponse;
+        dispatch({ type: 'SET_ERROR', payload: errorResponse.error });
         dispatch({ type: 'SET_LOADING', payload: false });
-        secureLogger.warn('Login failed', { error: response.error });
+        secureLogger.warn('Login failed', { error: errorResponse.error });
       }
       
       return response;
