@@ -190,7 +190,7 @@ class SecureSupabaseClient {
   private setupEventListeners(): void {
     this.client.auth.onAuthStateChange(async (event, session) => {
       const sanitizedSession = session ? sanitizeObject({
-        user_id: session.user?.id,
+        user_id: session.user.id,
         expires_at: session.expires_at,
         provider_token: session.provider_token ? '[REDACTED]' : null
       }) : null;
@@ -238,7 +238,7 @@ class SecureSupabaseClient {
     // For now, we'll just track request counts and timing
     const originalRpc = this.client.rpc.bind(this.client);
     
-    (this.client as any).rpc = async (fn: string, args?: Record<string, any>) => {
+    this.client.rpc = async (fn: string, args?: Record<string, any>) => {
       const startTime = Date.now();
       this.requestCount++;
       this.lastRequestTime = startTime;

@@ -23,8 +23,8 @@ const MOCK = {
     { id: 'r2', title: 'Random', subtitle: '雑談' },
   ],
   tags: [
-    { id: 't1', title: '#news', subtitle: undefined },
-    { id: 't2', title: '#reactnative', subtitle: undefined },
+    { id: 't1', title: '#news' },
+    { id: 't2', title: '#reactnative' },
   ],
 } satisfies Record<TabKey, Item[]>;
 
