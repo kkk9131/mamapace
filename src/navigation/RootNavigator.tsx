@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider } from '../contexts/AuthContext';
 import CustomTabs from './CustomTabs';
 
@@ -9,7 +10,9 @@ import CustomTabs from './CustomTabs';
 export default function RootNavigator() {
   return (
     <AuthProvider>
-      <CustomTabs />
+      <NavigationContainer>
+        <CustomTabs />
+      </NavigationContainer>
     </AuthProvider>
   );
 }

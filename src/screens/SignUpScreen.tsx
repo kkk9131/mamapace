@@ -3,23 +3,20 @@ import { View, Text, Pressable, Animated, ActivityIndicator, ScrollView, Alert }
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
-import { createRegistrationRequest } from '../types/auth';
-import { validateRegistrationForm, checkUsernameAvailability, createValidationDebouncer } from '../utils/formValidation';
 import { secureLogger } from '../utils/privacyProtection';
 import SecureInput from '../components/SecureInput';
 import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
 import EmojiPicker from '../components/EmojiPicker';
-import { appConfig } from '../config/appConfig';
+ 
 
 export default function SignUpScreen({ onLogin }: { onLogin?: () => void }) {
   const theme = useTheme() as any;
   const { colors } = theme;
-  const { register, isLoading, error, clearError } = useAuth();
+  const { registerWithEmail, isLoading, error, clearError } = useAuth();
   
   // Form state
   const [formData, setFormData] = useState({
-    username: '',
-    maternalHealthId: '',
+    email: '',
     password: '',
     displayName: '',
     bio: '',
@@ -28,8 +25,7 @@ export default function SignUpScreen({ onLogin }: { onLogin?: () => void }) {
   
   // Validation state
   const [validation, setValidation] = useState({
-    username: { isValid: true, error: '', checks: { length: false, characters: false, available: false } },
-    maternalHealthId: { isValid: true, error: '', format: { length: false, digitsOnly: false } },
+    email: { isValid: true, error: '' },
     password: { isValid: true, error: '', strength: 'weak' as const, checks: { length: false, uppercase: false, lowercase: false, numbers: false, symbols: false } },
     displayName: { isValid: true, error: '' },
     bio: { isValid: true, error: '' }
@@ -41,7 +37,7 @@ export default function SignUpScreen({ onLogin }: { onLogin?: () => void }) {
   const [usernameCheckInProgress, setUsernameCheckInProgress] = useState(false);
   
   // Refs and debouncing
-  const usernameCheckDebouncer = useRef(createValidationDebouncer(800));
+  // const usernameCheckDebouncer = useRef(createValidationDebouncer(800));
   
   const fade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -52,98 +48,40 @@ export default function SignUpScreen({ onLogin }: { onLogin?: () => void }) {
   // VALIDATION HANDLERS
   // =====================================================
 
-  /**
-   * Real-time username validation with availability check
-   */
-  const validateUsernameWithAvailability = useCallback(async (username: string) => {
-    if (!username.trim()) {
-      setValidation(prev => ({
-        ...prev,
-        username: { isValid: false, error: 'ユーザー名を入力してください', checks: { length: false, characters: false, available: false } }
-      }));
-      return;
-    }
-
-    // First validate format
-    const formatValidation = validateRegistrationForm({ username, maternalHealthId: '', password: '' });
-    
-    if (!formatValidation.username.isValid) {
-      setValidation(prev => ({
-        ...prev,
-        username: formatValidation.username
-      }));
-      return;
-    }
-
-    // Skip availability check when using mock auth (no backend)
-    if (appConfig.useMockAuth) {
-      setValidation(prev => ({
-        ...prev,
-        username: {
-          ...formatValidation.username,
-          checks: {
-            ...formatValidation.username.checks,
-            available: true,
-          },
-          isValid: formatValidation.username.isValid,
-          error: formatValidation.username.isValid ? undefined : formatValidation.username.error,
-        },
-      }));
-      return;
-    }
-
-    // Then check availability (debounced, real backend scenario)
-    setUsernameCheckInProgress(true);
-    
-    try {
-      const isAvailable = await usernameCheckDebouncer.current(checkUsernameAvailability, username);
-      
-      setValidation(prev => ({
-        ...prev,
-        username: {
-          ...formatValidation.username,
-          checks: {
-            ...formatValidation.username.checks,
-            available: isAvailable
-          },
-          isValid: formatValidation.username.isValid && isAvailable,
-          error: !isAvailable ? 'このユーザー名は既に使用されています' : undefined
-        }
-      }));
-    } catch (error) {
-      secureLogger.error('Username availability check failed', { error });
-      setValidation(prev => ({
-        ...prev,
-        username: {
-          ...formatValidation.username,
-          checks: {
-            ...formatValidation.username.checks,
-            available: true // Assume available if check fails
-          }
-        }
-      }));
-    } finally {
-      setUsernameCheckInProgress(false);
-    }
-  }, []);
+  // Username availability check removed (email-based sign-up)
 
   /**
    * Real-time form validation
    */
   const validateFormField = useCallback((field: string, value: string) => {
-    const formValidation = validateRegistrationForm({
-      username: field === 'username' ? value : formData.username,
-      maternalHealthId: field === 'maternalHealthId' ? value : formData.maternalHealthId,
-      password: field === 'password' ? value : formData.password,
-      displayName: field === 'displayName' ? value : formData.displayName,
-      bio: field === 'bio' ? value : formData.bio
-    });
-
-    setValidation(prev => ({
-      ...prev,
-      [field]: formValidation[field as keyof typeof formValidation] || { isValid: true }
-    }));
-  }, [formData]);
+    if (field === 'email') {
+      const ok = !!value && value.includes('@');
+      setValidation(prev => ({ ...prev, email: { isValid: ok, error: ok ? '' : 'メールアドレスが必要です' } }));
+      return;
+    }
+    if (field === 'password') {
+      const checks = {
+        length: value.length >= 8,
+        uppercase: /[A-Z]/.test(value),
+        lowercase: /[a-z]/.test(value),
+        numbers: /\d/.test(value),
+        symbols: /[^A-Za-z0-9]/.test(value)
+      };
+      const isValid = checks.length && checks.uppercase && checks.lowercase && checks.numbers;
+      setValidation(prev => ({ ...prev, password: { isValid, error: isValid ? '' : '強いパスワードを入力してください', strength: isValid ? 'medium' : 'weak', checks } }));
+      return;
+    }
+    if (field === 'displayName') {
+      const ok = !value || value.length <= 30;
+      setValidation(prev => ({ ...prev, displayName: { isValid: ok, error: ok ? '' : '表示名は30文字以内' } }));
+      return;
+    }
+    if (field === 'bio') {
+      const ok = !value || value.length <= 500;
+      setValidation(prev => ({ ...prev, bio: { isValid: ok, error: ok ? '' : '自己紹介は500文字以内' } }));
+      return;
+    }
+  }, []);
 
   // =====================================================
   // INPUT HANDLERS
@@ -158,12 +96,8 @@ export default function SignUpScreen({ onLogin }: { onLogin?: () => void }) {
     }
     
     // Validate field in real-time
-    if (field === 'username') {
-      validateUsernameWithAvailability(value);
-    } else {
-      validateFormField(field, value);
-    }
-  }, [error, clearError, validateUsernameWithAvailability, validateFormField]);
+    validateFormField(field, value);
+  }, [error, clearError, validateFormField]);
 
   const handleEmojiSelect = useCallback((emoji: string) => {
     setFormData(prev => ({ ...prev, avatarEmoji: emoji }));
@@ -180,36 +114,25 @@ export default function SignUpScreen({ onLogin }: { onLogin?: () => void }) {
       clearError();
       
       // Final validation
-      const formValidation = validateRegistrationForm(formData);
-      setValidation({
-        username: formValidation.username,
-        maternalHealthId: formValidation.maternal_health_id,
-        password: formValidation.password,
-        displayName: formValidation.display_name,
-        bio: formValidation.bio
-      });
-      
-      if (!formValidation.isFormValid) {
-        secureLogger.info('SignUp form validation failed');
+      if (!formData.email || !formData.email.includes('@')) {
+        setValidation(prev => ({ ...prev, email: { isValid: false, error: 'メールアドレスが必要です' } }));
+        return;
+      }
+      if (!formData.password || formData.password.length < 8) {
+        setValidation(prev => ({ ...prev, password: { ...prev.password, isValid: false, error: 'パスワードが短すぎます' } }));
         return;
       }
 
       setIsSubmitting(true);
       
-      // Create registration request
-      const registrationRequest = createRegistrationRequest({
-        username: formData.username.trim(),
-        maternal_health_id: formData.maternalHealthId.trim(),
+      // Attempt Supabase Auth registration
+      const response = await registerWithEmail({
+        email: formData.email.trim(),
         password: formData.password,
         display_name: formData.displayName.trim() || undefined,
         bio: formData.bio.trim() || undefined,
         avatar_emoji: formData.avatarEmoji || undefined
       });
-      
-      secureLogger.info('Registration attempt initiated');
-      
-      // Attempt registration
-      const response = await register(registrationRequest);
       
       if (response.success) {
         secureLogger.info('Registration successful');
@@ -235,8 +158,7 @@ export default function SignUpScreen({ onLogin }: { onLogin?: () => void }) {
   // RENDER HELPERS
   // =====================================================
 
-  const isFormValid = validation.username.isValid && 
-                     validation.maternalHealthId.isValid && 
+  const isFormValid = validation.email.isValid && 
                      validation.password.isValid && 
                      validation.displayName.isValid && 
                      validation.bio.isValid;
@@ -288,55 +210,25 @@ export default function SignUpScreen({ onLogin }: { onLogin?: () => void }) {
             </Text>
             
             <View style={{ gap: theme.spacing(1.5) }}>
-              {/* Username field */}
+              {/* Email field */}
               <View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                    ユーザー名 *
-                  </Text>
-                  {usernameCheckInProgress && (
-                    <ActivityIndicator 
-                      size="small" 
-                      color={colors.pink} 
-                      style={{ marginLeft: 8 }} 
-                    />
-                  )}
-                  {validation.username.checks.available && validation.username.isValid && (
-                    <Text style={{ color: colors.mint, fontSize: 12, marginLeft: 8 }}>✅ 利用可能</Text>
-                  )}
-                </View>
+                <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
+                  メールアドレス *
+                </Text>
                 <SecureInput
-                  placeholder="ユーザー名を入力"
-                  value={formData.username}
-                  onChangeText={(text) => handleInputChange('username', text)}
-                  validation={validation.username}
+                  placeholder="you@example.com"
+                  value={formData.email}
+                  onChangeText={(text) => handleInputChange('email', text)}
+                  validation={validation.email}
                   disabled={isLoading || isSubmitting}
-                  maxLength={20}
                   // accessibility
                   autoCapitalize="none"
-                  testID="username-input"
+                  keyboardType="email-address"
+                  testID="email-input"
                 />
               </View>
 
-              {/* Maternal Health ID field */}
-              <View>
-                <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', marginBottom: 4 }}>
-                  母子手帳番号 * 🔒
-                </Text>
-                <SecureInput
-                  placeholder="10桁の母子手帳番号"
-                  value={formData.maternalHealthId}
-                  onChangeText={(text) => handleInputChange('maternalHealthId', text)}
-                  validation={validation.maternalHealthId}
-                  disabled={isLoading || isSubmitting}
-                  isSensitive
-                  keyboardType="numeric"
-                  maxLength={10}
-                  // accessibility
-                  autoCapitalize="none"
-                  testID="maternal-health-id-input"
-                />
-              </View>
+              {/* Removed maternal health ID field (Supabase Auth email/password) */}
 
               {/* Password field with strength indicator */}
               <View>

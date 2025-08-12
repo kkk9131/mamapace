@@ -19,6 +19,8 @@ import {
   sanitizeForLogging
 } from '../types/auth';
 import { authService } from '../services/authService';
+import * as supaAuth from '../services/supabaseAuthAdapter';
+import { getMyProfile, updateMyProfile } from '../services/profileService';
 import { initializeAllServices } from '../utils/serviceInitializer';
 import { secureLogger } from '../utils/privacyProtection';
 import { appConfig } from '../config/appConfig';
@@ -104,6 +106,9 @@ interface AuthContextValue extends AuthContextType {
   login: (request: LoginRequest) => Promise<AuthResponse>;
   register: (request: RegistrationRequest) => Promise<AuthResponse>;
   logout: () => Promise<void>;
+  // Supabase Auth (email/password) methods
+  loginWithEmail: (params: { email: string; password: string }) => Promise<AuthResponse>;
+  registerWithEmail: (params: { email: string; password: string; display_name?: string; bio?: string; avatar_emoji?: string }) => Promise<AuthResponse>;
   
   // Utility methods
   clearError: () => void;
@@ -301,6 +306,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [state.isInitialized, setupSessionMonitoring]);
 
   /**
+   * Supabase Auth (email/password) registration
+   */
+  const registerWithEmail = useCallback(async (params: { email: string; password: string; display_name?: string; bio?: string; avatar_emoji?: string }): Promise<AuthResponse> => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      dispatch({ type: 'CLEAR_ERROR' });
+
+      // Use a stable native scheme to avoid Expo dev host variations
+      const redirectTo = 'mamapace://auth-callback';
+
+      const signUpResult = await supaAuth.signUp({ email: params.email, password: params.password, redirectTo });
+
+      // If email confirmations are enabled, session may be null. Try explicit sign-in.
+      try {
+        await supaAuth.signIn({ email: params.email, password: params.password });
+      } catch (e) {
+        // If sign-in fails (e.g., email not confirmed), surface a helpful message
+        dispatch({ type: 'SET_ERROR', payload: 'メール認証が必要です。受信トレイをご確認ください。' });
+        dispatch({ type: 'SET_LOADING', payload: false });
+        return { success: false, error: 'メール認証が必要です。受信トレイをご確認ください。' };
+      }
+
+      // Ensure profile exists/updated
+      if (params.display_name || params.bio || params.avatar_emoji) {
+        try { await updateMyProfile({
+          display_name: params.display_name,
+          bio: params.bio,
+          avatar_emoji: params.avatar_emoji
+        }); } catch {}
+      }
+
+      const profile = await getMyProfile();
+      dispatch({ type: 'SET_USER', payload: profile });
+      setupSessionMonitoring();
+      return { success: true, user: profile, session_token: '', refresh_token: '', expires_at: '' } as any;
+    } catch (error: any) {
+      const msg = (error && (error.message || error.error_description)) || '登録に失敗しました。もう一度お試しください。';
+      dispatch({ type: 'SET_ERROR', payload: msg });
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return { success: false, error: msg };
+    }
+  }, [setupSessionMonitoring]);
+
+  /**
    * User login with enhanced security validation
    */
   const login = useCallback(async (request: LoginRequest): Promise<AuthResponse> => {
@@ -350,6 +399,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [state.isInitialized, setupSessionMonitoring]);
 
   /**
+   * Supabase Auth (email/password) login
+   */
+  const loginWithEmail = useCallback(async (params: { email: string; password: string }): Promise<AuthResponse> => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      dispatch({ type: 'CLEAR_ERROR' });
+      await supaAuth.signIn({ email: params.email, password: params.password });
+      const profile = await getMyProfile();
+      dispatch({ type: 'SET_USER', payload: profile });
+      setupSessionMonitoring();
+      return { success: true, user: profile, session_token: '', refresh_token: '', expires_at: '' } as any;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: 'ログインに失敗しました。' });
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return { success: false, error: 'ログインに失敗しました。' };
+    }
+  }, [setupSessionMonitoring]);
+
+  /**
    * User logout with enhanced session cleanup
    */
   const logout = useCallback(async (): Promise<void> => {
@@ -363,6 +431,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       const svc = appConfig.useMockAuth ? mockAuthService : authService;
+      try { await supaAuth.signOut(); } catch {}
       await svc.logout();
       dispatch({ type: 'LOGOUT' });
       
@@ -470,6 +539,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Methods
     login,
     register,
+    loginWithEmail,
+    registerWithEmail,
     logout,
     clearError,
     refreshToken,

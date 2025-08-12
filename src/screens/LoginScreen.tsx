@@ -11,19 +11,17 @@ import SecureInput from '../components/SecureInput';
 export default function LoginScreen({ onSignup }: { onSignup?: () => void }) {
   const theme = useTheme() as any;
   const { colors } = theme;
-  const { login, isLoading, error, clearError } = useAuth();
+  const { loginWithEmail, isLoading, error, clearError } = useAuth();
   
   // Form state
   const [formData, setFormData] = useState({
-    username: '',
-    maternalHealthId: '',
+    email: '',
     password: ''
   });
   
   // Validation state
   const [validation, setValidation] = useState({
-    username: { isValid: true, error: '' },
-    maternalHealthId: { isValid: true, error: '', format: { length: false, digitsOnly: false } },
+    email: { isValid: true, error: '' },
     password: { isValid: true, error: '' }
   });
 
@@ -43,17 +41,17 @@ export default function LoginScreen({ onSignup }: { onSignup?: () => void }) {
    * Real-time form validation
    */
   const validateFormField = useCallback((field: string, value: string) => {
-    const formValidation = validateLoginForm({
-      username: field === 'username' ? value : formData.username,
-      maternalHealthId: field === 'maternalHealthId' ? value : formData.maternalHealthId,
-      password: field === 'password' ? value : formData.password
-    });
-
-    setValidation(prev => ({
-      ...prev,
-      [field]: formValidation[field as keyof typeof formValidation] || { isValid: true }
-    }));
-  }, [formData]);
+    if (field === 'email') {
+      const ok = !!value && value.includes('@');
+      setValidation(prev => ({ ...prev, email: { isValid: ok, error: ok ? '' : 'メールアドレスが必要です' } }));
+      return;
+    }
+    if (field === 'password') {
+      const ok = !!value && value.length >= 8;
+      setValidation(prev => ({ ...prev, password: { isValid: ok, error: ok ? '' : 'パスワードが短すぎます' } }));
+      return;
+    }
+  }, []);
 
   // =====================================================
   // INPUT HANDLERS
@@ -90,32 +88,21 @@ export default function LoginScreen({ onSignup }: { onSignup?: () => void }) {
         return;
       }
       
-      // Final form validation
-      const formValidation = validateLoginForm(formData);
-      setValidation({
-        username: formValidation.username,
-        maternalHealthId: formValidation.maternal_health_id,
-        password: formValidation.password
-      });
-      
-      if (!formValidation.isFormValid) {
-        secureLogger.info('Login form validation failed');
+      // Final validation (email/password)
+      if (!formData.email || !formData.email.includes('@')) {
+        setValidation(prev => ({ ...prev, email: { isValid: false, error: 'メールアドレスが必要です' } }));
+        return;
+      }
+      if (!formData.password || formData.password.length < 8) {
+        setValidation(prev => ({ ...prev, password: { isValid: false, error: 'パスワードが短すぎます' } }));
         return;
       }
 
       setIsSubmitting(true);
       
-      // Create login request
-      const loginRequest = createLoginRequest({
-        username: formData.username.trim(),
-        maternal_health_id: formData.maternalHealthId.trim(),
-        password: formData.password
-      });
-      
-      secureLogger.info('Login attempt initiated');
-      
-      // Attempt login
-      const response = await login(loginRequest);
+      // Attempt Supabase Auth login
+      secureLogger.info('Supabase auth login attempt');
+      const response = await loginWithEmail({ email: formData.email.trim(), password: formData.password });
       
       if (response.success) {
         secureLogger.info('Login successful');
@@ -159,9 +146,7 @@ export default function LoginScreen({ onSignup }: { onSignup?: () => void }) {
   // RENDER HELPERS
   // =====================================================
 
-  const isFormValid = validation.username.isValid && 
-                     validation.maternalHealthId.isValid && 
-                     validation.password.isValid;
+  const isFormValid = validation.email.isValid && validation.password.isValid;
 
   const isLockedOut = loginAttempts >= 5;
 
@@ -238,41 +223,21 @@ export default function LoginScreen({ onSignup }: { onSignup?: () => void }) {
           )}
           
           <View style={{ gap: theme.spacing(1.5) }}>
-            {/* Username field */}
+            {/* Email field */}
             <View>
               <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', marginBottom: 4 }}>
-                ユーザー名
+                メールアドレス
               </Text>
               <SecureInput
-                placeholder="ユーザー名を入力"
-                value={formData.username}
-                onChangeText={(text) => handleInputChange('username', text)}
-                validation={validation.username}
+                placeholder="you@example.com"
+                value={formData.email}
+                onChangeText={(text) => handleInputChange('email', text)}
+                validation={validation.email}
                 disabled={isLoading || isSubmitting || isLockedOut}
-                maxLength={20}
                 // accessibility
                 autoCapitalize="none"
-                testID="username-input"
-              />
-            </View>
-            
-            {/* Maternal Health ID field */}
-            <View>
-              <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', marginBottom: 4 }}>
-                母子手帳番号 🔒
-              </Text>
-              <SecureInput
-                placeholder="10桁の母子手帳番号"
-                value={formData.maternalHealthId}
-                onChangeText={(text) => handleInputChange('maternalHealthId', text)}
-                validation={validation.maternalHealthId}
-                disabled={isLoading || isSubmitting || isLockedOut}
-                isSensitive
-                keyboardType="numeric"
-                maxLength={10}
-                // accessibility
-                autoCapitalize="none"
-                testID="maternal-health-id-input"
+                keyboardType="email-address"
+                testID="email-input"
               />
             </View>
             
