@@ -53,7 +53,7 @@ export default function ComposeScreen({ onClose, onPosted }: { onClose?: () => v
         setSubmitting(true);
         try {
           if (!user?.id) throw new Error('ログインが必要です');
-          await createPost(user.id, body.trim());
+          await createPost(body.trim());
           if (onPosted) onPosted(); else onClose && onClose();
         } catch (e: any) {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

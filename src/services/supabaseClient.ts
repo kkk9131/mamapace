@@ -12,7 +12,7 @@
 import { createClient, SupabaseClient, SupabaseClientOptions } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
-import appManifest from '../../app.json';
+// import appManifest from '../../app.json'; // Disabled due to path issue
 import { secureLogger, sanitizeObject } from '../utils/privacyProtection';
 
 // =====================================================
@@ -23,7 +23,7 @@ import { secureLogger, sanitizeObject } from '../utils/privacyProtection';
 function readSupabaseCredentials(): { url?: string; anonKey?: string } {
   try {
     const fromExpoExtra = (Constants as any)?.expoConfig?.extra || (Constants as any)?.manifestExtra || {};
-    const fromAppJson = (appManifest as any)?.expo?.extra || {};
+    const fromAppJson = {}; // Disabled app.json access
     const env = (global as any)?.process?.env || {};
     let url = fromExpoExtra.SUPABASE_URL
       || fromAppJson.SUPABASE_URL
@@ -238,7 +238,7 @@ class SecureSupabaseClient {
     // For now, we'll just track request counts and timing
     const originalRpc = this.client.rpc.bind(this.client);
     
-    this.client.rpc = async (fn: string, args?: Record<string, any>) => {
+    (this.client as any).rpc = async (fn: string, args?: Record<string, any>) => {
       const startTime = Date.now();
       this.requestCount++;
       this.lastRequestTime = startTime;

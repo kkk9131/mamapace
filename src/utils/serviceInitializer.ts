@@ -306,8 +306,8 @@ class ServiceInitializer {
     const results: HealthCheckResult[] = [];
 
     const servicesToCheck = (appConfig.useServerHashing || (appConfig as any).disableClientEncryption)
-      ? (SERVICES.filter(s => s !== 'encryption' && s !== 'sessionManager') as ServiceName[])
-      : (SERVICES as ServiceName[]);
+      ? [...SERVICES].filter(s => s !== 'encryption' && s !== 'sessionManager')
+      : [...SERVICES];
 
     for (const serviceName of servicesToCheck) {
       const result = await this.checkServiceHealth(serviceName);
@@ -405,7 +405,7 @@ class ServiceInitializer {
    * Determines if a service is critical for app functionality
    */
   private isCriticalService(serviceName: ServiceName): boolean {
-    const criticalServices: ServiceName[] = ['supabase', ...((appConfig.useServerHashing || (appConfig as any).disableClientEncryption) ? [] as ServiceName[] : ['sessionManager','encryption'])];
+    const criticalServices: ServiceName[] = ['supabase', ...((appConfig.useServerHashing || (appConfig as any).disableClientEncryption) ? [] : ['sessionManager' as ServiceName,'encryption' as ServiceName])];
     return criticalServices.includes(serviceName);
   }
 

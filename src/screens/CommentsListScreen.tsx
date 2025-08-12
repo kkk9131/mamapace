@@ -57,7 +57,7 @@ export default function CommentsListScreen({ postId, refreshKey, onCompose }: { 
         const client = getSupabaseClient();
         channel = client
           .channel(`comments-${postId}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'post_comments' }, (payload: any) => {
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'post_comments', filter: `post_id=eq.${postId}` }, (payload: any) => {
             const pid = payload?.new?.post_id ?? payload?.old?.post_id;
             if (pid !== postId) return;
             // refetch list to include joined user fields consistently
@@ -94,7 +94,7 @@ export default function CommentsListScreen({ postId, refreshKey, onCompose }: { 
                 {item.user_id === user?.id && (
                   <Pressable accessibilityRole="button" accessibilityLabel="コメントを削除" onPress={async () => {
                     try {
-                      await deleteComment(user!.id, item.id);
+                      await deleteComment(item.id);
                       setItems(prev => prev.filter(c => c.id !== item.id));
                     } catch (e: any) {
                       notifyError(e?.message || 'コメントの削除に失敗しました');

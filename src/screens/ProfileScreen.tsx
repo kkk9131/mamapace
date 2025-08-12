@@ -3,8 +3,13 @@ import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import MyPostsListScreen from './MyPostsListScreen';
 import { useAuth } from '../contexts/AuthContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { getSupabaseClient } from '../services/supabaseClient';
+import { getMyProfile, getFollowCounts } from '../services/profileService';
+import { PublicUserProfile } from '../types/auth';
+import { FollowCounts } from '../services/profileService';
+import { useFocusEffect } from '@react-navigation/native';
+import { secureLogger } from '../utils/privacyProtection';
 
 export default function ProfileScreen({ onNavigate }: { onNavigate?: (key: string) => void }) {
   const theme = useTheme() as any;
@@ -13,36 +18,46 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (key: strin
   Animated.timing(fade, { toValue: 1, duration: 200, useNativeDriver: true }).start();
   const { user } = useAuth();
   const [myPostCount, setMyPostCount] = useState<number>(0);
-  useEffect(() => {
-    (async () => {
+  const [profile, setProfile] = useState<PublicUserProfile | null>(null);
+  const [followCounts, setFollowCounts] = useState<FollowCounts>({ followers: 0, following: 0 });
+  
+  const loadProfileData = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Load profile
+      const profileData = await getMyProfile();
+      setProfile(profileData);
+      
+      // Load follow counts
+      const counts = await getFollowCounts(user.id);
+      setFollowCounts(counts);
+      
+      // Load post count
+      const client = getSupabaseClient();
       try {
-        const client = getSupabaseClient();
-        if (!user?.id) return;
-        let countVal = 0;
-        try {
-          const { data, error } = await client.rpc('get_user_post_count', { p_user_id: user.id });
-          if (!error && typeof data !== 'undefined' && data !== null) {
-            countVal = Number(data);
-          } else {
-            // Fallback to direct count if RPC unavailable or no permission
-            const { count, error: cErr } = await client
-              .from('posts')
-              .select('id', { count: 'exact', head: true })
-              .eq('user_id', user.id);
-            if (!cErr) countVal = count ?? 0;
-          }
-        } catch {
-          // Fallback path
-          const { count } = await client
-            .from('posts')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', user.id);
-          countVal = count ?? 0;
+        const { data, error } = await client.rpc('get_user_post_count_v2');
+        if (!error && typeof data !== 'undefined' && data !== null) {
+          setMyPostCount(Number(data));
         }
-        setMyPostCount(countVal);
-      } catch {}
-    })();
+      } catch {
+        // Keep default 0 on error
+      }
+    } catch (error) {
+      secureLogger.error('Failed to load profile data:', error);
+    }
   }, [user?.id]);
+  
+  useEffect(() => {
+    loadProfileData();
+  }, [loadProfileData]);
+  
+  // Reload on focus
+  useFocusEffect(
+    useCallback(() => {
+      loadProfileData();
+    }, [loadProfileData])
+  );
   const rooms = [
     { id: 'r1', name: 'ねんね相談', members: 124 },
     { id: 'r2', name: 'ごはん/離乳食', members: 88 },
@@ -54,16 +69,35 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (key: strin
         <BlurView intensity={30} tint="dark" style={{ padding: theme.spacing(1.75), backgroundColor: '#ffffff10' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-              <Text style={{ fontSize: 30 }}>👩‍🍼</Text>
+              <Text style={{ fontSize: 30 }}>{profile?.avatar_emoji || user?.avatar_emoji || '👩‍🍼'}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>ママネーム</Text>
-              <Text style={{ color: colors.subtext, fontSize: 12 }}>ママの一言プロフィール</Text>
+              <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>
+                {profile?.display_name || user?.display_name || 'ママネーム'}
+              </Text>
+              <Text style={{ color: colors.subtext, fontSize: 12 }}>@{profile?.username || user?.username}</Text>
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                <Pill label={`フォロー 32`} onPress={() => onNavigate && onNavigate('following')} />
-                <Pill label={`フォロワー 128`} onPress={() => onNavigate && onNavigate('followers')} />
+                <Pill label={`フォロー ${followCounts.following}`} onPress={() => onNavigate && onNavigate('following')} />
+                <Pill label={`フォロワー ${followCounts.followers}`} onPress={() => onNavigate && onNavigate('followers')} />
               </View>
             </View>
+          </View>
+          <View style={{ marginTop: theme.spacing(1.5) }}>
+            <Pressable 
+              onPress={() => onNavigate && onNavigate('profileEdit')}
+              style={({ pressed }) => [
+                {
+                  paddingVertical: theme.spacing(1),
+                  paddingHorizontal: theme.spacing(2),
+                  backgroundColor: colors.pink,
+                  borderRadius: 999,
+                  alignItems: 'center',
+                  transform: [{ scale: pressed ? 0.97 : 1 }]
+                }
+              ]}
+            >
+              <Text style={{ color: 'white', fontWeight: '700' }}>プロフィールを編集</Text>
+            </Pressable>
           </View>
         </BlurView>
       </View>
@@ -71,7 +105,9 @@ export default function ProfileScreen({ onNavigate }: { onNavigate?: (key: strin
       <View style={{ marginTop: theme.spacing(1.5), borderRadius: theme.radius.lg, overflow: 'hidden', ...theme.shadow.card }}>
         <BlurView intensity={20} tint="dark" style={{ padding: theme.spacing(1.5), backgroundColor: '#ffffff10' }}>
           <Text style={{ color: colors.subtext, fontSize: 12, marginBottom: 6 }}>プロフィール</Text>
-          <Text style={{ color: colors.text, lineHeight: 20 }}>はじめまして。夜間授乳がんばり中。コーヒーと昼寝がご褒美。よろしくお願いします。</Text>
+          <Text style={{ color: colors.text, lineHeight: 20 }}>
+            {profile?.bio || user?.bio || 'プロフィールを入力してください'}
+          </Text>
         </BlurView>
       </View>
 

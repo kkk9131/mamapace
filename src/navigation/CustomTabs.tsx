@@ -27,6 +27,8 @@ import MyPostsListScreen from '../screens/MyPostsListScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SignUpScreen from '../screens/SignUpScreen';
+import ProfileEditScreen from '../screens/ProfileEditScreen';
+import UserProfileScreen from '../screens/UserProfileScreen';
 
 const tabs = [
   { key: 'me', label: 'あなた', Component: ProfileScreen },
@@ -59,6 +61,7 @@ export default function CustomTabs() {
   const [active, setActive] = useState<any>('home');
   const [homeRefreshKey, setHomeRefreshKey] = useState<number>(0);
   const [activePostId, setActivePostId] = useState<string | null>(null);
+  const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [commentsRefreshKey, setCommentsRefreshKey] = useState<number>(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -88,7 +91,7 @@ export default function CustomTabs() {
         }} />
         <View style={{ flex: 1 }}>
           {active === 'home' ? (
-            <HomeScreen refreshKey={homeRefreshKey} onCompose={() => setActive('compose' as any)} onOpenPost={(postId) => { setActivePostId(postId); setActive('comments' as any); }} />
+            <HomeScreen refreshKey={homeRefreshKey} onCompose={() => setActive('compose' as any)} onOpenPost={(postId) => { setActivePostId(postId); setActive('comments' as any); }} onOpenProfileEdit={() => setActive('profileEdit' as any)} onOpenUser={(userId) => { setActiveUserId(userId); setActive('userProfile' as any); }} />
           ) : active === 'search' ? (
             <SearchScreen />
           ) : active === 'rooms' ? (
@@ -125,6 +128,10 @@ export default function CustomTabs() {
             <LikedPostsListScreen onOpen={(postId) => { setActivePostId(postId); setActive('comments' as any); }} />
           ) : active === 'myPosts' ? (
             <MyPostsListScreen />
+          ) : active === 'profileEdit' ? (
+            <ProfileEditScreen navigation={{ goBack: () => setActive('me' as any) }} />
+          ) : active === 'userProfile' ? (
+            activeUserId ? <UserProfileScreen userId={activeUserId} onBack={() => { setActiveUserId(null); setActive('home' as any); }} /> : null
           ) : (
             <ProfileScreen onNavigate={(key: string) => setActive(key as any)} />
           )}

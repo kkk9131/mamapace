@@ -251,7 +251,8 @@ export class SecureLogger {
     try {
       const env: any = (global as any)?.process?.env || {};
       const explicit = (env.EXPO_PUBLIC_LOG_LEVEL || env.LOG_LEVEL || '').toString().toLowerCase();
-      const nodeEnv = (env.NODE_ENV || (__DEV__ ? 'development' : 'production')).toString().toLowerCase();
+      const isDev = env.__DEV__ || process.env.NODE_ENV !== 'production';
+      const nodeEnv = (env.NODE_ENV || (isDev ? 'development' : 'production')).toString().toLowerCase();
 
       const isValid = (v: string) => ['debug','info','warn','error'].includes(v);
       if (explicit && isValid(explicit)) {
@@ -533,7 +534,8 @@ export function createSafeError(
   const safeError = new Error(userMessage);
   
   // In development, include more details
-  if (__DEV__) {
+  const isDev = process.env.NODE_ENV !== 'production';
+  if (isDev) {
     (safeError as any).originalError = typeof originalError === 'string' ? 
       originalError : originalError.message;
     (safeError as any).context = sanitizedContext;

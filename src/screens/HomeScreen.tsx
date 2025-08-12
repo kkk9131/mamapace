@@ -11,7 +11,7 @@ import { getSupabaseClient } from '../services/supabaseClient';
 import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
 
-export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpenPost }: { refreshKey?: number; commentDeltas?: Record<string, number>; onCompose?: () => void; onOpenPost?: (postId: string) => void }) {
+export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpenPost, onOpenProfileEdit, onOpenUser }: { refreshKey?: number; commentDeltas?: Record<string, number>; onCompose?: () => void; onOpenPost?: (postId: string) => void; onOpenProfileEdit?: () => void; onOpenUser?: (userId: string) => void }) {
   const theme = useTheme() as any;
   const { colors } = theme;
   const fade = useRef(new Animated.Value(0)).current;
@@ -31,7 +31,7 @@ export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpe
     setLoading(true);
     try {
       const before = opts?.refresh ? null : cursor;
-      const res = await fetchHomeFeed({ before, currentUserId: user?.id });
+      const res = await fetchHomeFeed({ before });
       setItems((prev) => (opts?.refresh ? res.items : [...prev, ...res.items]));
       setCursor(res.nextCursor);
     } finally {
@@ -112,7 +112,7 @@ export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpe
     } : p));
     try {
       if (!user?.id) throw new Error('not logged in');
-      await toggleReaction(user.id, postId, current);
+      await toggleReaction(postId, current);
     } catch (e) {
       // rollback on error
       setItems((prev) => prev.map(p => p.id === postId ? {
@@ -129,12 +129,13 @@ export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpe
   const handleDelete = async (postId: string) => {
     try {
       if (!user?.id) return;
-      await deletePost(user.id, postId);
+      await deletePost(postId);
       setItems(prev => prev.filter(p => p.id !== postId));
     } catch (e: any) {
       notifyError(e?.message || '削除に失敗しました');
     }
   };
+
 
   return (
     <Animated.View style={{ flex: 1, backgroundColor: 'transparent', paddingTop: 48, opacity: fade }}>
@@ -157,7 +158,7 @@ export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpe
         contentContainerStyle={{ padding: theme.spacing(2), paddingTop: 8, paddingBottom: 120 }}
         ItemSeparatorComponent={() => <View style={{ height: theme.spacing(2) }} />}
         renderItem={({ item }) => (
-          <PostCard post={item} isOwner={item.user_id===user?.id} onDelete={handleDelete} commentDelta={commentDeltas?.[item.id] || 0} onOpenComments={(id) => onOpenPost && onOpenPost(id)} onToggleLike={handleToggleLike} />
+          <PostCard post={item} isOwner={item.user_id===user?.id} onDelete={handleDelete} commentDelta={commentDeltas?.[item.id] || 0} onOpenComments={(id) => onOpenPost && onOpenPost(id)} onToggleLike={handleToggleLike} onOpenUser={(uid) => onOpenUser && onOpenUser(uid)} />
         )}
         onEndReachedThreshold={0.4}
         onEndReached={onEndReached}
