@@ -172,9 +172,9 @@ class ValidationService {
       }
     };
 
-    if (!result.format.length) {
+    if (!result.format?.length) {
       result.error = JAPANESE_ERROR_MESSAGES.maternal_health_id.invalid_format;
-    } else if (!result.format.digitsOnly) {
+    } else if (!result.format?.digitsOnly) {
       result.error = JAPANESE_ERROR_MESSAGES.maternal_health_id.not_digits;
     } else {
       result.isValid = true;
@@ -388,10 +388,11 @@ class ValidationService {
       this.updateStats(startTime, false);
       secureLogger.error('Server username validation failed', { error });
       
+      const fallbackResult = this.validateUsernameClient(username);
       return {
-        ...clientResult,
+        ...fallbackResult,
         checks: {
-          ...clientResult.checks,
+          ...fallbackResult.checks,
           available: false
         },
         error: 'サーバーでの検証に失敗しました。もう一度お試しください。'
@@ -421,7 +422,7 @@ class ValidationService {
       const serverResult = await this.validateOnServer({
         field: 'password',
         value: password,
-        context
+        context: context ? { userId: context.username, action: context.action === 'change' ? 'update' : context.action } : undefined
       });
 
       const result = this.mapServerResponseToPassword(serverResult, clientResult);
@@ -439,9 +440,10 @@ class ValidationService {
       secureLogger.error('Server password validation failed', { error });
       
       // Return client-side result as fallback
+      const fallbackResult = this.validatePasswordClient(password);
       return {
-        ...clientResult,
-        error: clientResult.error || 'サーバーでの検証に失敗しました。もう一度お試しください。'
+        ...fallbackResult,
+        error: fallbackResult.error || 'サーバーでの検証に失敗しました。もう一度お試しください。'
       };
     }
   }
@@ -713,7 +715,9 @@ class ValidationService {
     // Implement LRU cache behavior
     if (this.validationCache.size >= VALIDATION_CONFIG.MAX_CACHE_SIZE) {
       const firstKey = this.validationCache.keys().next().value;
-      this.validationCache.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.validationCache.delete(firstKey);
+      }
     }
 
     this.validationCache.set(key, {

@@ -11,7 +11,7 @@ import { getSupabaseClient } from '../services/supabaseClient';
 import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
 
-export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpenPost }: { refreshKey?: number; commentDeltas?: Record<string, number>; onCompose?: () => void; onOpenPost?: (postId: string) => void }) {
+export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpenPost, onOpenProfileEdit, onOpenUser }: { refreshKey?: number; commentDeltas?: Record<string, number>; onCompose?: () => void; onOpenPost?: (postId: string) => void; onOpenProfileEdit?: () => void; onOpenUser?: (userId: string) => void }) {
   const theme = useTheme() as any;
   const { colors } = theme;
   const fade = useRef(new Animated.Value(0)).current;
@@ -136,6 +136,7 @@ export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpe
     }
   };
 
+
   return (
     <Animated.View style={{ flex: 1, backgroundColor: 'transparent', paddingTop: 48, opacity: fade }}>
       <View style={{ paddingHorizontal: theme.spacing(2), marginBottom: 20 }}>
@@ -157,7 +158,7 @@ export default function HomeScreen({ refreshKey, commentDeltas, onCompose, onOpe
         contentContainerStyle={{ padding: theme.spacing(2), paddingTop: 8, paddingBottom: 120 }}
         ItemSeparatorComponent={() => <View style={{ height: theme.spacing(2) }} />}
         renderItem={({ item }) => (
-          <PostCard post={item} isOwner={item.user_id===user?.id} onDelete={handleDelete} commentDelta={commentDeltas?.[item.id] || 0} onOpenComments={(id) => onOpenPost && onOpenPost(id)} onToggleLike={handleToggleLike} />
+          <PostCard post={item} isOwner={item.user_id===user?.id} onDelete={handleDelete} commentDelta={commentDeltas?.[item.id] || 0} onOpenComments={(id) => onOpenPost && onOpenPost(id)} onToggleLike={handleToggleLike} onOpenUser={(uid) => onOpenUser && onOpenUser(uid)} />
         )}
         onEndReachedThreshold={0.4}
         onEndReached={onEndReached}

@@ -39,6 +39,24 @@ export async function getMyProfile(): Promise<PublicUserProfile> {
   return data as PublicUserProfile;
 }
 
+export async function getUserProfile(userId: string): Promise<PublicUserProfile> {
+  const client = getSupabaseClient();
+  const { data, error } = await client.rpc('get_user_profile_v2', {
+    p_user_id: userId
+  });
+  
+  if (error) {
+    console.error('Failed to fetch user profile:', error);
+    throw new Error('ユーザープロフィールの取得に失敗しました');
+  }
+  
+  if (!data) {
+    throw new Error('ユーザーが見つかりません');
+  }
+  
+  return data as PublicUserProfile;
+}
+
 export async function updateMyProfile(input: ProfileUpdateInput): Promise<PublicUserProfile> {
   // Validate inputs
   if (input.display_name !== undefined) {

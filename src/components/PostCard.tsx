@@ -8,6 +8,7 @@ import { PostWithMeta } from '../types/post';
 export default function PostCard({
   post,
   onOpenComments,
+  onOpenUser,
   onToggleLike,
   commentDelta = 0,
   reactionDelta = 0,
@@ -16,6 +17,7 @@ export default function PostCard({
 }: {
   post: PostWithMeta;
   onOpenComments?: (postId: string) => void;
+  onOpenUser?: (userId: string) => void;
   onToggleLike?: (postId: string, current: boolean) => void;
   commentDelta?: number;
   reactionDelta?: number;
@@ -64,7 +66,9 @@ export default function PostCard({
           </Pressable>
         )}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ color: colors.subtext }}>{post.user?.display_name || post.user?.username || '匿名'} ・ {new Date(post.created_at).toLocaleString()}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="ユーザープロフィールを開く" onPress={() => onOpenUser && onOpenUser(post.user_id)}>
+            <Text style={{ color: colors.subtext }}>{post.user?.display_name || post.user?.username || '匿名'} ・ {new Date(post.created_at).toLocaleString()}</Text>
+          </Pressable>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {isOwner && (
               <Pressable accessibilityRole="button" accessibilityLabel="投稿を削除" onPress={() => onDelete && onDelete(post.id)} style={({ pressed }) => [{ backgroundColor: colors.surface, paddingHorizontal: theme.spacing(1), paddingVertical: 6, borderRadius: 999, transform: [{ scale: pressed ? 0.97 : 1 }] }]}> 
