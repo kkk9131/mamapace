@@ -27,6 +27,7 @@
     "@react-navigation/native": "^6.1.18",
     "@supabase/supabase-js": "^2.54.0",
     "@types/react": "~19.0.7",
+    "date-fns": "^4.1.0",
     "expo": "~53.0.20",
     "expo-av": "~15.1.7",
     "expo-blur": "~14.1.5",

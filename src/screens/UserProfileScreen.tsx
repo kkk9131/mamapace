@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, Animated, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, Animated, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,10 +8,16 @@ import { PostWithMeta } from '../types/post';
 import { getFollowCounts, isFollowing, followUser, unfollowUser, getUserProfile } from '../services/profileService';
 import { PublicUserProfile } from '../types/auth';
 import { fetchHomeFeed } from '../services/postService';
-import { Alert } from 'react-native';
 import { secureLogger } from '../utils/privacyProtection';
+import { chatService } from '../services/chatService';
 
-export default function UserProfileScreen({ userId, onBack }: { userId: string; onBack?: () => void }) {
+interface UserProfileScreenProps {
+  userId: string; 
+  onBack?: () => void;
+  onNavigateToChat?: (chatId: string, userName: string) => void;
+}
+
+export default function UserProfileScreen({ userId, onBack, onNavigateToChat }: UserProfileScreenProps) {
   const theme = useTheme() as any;
   const { colors } = theme;
   const { user } = useAuth();
@@ -21,6 +27,7 @@ export default function UserProfileScreen({ userId, onBack }: { userId: string; 
   const [following, setFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState<PostWithMeta[]>([]);
+  const [isStartingChat, setIsStartingChat] = useState(false);
   
   const fade = new Animated.Value(1);
   
@@ -110,6 +117,53 @@ export default function UserProfileScreen({ userId, onBack }: { userId: string; 
     }
   };
 
+  const handleStartChat = async (targetUserId: string, userName: string) => {
+    // Prevent multiple simultaneous calls
+    if (isStartingChat) {
+      console.log('Chat start already in progress');
+      return;
+    }
+    
+    try {
+      setIsStartingChat(true);
+      
+      // Check if user is logged in
+      if (!user) {
+        Alert.alert('エラー', 'チャット機能を使用するにはログインが必要です。');
+        return;
+      }
+      
+      console.log(`Starting chat with ${userName}...`);
+      
+      
+      // Create or get existing conversation
+      const response = await chatService.createOrGetChat({
+        participantIds: [targetUserId],
+        type: 'direct'
+      });
+      
+      console.log('Chat creation response:', response);
+      
+      if (response.success && response.data) {
+        // Navigate to chat screen
+        if (onNavigateToChat) {
+          onNavigateToChat(response.data.id, userName);
+        } else {
+          Alert.alert('成功', `${userName}とのチャットが開始されました`);
+        }
+      } else {
+        console.error('Chat creation failed:', response);
+        const errorMessage = response.error || 'チャットの作成に失敗しました';
+        Alert.alert('エラー', errorMessage);
+      }
+    } catch (error: any) {
+      console.error('Failed to start chat:', error);
+      Alert.alert('エラー', `チャット機能でエラーが発生しました:\n${error.message || error}`);
+    } finally {
+      setIsStartingChat(false);
+    }
+  };
+
   return (
     <Animated.View style={{ flex: 1, backgroundColor: colors.bg || '#000', paddingTop: 48, opacity: fade }}>
       {/* Header */}
@@ -152,23 +206,44 @@ export default function UserProfileScreen({ userId, onBack }: { userId: string; 
                 フォロー {counts.following} ・ フォロワー {counts.followers}
               </Text>
               {user?.id !== userId && (
-                <Pressable 
-                  onPress={toggleFollow}
-                  style={({ pressed }) => [{ 
-                    paddingHorizontal: 12, 
-                    paddingVertical: 8, 
-                    backgroundColor: following ? colors.surface : colors.pink, 
-                    borderRadius: 999, 
-                    transform: [{ scale: pressed ? 0.97 : 1 }] 
-                  }]}
-                >
-                  <Text style={{ 
-                    color: following ? colors.text : '#000', 
-                    fontWeight: '700' 
-                  }}>
-                    {following ? 'フォロー中' : 'フォロー'}
-                  </Text>
-                </Pressable>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {/* Chat Button */}
+                  <Pressable 
+                    onPress={() => !isStartingChat && handleStartChat(userId, userData?.display_name || 'ユーザー')}
+                    disabled={isStartingChat}
+                    style={({ pressed }) => [{ 
+                      paddingHorizontal: 12, 
+                      paddingVertical: 8, 
+                      backgroundColor: isStartingChat ? colors.subtext : colors.surface, 
+                      borderRadius: 999, 
+                      transform: [{ scale: pressed && !isStartingChat ? 0.97 : 1 }],
+                      opacity: isStartingChat ? 0.5 : 1
+                    }]}
+                  >
+                    <Text style={{ color: colors.text, fontWeight: '700' }}>
+                      {isStartingChat ? '処理中...' : '💬 チャット'}
+                    </Text>
+                  </Pressable>
+                  
+                  {/* Follow Button */}
+                  <Pressable 
+                    onPress={toggleFollow}
+                    style={({ pressed }) => [{ 
+                      paddingHorizontal: 12, 
+                      paddingVertical: 8, 
+                      backgroundColor: following ? colors.surface : colors.pink, 
+                      borderRadius: 999, 
+                      transform: [{ scale: pressed ? 0.97 : 1 }] 
+                    }]}
+                  >
+                    <Text style={{ 
+                      color: following ? colors.text : '#000', 
+                      fontWeight: '700' 
+                    }}>
+                      {following ? 'フォロー中' : 'フォロー'}
+                    </Text>
+                  </Pressable>
+                </View>
               )}
             </View>
           </BlurView>

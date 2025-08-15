@@ -62,6 +62,9 @@ export default function CustomTabs() {
   const [homeRefreshKey, setHomeRefreshKey] = useState<number>(0);
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [activeChatUserName, setActiveChatUserName] = useState<string | null>(null);
+  const [chatReturnTo, setChatReturnTo] = useState<string>('chats'); // Track where to return from chat
   const [commentsRefreshKey, setCommentsRefreshKey] = useState<number>(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -99,11 +102,36 @@ export default function CustomTabs() {
           ) : active === 'createRoom' ? (
             <CreateRoomScreen />
           ) : active === 'chats' ? (
-            <ChatsListScreen onOpen={() => setActive('chat' as any)} />
+            <ChatsListScreen onOpen={(chatId: string, userName: string) => {
+              setActiveChatId(chatId);
+              setActiveChatUserName(userName);
+              setChatReturnTo('chats');
+              setActive('chat' as any);
+            }} />
           ) : active === 'anon' ? (
             <AnonFeedScreen onComment={() => setActive('comment' as any)} onOpenPost={() => setActive('comments' as any)} />
           ) : active === 'chat' ? (
-            <ChatScreen />
+            activeChatId ? (
+              (() => {
+                console.log('Rendering ChatScreen with chatId:', activeChatId, 'userName:', activeChatUserName);
+                return (
+                  <ChatScreen 
+                    chatId={activeChatId} 
+                    userName={activeChatUserName || 'ユーザー'}
+                    onBack={() => {
+                      setActiveChatId(null);
+                      setActiveChatUserName(null);
+                      setActive(chatReturnTo as any);
+                    }}
+                  />
+                );
+              })()
+            ) : <ChatsListScreen onOpen={(chatId: string, userName: string) => {
+              setActiveChatId(chatId);
+              setActiveChatUserName(userName);
+              setChatReturnTo('chats');
+              setActive('chat' as any);
+            }} />
           ) : active === 'noti' ? (
             <NotificationsScreen />
           ) : active === 'settings' ? (
@@ -131,16 +159,31 @@ export default function CustomTabs() {
           ) : active === 'profileEdit' ? (
             <ProfileEditScreen navigation={{ goBack: () => setActive('me' as any) }} />
           ) : active === 'userProfile' ? (
-            activeUserId ? <UserProfileScreen userId={activeUserId} onBack={() => { setActiveUserId(null); setActive('home' as any); }} /> : null
+            activeUserId ? <UserProfileScreen 
+              userId={activeUserId} 
+              onBack={() => { 
+                setActiveUserId(null); 
+                setActive('home' as any); 
+              }}
+              onNavigateToChat={(chatId: string, userName: string) => {
+                setActiveChatId(chatId);
+                setActiveChatUserName(userName);
+                setChatReturnTo('userProfile');
+                setActive('chat' as any);
+              }}
+            /> : null
           ) : (
             <ProfileScreen onNavigate={(key: string) => setActive(key as any)} />
           )}
         </View>
-        <View style={{ position: 'absolute', left: 12, right: 12, bottom: 8, height: 56, borderRadius: 16, flexDirection: 'row', backgroundColor: colors.card + '88', borderColor: '#22252B', borderWidth: 1, overflow: 'hidden' }}>
-          {(['me','noti','home'] as const).map((k) => (
-            <TextButton key={k} label={k==='me'?'👤':k==='noti'?'🔔':'🏠'} active={active===k} onPress={() => k==='home'? setActive('home'): setActive(k)} onLongPress={k==='home'? () => setSidebarOpen(true): undefined} />
-          ))}
-        </View>
+        {/* Hide tab bar when in chat mode */}
+        {active !== 'chat' && (
+          <View style={{ position: 'absolute', left: 12, right: 12, bottom: 8, height: 56, borderRadius: 16, flexDirection: 'row', backgroundColor: colors.card + '88', borderColor: '#22252B', borderWidth: 1, overflow: 'hidden' }}>
+            {(['me','noti','home'] as const).map((k) => (
+              <TextButton key={k} label={k==='me'?'👤':k==='noti'?'🔔':'🏠'} active={active===k} onPress={() => k==='home'? setActive('home'): setActive(k)} onLongPress={k==='home'? () => setSidebarOpen(true): undefined} />
+            ))}
+          </View>
+        )}
       </View>
     </AuthGuard>
   );

@@ -27,8 +27,8 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "SUPABASE_URL": "",
-      "SUPABASE_ANON_KEY": ""
+      "SUPABASE_URL": "https://xxnslcwktufssamircxf.supabase.co",
+      "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4bnNsY3drdHVmc3NhbWlyY3hmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1NzMzMDIsImV4cCI6MjA3MDE0OTMwMn0.sBQxs6L0-mDDqdqzK0gQmk-lDcDQ-l5IztdA5tUo3JM"
     },
     "plugins": [
       "expo-secure-store"
