@@ -75,7 +75,7 @@
     ],
     "setupFilesAfterEnv": [
       "@testing-library/jest-native/extend-expect",
-      "<rootDir>/src/__tests__/setup.ts"
+      "./src/__tests__/setup.ts"
     ],
     "testMatch": [
       "**/__tests__/**/*.test.(ts|tsx|js)",
