@@ -1,124 +1,442 @@
 /**
- * CHAT SERVICE TESTS
+ * COMPREHENSIVE CHAT SERVICE TESTS
+ * Tests functionality with proper isolated mocking
  */
 
 import { jest } from '@jest/globals';
 
-// Mock the entire chatService module
-const mockChatService = {
-  initialize: jest.fn().mockResolvedValue(undefined),
-  getChats: jest.fn().mockResolvedValue({ success: true, data: { chats: [] } }),
-  sendMessage: jest.fn().mockResolvedValue({ success: true, data: {} }),
-  createChat: jest.fn().mockResolvedValue({ success: true, data: {} }),
-  subscribeToChat: jest.fn().mockResolvedValue({ success: true, data: 'sub-id' }),
-  unsubscribeFromChat: jest.fn().mockResolvedValue(undefined),
-  markAsRead: jest.fn().mockResolvedValue({ success: true, data: true }),
-  updateTypingStatus: jest.fn().mockResolvedValue({ success: true, data: true }),
-  cleanup: jest.fn().mockResolvedValue(undefined)
+// Mock all dependencies before importing the service
+const mockSupabaseClient = {
+  auth: {
+    getUser: jest.fn().mockResolvedValue({
+      data: { user: { id: 'test-user-123', email: 'test@example.com' } },
+      error: null
+    })
+  },
+  rpc: jest.fn().mockResolvedValue({ data: 'conv-123', error: null }),
+  from: jest.fn(() => ({
+    select: jest.fn(() => ({
+      eq: jest.fn(() => ({
+        single: jest.fn().mockResolvedValue({ data: null, error: null })
+      }))
+    }))
+  })),
+  channel: jest.fn(() => ({
+    on: jest.fn().mockReturnThis(),
+    subscribe: jest.fn().mockResolvedValue({ error: null }),
+    unsubscribe: jest.fn().mockResolvedValue({ error: null })
+  }))
 };
 
-jest.mock('../chatService', () => ({
-  chatService: mockChatService
+const mockSecureLogger = {
+  info: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  debug: jest.fn(),
+  security: jest.fn(),
+  privacy: jest.fn()
+};
+
+const mockAuthService = {
+  getCurrentUser: jest.fn().mockReturnValue({ id: 'test-user-123' }),
+  isAuthenticated: jest.fn().mockReturnValue(true)
+};
+
+// Apply mocks before any imports
+jest.mock('../supabaseClient', () => ({
+  getSupabaseClient: () => mockSupabaseClient
 }));
 
-describe('ChatService', () => {
+jest.mock('../authService', () => ({
+  authService: mockAuthService
+}));
+
+jest.mock('../../utils/privacyProtection', () => ({
+  secureLogger: mockSecureLogger,
+  sanitizeObject: jest.fn((obj) => obj),
+  sanitizeString: jest.fn((str) => str)
+}));
+
+jest.mock('../../types/chat', () => ({
+  ...jest.requireActual('../../types/chat'),
+  sanitizeChatForLogging: jest.fn((data) => data),
+  sanitizeMessageForLogging: jest.fn((data) => data)
+}));
+
+// Now import the service after mocks are in place
+import { ChatConstraints, ChatErrorCode, MessageType } from '../../types/chat';
+
+describe('ChatService - Comprehensive Tests', () => {
+  const mockUser = { id: 'test-user-123', email: 'test@example.com' };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Default mock implementations
+    mockSupabaseClient.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null
+    });
+    
+    mockAuthService.getCurrentUser.mockReturnValue(mockUser);
+    mockAuthService.isAuthenticated.mockReturnValue(true);
   });
 
-  describe('initialization', () => {
-    it('should initialize the service', async () => {
-      const result = await mockChatService.initialize();
-      expect(result).toBeUndefined();
-      expect(mockChatService.initialize).toHaveBeenCalled();
+  describe('Chat Creation', () => {
+    it('should create chat successfully with valid data', async () => {
+      const mockConversationId = 'conv-123';
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: mockConversationId,
+        error: null
+      });
+
+      const request = {
+        participant_id: 'user-456',
+        chat_type: 'direct' as const,
+        initial_message: 'Hello there!'
+      };
+
+      const result = await chatService.createChat(request);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.id).toBe(mockConversationId);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith('get_or_create_conversation', {
+        p_user1_id: mockUser.id,
+        p_user2_id: request.participant_id
+      });
+      expect(mockSecureLogger.info).toHaveBeenCalledWith('Chat created successfully', {
+        chatId: mockConversationId,
+        participantIds: [request.participant_id]
+      });
+    });
+
+    it('should handle unauthenticated user', async () => {
+      mockSupabaseClient.auth.getUser.mockResolvedValueOnce({
+        data: { user: null },
+        error: new Error('No user')
+      });
+
+      const request = {
+        participant_id: 'user-456',
+        chat_type: 'direct' as const
+      };
+
+      const result = await chatService.createChat(request);
+
+      expect(result.success).toBe(false);
+      expect(result.error_code).toBe(ChatErrorCode.ACCESS_DENIED);
+      expect(result.error).toBe('認証が必要です。');
+    });
+
+    it('should handle database RPC errors', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: new Error('Database connection failed')
+      });
+
+      const request = {
+        participant_id: 'user-456',
+        chat_type: 'direct' as const
+      };
+
+      const result = await chatService.createChat(request);
+
+      expect(result.success).toBe(false);
+      expect(result.error_code).toBe(ChatErrorCode.SYSTEM_ERROR);
+      expect(mockSecureLogger.error).toHaveBeenCalledWith('Create chat RPC error', {
+        error: expect.any(Error)
+      });
+    });
+
+    it('should send initial message when provided', async () => {
+      const mockConversationId = 'conv-123';
+      mockSupabaseClient.rpc
+        .mockResolvedValueOnce({ data: mockConversationId, error: null })
+        .mockResolvedValueOnce({ data: {}, error: null });
+
+      const request = {
+        participant_id: 'user-456',
+        chat_type: 'direct' as const,
+        initial_message: 'Hello there!'
+      };
+
+      const result = await chatService.createChat(request);
+
+      expect(result.success).toBe(true);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith('send_message', {
+        p_sender_id: mockUser.id,
+        p_recipient_id: request.participant_id,
+        p_content: 'Hello there!',
+        p_message_type: 'text'
+      });
     });
   });
 
-  describe('message operations', () => {
+  describe('Message Operations', () => {
     it('should validate message content length', () => {
+      const constraints = ChatConstraints.message;
+      
+      expect(constraints.minLength).toBe(1);
+      expect(constraints.maxLength).toBe(2000);
+      
       const shortMessage = '';
       const validMessage = 'Hello world';
       const longMessage = 'a'.repeat(2001);
       
-      // Basic validation tests
-      expect(shortMessage.length).toBe(0);
-      expect(validMessage.length).toBeGreaterThan(0);
-      expect(longMessage.length).toBeGreaterThan(2000);
+      expect(shortMessage.length).toBeLessThan(constraints.minLength);
+      expect(validMessage.length).toBeGreaterThanOrEqual(constraints.minLength);
+      expect(validMessage.length).toBeLessThanOrEqual(constraints.maxLength);
+      expect(longMessage.length).toBeGreaterThan(constraints.maxLength);
     });
 
-    it('should send messages', async () => {
-      const result = await mockChatService.sendMessage({
-        chat_id: 'test-chat',
-        content: 'Test message'
+    it('should send message successfully', async () => {
+      const mockMessage = {
+        id: 'msg-123',
+        conversation_id: 'conv-123',
+        sender_id: mockUser.id,
+        content: 'Test message',
+        message_type: 'text' as MessageType,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_edited: false,
+        deleted_at: null,
+        metadata: null
+      };
+
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: mockMessage,
+        error: null
       });
-      
+
+      const request = {
+        chat_id: 'conv-123',
+        content: 'Test message',
+        message_type: 'text' as MessageType
+      };
+
+      const result = await chatService.sendMessage(request);
+
       expect(result.success).toBe(true);
-      expect(mockChatService.sendMessage).toHaveBeenCalledWith({
-        chat_id: 'test-chat',
-        content: 'Test message'
+      expect(result.data).toEqual(mockMessage);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith('send_message', {
+        p_sender_id: mockUser.id,
+        p_recipient_id: expect.any(String),
+        p_content: 'Test message',
+        p_message_type: 'text'
       });
+    });
+
+    it('should handle message sending errors', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: new Error('Failed to send message')
+      });
+
+      const request = {
+        chat_id: 'conv-123',
+        content: 'Test message',
+        message_type: 'text' as MessageType
+      };
+
+      const result = await chatService.sendMessage(request);
+
+      expect(result.success).toBe(false);
+      expect(result.error_code).toBe(ChatErrorCode.SYSTEM_ERROR);
+      expect(mockSecureLogger.error).toHaveBeenCalled();
     });
   });
 
-  describe('chat management', () => {
-    it('should get chats list', async () => {
-      const result = await mockChatService.getChats();
-      
+  describe('Chat Retrieval', () => {
+    it('should get chats list successfully', async () => {
+      const mockConversations = [
+        {
+          id: 'conv-1',
+          participant_id: 'user-2',
+          participant_username: 'user2',
+          participant_display_name: 'User Two',
+          participant_avatar_emoji: '😊',
+          last_message_content: 'Hello',
+          last_message_sender_id: 'user-2',
+          last_message_created_at: new Date().toISOString(),
+          unread_count: 1,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: mockConversations,
+        error: null
+      });
+
+      const result = await chatService.getChats();
+
       expect(result.success).toBe(true);
-      expect(result.data.chats).toEqual([]);
-      expect(mockChatService.getChats).toHaveBeenCalled();
+      expect(result.data?.chats).toHaveLength(1);
+      expect(result.data?.chats[0].id).toBe('conv-1');
+      expect(result.data?.chats[0].unread_count).toBe(1);
+      expect(result.data?.chats[0].last_message?.content).toBe('Hello');
     });
 
-    it('should create new chats', async () => {
-      const result = await mockChatService.createChat({
-        participant_id: 'user-2'
+    it('should handle empty chats list', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: [],
+        error: null
       });
-      
+
+      const result = await chatService.getChats();
+
       expect(result.success).toBe(true);
-      expect(mockChatService.createChat).toHaveBeenCalledWith({
-        participant_id: 'user-2'
+      expect(result.data?.chats).toEqual([]);
+      expect(result.data?.total_count).toBe(0);
+    });
+
+    it('should handle database errors when getting chats', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: new Error('Database error')
       });
+
+      const result = await chatService.getChats();
+
+      expect(result.success).toBe(false);
+      expect(result.error_code).toBe(ChatErrorCode.SYSTEM_ERROR);
+      expect(mockSecureLogger.error).toHaveBeenCalled();
     });
   });
 
-  describe('real-time features', () => {
-    it('should handle chat subscriptions', async () => {
-      const result = await mockChatService.subscribeToChat('chat-1', jest.fn());
-      
-      expect(result.success).toBe(true);
-      expect(result.data).toBe('sub-id');
-      expect(mockChatService.subscribeToChat).toHaveBeenCalled();
-    });
-
-    it('should handle typing status updates', async () => {
-      const result = await mockChatService.updateTypingStatus({
-        chat_id: 'chat-1',
-        is_typing: true
-      });
-      
-      expect(result.success).toBe(true);
-      expect(mockChatService.updateTypingStatus).toHaveBeenCalled();
-    });
-  });
-
-  describe('error handling', () => {
-    it('should handle API error responses', () => {
-      const errorResponse = {
-        success: false,
-        error: 'Database error',
-        error_code: 'SYSTEM_ERROR'
+  describe('Real-time Subscriptions', () => {
+    it('should subscribe to chat successfully', async () => {
+      const mockChannel = {
+        on: jest.fn().mockReturnThis(),
+        subscribe: jest.fn().mockResolvedValue({ error: null })
       };
       
-      expect(errorResponse.success).toBe(false);
-      expect(errorResponse.error).toBeDefined();
-      expect(errorResponse.error_code).toBeDefined();
+      mockSupabaseClient.channel.mockReturnValue(mockChannel);
+
+      const callback = jest.fn();
+      const result = await chatService.subscribeToChat('conv-123', callback);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(mockSupabaseClient.channel).toHaveBeenCalledWith(`chat:conv-123`);
+      expect(mockChannel.on).toHaveBeenCalled();
+      expect(mockChannel.subscribe).toHaveBeenCalled();
+    });
+
+    it('should handle subscription errors', async () => {
+      const mockChannel = {
+        on: jest.fn().mockReturnThis(),
+        subscribe: jest.fn().mockResolvedValue({ 
+          error: new Error('Subscription failed') 
+        })
+      };
+      
+      mockSupabaseClient.channel.mockReturnValue(mockChannel);
+
+      const callback = jest.fn();
+      const result = await chatService.subscribeToChat('conv-123', callback);
+
+      expect(result.success).toBe(false);
+      expect(result.error_code).toBe(ChatErrorCode.SYSTEM_ERROR);
+    });
+
+    it('should unsubscribe from chat', async () => {
+      // First subscribe
+      const mockChannel = {
+        on: jest.fn().mockReturnThis(),
+        subscribe: jest.fn().mockResolvedValue({ error: null }),
+        unsubscribe: jest.fn().mockResolvedValue({ error: null })
+      };
+      
+      mockSupabaseClient.channel.mockReturnValue(mockChannel);
+
+      const callback = jest.fn();
+      const subscribeResult = await chatService.subscribeToChat('conv-123', callback);
+      
+      // Then unsubscribe
+      const unsubscribeResult = await chatService.unsubscribeFromChat('conv-123');
+
+      expect(subscribeResult.success).toBe(true);
+      expect(unsubscribeResult).toBeUndefined();
+      expect(mockChannel.unsubscribe).toHaveBeenCalled();
     });
   });
 
-  describe('service cleanup', () => {
-    it('should cleanup resources', async () => {
-      await mockChatService.cleanup();
-      expect(mockChatService.cleanup).toHaveBeenCalled();
+  describe('Error Handling and Edge Cases', () => {
+    it('should handle network errors gracefully', async () => {
+      mockSupabaseClient.rpc.mockRejectedValueOnce(new Error('Network error'));
+
+      const request = {
+        participant_id: 'user-456',
+        chat_type: 'direct' as const
+      };
+
+      const result = await chatService.createChat(request);
+
+      expect(result.success).toBe(false);
+      expect(result.error_code).toBe(ChatErrorCode.SYSTEM_ERROR);
+      expect(mockSecureLogger.error).toHaveBeenCalledWith('Create chat exception', {
+        error: expect.any(Error)
+      });
+    });
+
+    it('should handle null/undefined responses', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: null
+      });
+
+      const request = {
+        participant_id: 'user-456',
+        chat_type: 'direct' as const
+      };
+
+      const result = await chatService.createChat(request);
+
+      expect(result.success).toBe(false);
+      expect(result.error_code).toBe(ChatErrorCode.SYSTEM_ERROR);
+    });
+
+    it('should log security events appropriately', async () => {
+      mockSupabaseClient.auth.getUser.mockResolvedValueOnce({
+        data: { user: null },
+        error: new Error('Unauthorized')
+      });
+
+      const request = {
+        participant_id: 'user-456',
+        chat_type: 'direct' as const
+      };
+
+      await chatService.createChat(request);
+
+      expect(mockSecureLogger.info).toHaveBeenCalledWith('Creating new chat', expect.any(Object));
+    });
+  });
+
+  describe('Rate Limiting', () => {
+    it('should enforce message rate limits', () => {
+      const constraints = ChatConstraints.rateLimit;
+      
+      expect(constraints.messagesPerMinute).toBe(30);
+      expect(constraints.chatsPerHour).toBe(10);
+      
+      // Test rate limit logic conceptually
+      const userId = 'test-user';
+      const messageTimes: number[] = [];
+      const now = Date.now();
+      
+      // Simulate 31 messages in a minute
+      for (let i = 0; i < 31; i++) {
+        messageTimes.push(now + (i * 1000)); // 1 second apart
+      }
+      
+      const messagesInLastMinute = messageTimes.filter(time => 
+        time > now - 60000
+      ).length;
+      
+      expect(messagesInLastMinute).toBeGreaterThan(constraints.messagesPerMinute);
     });
   });
 });

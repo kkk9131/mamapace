@@ -184,20 +184,17 @@ export function useChatList(filters: ChatListFilters = {}) {
         switch (event.type) {
           case ChatEventType.NEW_MESSAGE: {
             // リアルタイム更新を無効化（順序固定のため）
-            console.log('新規メッセージイベント（順序固定のため無視）:', chatId);
             break;
           }
 
           case ChatEventType.MESSAGE_READ: {
             // 既読イベントも無効化（順序固定のため）
-            console.log('既読イベント（順序固定のため無視）:', chatId);
             break;
           }
 
           case ChatEventType.CHAT_UPDATED: {
             // リアルタイム更新を無効化（順序固定のため）
             // 必要に応じて手動でリフレッシュしてもらう
-            console.log('チャット更新イベント（順序固定のため無視）:', chatId);
             break;
           }
 
@@ -224,11 +221,9 @@ export function useChatList(filters: ChatListFilters = {}) {
    */
   const loadChats = useCallback(async (reset: boolean = false) => {
     if (!isAuthenticated || !user) {
-      console.log('useChatList - 認証なし:', { isAuthenticated, userId: user?.id });
       return;
     }
 
-    console.log('useChatList - loadChats開始:', { reset, userId: user.id });
 
     try {
       if (reset) {
@@ -248,7 +243,6 @@ export function useChatList(filters: ChatListFilters = {}) {
         params.cursor = state.nextCursor;
       }
 
-      console.log('useChatList - API呼び出し中:', params);
       const response = await chatService.getChats(params);
       // API response received
 
@@ -267,7 +261,6 @@ export function useChatList(filters: ChatListFilters = {}) {
         });
 
         // リアルタイム購読を無効化（順序固定のため）
-        console.log('リアルタイム購読を無効化中（順序固定のため）');
 
         secureLogger.info('Chat list loaded successfully', {
           chatCount: newChats.length,
@@ -280,7 +273,6 @@ export function useChatList(filters: ChatListFilters = {}) {
       }
 
     } catch (error) {
-      console.error('useChatList - エラー発生:', error);
       secureLogger.warn('Chat list temporarily unavailable', { error });
       setError(`チャット一覧の読み込みエラー: ${error}`);
     }
@@ -484,7 +476,6 @@ export function useChatList(filters: ChatListFilters = {}) {
       }
 
       // リアルタイム購読クリーンアップを無効化（順序固定のため）
-      console.log('リアルタイム購読クリーンアップ無効化');
 
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
@@ -500,7 +491,6 @@ export function useChatList(filters: ChatListFilters = {}) {
   /*
   useEffect(() => {
     // リアルタイム購読システムを完全無効化（順序固定のため）
-    console.log('リアルタイム購読システム無効化中');
   }, [state.chats]);
   */
 

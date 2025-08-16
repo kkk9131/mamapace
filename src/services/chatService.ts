@@ -448,14 +448,11 @@ class ChatService {
    * Gets user's chat list with pagination
    */
   async getChats(params: ChatPaginationParams = {}): Promise<ChatResponse<PaginatedChats>> {
-    console.log('chatService.getChats - 開始:', params);
     try {
       const client = getSupabaseClient();
-      console.log('chatService.getChats - Supabaseクライアント取得完了');
       
       // Get current user from Supabase session
       const { data: { user }, error: authError } = await client.auth.getUser();
-      console.log('chatService.getChats - 認証チェック:', { userId: user?.id, authError });
       if (authError || !user) {
         return {
           success: false,
@@ -465,7 +462,6 @@ class ChatService {
       }
       
       const limit = Math.min(params.limit || CHAT_CONFIG.PAGINATION_DEFAULT_LIMIT, CHAT_CONFIG.PAGINATION_MAX_LIMIT);
-      console.log('chatService.getChats - RPC呼び出し開始:', { userId: user.id, limit });
 
       const { data, error } = await client.rpc('get_user_conversations', {
         p_user_id: user.id,
@@ -521,11 +517,6 @@ class ChatService {
         typing_users: []
       }));
 
-      console.log('chatService.getChats - 成功:', { 
-        chatsCount: chats.length,
-        firstChatLastMessage: chats[0]?.last_message,
-        firstChatUnreadCount: chats[0]?.unread_count
-      });
       return {
         success: true,
         data: {
@@ -537,7 +528,6 @@ class ChatService {
       };
 
     } catch (error) {
-      console.error('chatService.getChats - 例外:', error);
       secureLogger.error('Get chats exception', { error });
       return {
         success: false,
