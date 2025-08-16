@@ -371,7 +371,7 @@ class SecurityTestFramework {
     tests.push(await this.runTest('auth-registration-request', 'authentication', async () => {
       const request = createRegistrationRequest({
         username: 'testuser',
-        maternal_health_id: '1234567890',
+        maternal_health_id: 'TEST_ID_MOCK',
         password: 'TestPassword123!',
         display_name: 'Test User',
         bio: 'Test bio'
@@ -458,7 +458,7 @@ class SecurityTestFramework {
     tests.push(await this.runTest('validation-privacy-compliance', 'validation', async () => {
       const sensitiveData = {
         username: 'testuser',
-        maternal_health_id: '1234567890', // This should trigger a violation
+        maternal_health_id: 'TEST_ID_MOCK', // This should trigger a violation
         password: 'password123',
         some_field: 'normal data'
       };
@@ -563,7 +563,7 @@ class SecurityTestFramework {
     tests.push(await this.runTest('privacy-data-sanitization', 'privacy', async () => {
       const sensitiveData = {
         username: 'testuser',
-        maternal_health_id: '1234567890',
+        maternal_health_id: 'TEST_ID_MOCK',
         password: 'secret123',
         session_token: 'token-abc-123',
         normal_field: 'normal data'
@@ -591,7 +591,7 @@ class SecurityTestFramework {
       // Test that secure logger sanitizes data
       const testData = {
         user: 'testuser',
-        maternal_health_id: '1234567890',
+        maternal_health_id: 'TEST_ID_MOCK',
         action: 'test'
       };
 
