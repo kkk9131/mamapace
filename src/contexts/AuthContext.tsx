@@ -24,8 +24,6 @@ import * as supaAuth from '../services/supabaseAuthAdapter';
 import { getMyProfile, updateMyProfile } from '../services/profileService';
 import { initializeAllServices } from '../utils/serviceInitializer';
 import { secureLogger } from '../utils/privacyProtection';
-import { appConfig } from '../config/appConfig';
-import { mockAuthService } from '../services/mockAuthService';
 
 // =====================================================
 // CONTEXT STATE TYPES
@@ -159,31 +157,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const initializeServices = useCallback(async () => {
     try {
-      secureLogger.info('AuthContext: Initializing services', { useMock: appConfig.useMockAuth });
+      secureLogger.info('AuthContext: Initializing services');
 
-      if (appConfig.useMockAuth) {
-        await mockAuthService.initialize();
+      const result = await initializeAllServices();
+
+      if (result.success) {
         dispatch({ type: 'SET_INITIALIZATION', payload: { initialized: true } });
-        secureLogger.info('AuthContext: Mock services initialized');
+        secureLogger.info('AuthContext: Services initialized successfully', {
+          totalTime: result.totalTime,
+          services: result.services.length
+        });
         await restoreSession();
       } else {
-        const result = await initializeAllServices();
-
-        if (result.success) {
-          dispatch({ type: 'SET_INITIALIZATION', payload: { initialized: true } });
-          secureLogger.info('AuthContext: Services initialized successfully', {
-            totalTime: result.totalTime,
-            services: result.services.length
-          });
-          await restoreSession();
-        } else {
-          const errorMessage = result.criticalErrors.join('; ') || 'サービスの初期化に失敗しました';
-          dispatch({ type: 'SET_INITIALIZATION', payload: { initialized: false, error: errorMessage }});
-          secureLogger.error('AuthContext: Service initialization failed', {
-            criticalErrors: result.criticalErrors,
-            warnings: result.warnings
-          });
-        }
+        const errorMessage = result.criticalErrors.join('; ') || 'サービスの初期化に失敗しました';
+        dispatch({ type: 'SET_INITIALIZATION', payload: { initialized: false, error: errorMessage }});
+        secureLogger.error('AuthContext: Service initialization failed', {
+          criticalErrors: result.criticalErrors,
+          warnings: result.warnings
+        });
       }
     } catch (error) {
       const errorMessage = 'サービスの初期化中にエラーが発生しました';
@@ -201,8 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const restoreSession = useCallback(async () => {
     try {
       secureLogger.info('AuthContext: Restoring session');
-      const svc = appConfig.useMockAuth ? mockAuthService : authService;
-      const user = await svc.loadSession();
+      const user = await authService.loadSession();
       
       if (user) {
         dispatch({ type: 'SET_USER', payload: user });
@@ -233,8 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check session every 5 minutes
     const interval = setInterval(async () => {
       try {
-        const svc = appConfig.useMockAuth ? mockAuthService : authService;
-        const needsRefresh = await svc.needsRefresh();
+        const needsRefresh = await authService.needsRefresh();
         
         if (needsRefresh) {
           secureLogger.info('AuthContext: Session needs refresh, attempting refresh');
@@ -273,8 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'CLEAR_ERROR' });
       
       secureLogger.info('AuthContext: Registration attempt', sanitizeForLogging(request));
-      const svc = appConfig.useMockAuth ? mockAuthService : authService;
-      const response = await svc.register(request);
+      const response = await authService.register(request);
       
       if (response.success) {
         dispatch({ type: 'SET_USER', payload: response.user });
@@ -318,7 +306,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Use a stable native scheme to avoid Expo dev host variations
       const redirectTo = 'mamapace://auth-callback';
 
-      const signUpResult = await supaAuth.signUp({ email: params.email, password: params.password, redirectTo });
+      await supaAuth.signUp({ email: params.email, password: params.password, redirectTo });
 
       // If email confirmations are enabled, session may be null. Try explicit sign-in.
       try {
@@ -367,8 +355,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'CLEAR_ERROR' });
       
       secureLogger.info('AuthContext: Login attempt', sanitizeForLogging(request));
-      const svc = appConfig.useMockAuth ? mockAuthService : authService;
-      const response = await svc.login(request);
+      const response = await authService.login(request);
       
       if (response.success) {
         dispatch({ type: 'SET_USER', payload: response.user });
@@ -433,9 +420,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSessionCheckInterval(null);
       }
       
-      const svc = appConfig.useMockAuth ? mockAuthService : authService;
       try { await supaAuth.signOut(); } catch {}
-      await svc.logout();
+      await authService.logout();
       dispatch({ type: 'LOGOUT' });
       
       secureLogger.security('Logout successful');
@@ -467,8 +453,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       secureLogger.info('AuthContext: Refreshing token');
-      const svc = appConfig.useMockAuth ? mockAuthService : authService;
-      const success = await svc.refreshToken();
+      const success = await authService.refreshToken();
       
       if (!success) {
         secureLogger.warn('AuthContext: Token refresh failed, logging out');
@@ -494,8 +479,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const svc = appConfig.useMockAuth ? mockAuthService : authService;
-      const stats = svc.getServiceStats();
+      const stats = authService.getServiceStats();
       return stats;
     } catch (error) {
       secureLogger.error('Failed to get service health', { error });
@@ -744,8 +728,4 @@ export function withAuth<P extends object>(
 
 export default AuthContext;
 
-// Export additional utilities
-export {
-  useAuthReady,
-  useServiceHealth
-};
+// Additional utilities are already exported above

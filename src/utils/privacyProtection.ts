@@ -291,20 +291,8 @@ export class SecureLogger {
       ...(sanitizedData && { data: sanitizedData })
     };
 
-    switch (level) {
-      case 'debug':
-        console.debug('[SECURE]', logEntry);
-        break;
-      case 'info':
-        console.info('[SECURE]', logEntry);
-        break;
-      case 'warn':
-        console.warn('[SECURE]', logEntry);
-        break;
-      case 'error':
-        console.error('[SECURE]', logEntry);
-        break;
-    }
+    // Production: no console output for security
+    // All logs are stored securely only
   }
 
   debug(message: string, data?: any): void {
