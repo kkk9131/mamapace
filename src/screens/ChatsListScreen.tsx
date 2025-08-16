@@ -42,7 +42,7 @@ export default function ChatsListScreen({ onOpen, filters = {} }: ChatsListScree
         }
         setIsInitialLoadComplete(true);
       } catch (error) {
-        console.error('最終確認時刻復元エラー:', error);
+        // Error restoring last viewed times
         setIsInitialLoadComplete(true);
       }
     };
@@ -60,7 +60,7 @@ export default function ChatsListScreen({ onOpen, filters = {} }: ChatsListScree
         const key = `last_viewed_times_${user?.id}`;
         await AsyncStorage.setItem(key, JSON.stringify(timesObject));
       } catch (error) {
-        console.error('最終確認時刻保存エラー:', error);
+        // Error saving last viewed times
       }
     };
 
@@ -139,7 +139,7 @@ export default function ChatsListScreen({ onOpen, filters = {} }: ChatsListScree
       const key = `last_viewed_times_${user?.id}`;
       await AsyncStorage.setItem(key, JSON.stringify(timesObject));
     } catch (error) {
-      console.error('AsyncStorage保存エラー:', error);
+      // AsyncStorage save error
     }
     
     if (onOpen) {
@@ -303,7 +303,7 @@ export default function ChatsListScreen({ onOpen, filters = {} }: ChatsListScree
       </Pressable>
     );
     } catch (error) {
-      console.error('renderChatItem - エラー:', error);
+      // Error rendering chat item
       // フォールバック表示
       return (
         <View style={{ padding: 16, backgroundColor: colors.surface }}>
@@ -386,9 +386,7 @@ export default function ChatsListScreen({ onOpen, filters = {} }: ChatsListScree
         showsVerticalScrollIndicator={false}
         extraData={[lastViewedTimes.size, chats.length, renderKey]} // 確認時刻数、チャット数、フォーカス状態が変更された時に再レンダリング
         onLayout={() => {
-          if (chats.length > 0) {
-            console.log('FlatList ready - チャット数:', chats.length);
-          }
+          // FlatList layout complete
         }}
       />
     </View>

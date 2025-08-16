@@ -25,8 +25,7 @@ export default function ChatScreen({ chatId: propChatId, userName, onBack, route
   // Get chatId from props or route params
   const chatId = propChatId || route?.params?.chatId;
   
-  console.log('ChatScreen - データベース接続テスト中');
-  console.log('ChatScreen - chatId:', chatId, 'userName:', userName);
+  // Debug logs removed for production
   
   // Use chat hook with actual chatId
   const {
@@ -46,15 +45,7 @@ export default function ChatScreen({ chatId: propChatId, userName, onBack, route
     isLoadingMessages
   } = useChat(chatId || '');
   
-  console.log('useChat状態:', {
-    messagesCount: messages.length,
-    isLoading,
-    isSending,
-    error,
-    canLoadMore,
-    firstMessage: messages[0]?.content?.substring(0, 20),
-    lastMessage: messages[messages.length - 1]?.content?.substring(0, 20)
-  });
+  // Debug state logging removed for production
   
   // Handle send message
   const handleSendMessage = useCallback(async () => {
@@ -65,13 +56,10 @@ export default function ChatScreen({ chatId: propChatId, userName, onBack, route
     const messageToSend = inputMessage.trim();
     setInputMessage('');
     
-    console.log('データベースにメッセージを送信中:', messageToSend);
-    
     try {
       await sendMessage(messageToSend, MessageType.TEXT);
-      console.log('メッセージ送信成功');
     } catch (error) {
-      console.error('メッセージ送信エラー:', error);
+      // Error is handled by the error state
       setInputMessage(messageToSend); // Restore message on error
     }
   }, [inputMessage, isSending, sendMessage]);
@@ -383,10 +371,7 @@ export default function ChatScreen({ chatId: propChatId, userName, onBack, route
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {onBack && (
               <Pressable 
-                onPress={() => {
-                  console.log('戻るボタンが押されました');
-                  onBack();
-                }}
+                onPress={onBack}
                 style={{ 
                   marginRight: 12, 
                   padding: 8, 

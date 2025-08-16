@@ -250,11 +250,7 @@ export function useChatList(filters: ChatListFilters = {}) {
 
       console.log('useChatList - API呼び出し中:', params);
       const response = await chatService.getChats(params);
-      console.log('useChatList - API応答:', { 
-        success: response.success, 
-        chatsCount: response.success ? response.data.chats.length : 0,
-        error: response.error
-      });
+      // API response received
 
       if (response.success) {
         const newChats = reset ? 

@@ -135,13 +135,31 @@ interface CacheEntry<T> {
 class CacheManager {
   private cache = new Map<string, CacheEntry<any>>();
   private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
+  private readonly MAX_CACHE_SIZE = 1000; // Maximum number of entries
+  private readonly MAX_MEMORY_MB = 50; // Maximum memory usage in MB
+  private currentMemoryUsage = 0;
 
   set<T>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {
+    // Check cache size limit
+    if (this.cache.size >= this.MAX_CACHE_SIZE) {
+      this.evictOldest();
+    }
+
+    // Estimate memory usage (rough approximation)
+    const dataSize = this.estimateSize(data);
+    
+    // Check memory limit
+    while (this.currentMemoryUsage + dataSize > this.MAX_MEMORY_MB * 1024 * 1024) {
+      this.evictOldest();
+    }
+
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
       expiry: Date.now() + ttl
     });
+    
+    this.currentMemoryUsage += dataSize;
   }
 
   get<T>(key: string): T | null {
@@ -160,11 +178,16 @@ class CacheManager {
   }
 
   delete(key: string): void {
-    this.cache.delete(key);
+    const entry = this.cache.get(key);
+    if (entry) {
+      this.currentMemoryUsage -= this.estimateSize(entry.data);
+      this.cache.delete(key);
+    }
   }
 
   clear(): void {
     this.cache.clear();
+    this.currentMemoryUsage = 0;
   }
 
   // Clean expired entries
@@ -172,9 +195,33 @@ class CacheManager {
     const now = Date.now();
     for (const [key, entry] of this.cache.entries()) {
       if (now > entry.expiry) {
+        this.currentMemoryUsage -= this.estimateSize(entry.data);
         this.cache.delete(key);
       }
     }
+  }
+
+  // Evict oldest entry when cache is full
+  private evictOldest(): void {
+    let oldestKey: string | null = null;
+    let oldestTime = Infinity;
+    
+    for (const [key, entry] of this.cache.entries()) {
+      if (entry.timestamp < oldestTime) {
+        oldestTime = entry.timestamp;
+        oldestKey = key;
+      }
+    }
+    
+    if (oldestKey) {
+      this.delete(oldestKey);
+    }
+  }
+
+  // Rough estimation of object size in bytes
+  private estimateSize(obj: any): number {
+    const str = JSON.stringify(obj);
+    return str ? str.length * 2 : 0; // UTF-16 characters are ~2 bytes
   }
 
   getStats() {
@@ -424,11 +471,7 @@ class ChatService {
         p_user_id: user.id,
         p_limit: limit
       });
-      console.log('chatService.getChats - RPC応答:', { 
-        dataLength: data?.length || 0, 
-        error: error?.message || 'なし',
-        rawData: data
-      });
+      // RPC response received
 
       if (error) {
         secureLogger.error('Get chats RPC error', { error });

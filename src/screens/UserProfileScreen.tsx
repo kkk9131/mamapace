@@ -120,7 +120,7 @@ export default function UserProfileScreen({ userId, onBack, onNavigateToChat }: 
   const handleStartChat = async (targetUserId: string, userName: string) => {
     // Prevent multiple simultaneous calls
     if (isStartingChat) {
-      console.log('Chat start already in progress');
+      // Chat start already in progress
       return;
     }
     
@@ -133,7 +133,7 @@ export default function UserProfileScreen({ userId, onBack, onNavigateToChat }: 
         return;
       }
       
-      console.log(`Starting chat with ${userName}...`);
+      // Starting chat
       
       
       // Create or get existing conversation
@@ -142,7 +142,7 @@ export default function UserProfileScreen({ userId, onBack, onNavigateToChat }: 
         type: 'direct'
       });
       
-      console.log('Chat creation response:', response);
+      // Chat created
       
       if (response.success && response.data) {
         // Navigate to chat screen
@@ -152,12 +152,12 @@ export default function UserProfileScreen({ userId, onBack, onNavigateToChat }: 
           Alert.alert('成功', `${userName}とのチャットが開始されました`);
         }
       } else {
-        console.error('Chat creation failed:', response);
+        // Chat creation failed
         const errorMessage = response.error || 'チャットの作成に失敗しました';
         Alert.alert('エラー', errorMessage);
       }
     } catch (error: any) {
-      console.error('Failed to start chat:', error);
+      // Failed to start chat
       Alert.alert('エラー', `チャット機能でエラーが発生しました:\n${error.message || error}`);
     } finally {
       setIsStartingChat(false);

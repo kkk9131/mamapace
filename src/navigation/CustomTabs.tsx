@@ -112,9 +112,7 @@ export default function CustomTabs() {
             <AnonFeedScreen onComment={() => setActive('comment' as any)} onOpenPost={() => setActive('comments' as any)} />
           ) : active === 'chat' ? (
             activeChatId ? (
-              (() => {
-                console.log('Rendering ChatScreen with chatId:', activeChatId, 'userName:', activeChatUserName);
-                return (
+              (
                   <ChatScreen 
                     chatId={activeChatId} 
                     userName={activeChatUserName || 'ユーザー'}
@@ -124,8 +122,7 @@ export default function CustomTabs() {
                       setActive(chatReturnTo as any);
                     }}
                   />
-                );
-              })()
+                )
             ) : <ChatsListScreen onOpen={(chatId: string, userName: string) => {
               setActiveChatId(chatId);
               setActiveChatUserName(userName);
