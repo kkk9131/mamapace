@@ -235,6 +235,17 @@ class CacheManager {
       expired
     };
   }
+
+  // Get all cache keys that match a pattern
+  getKeysMatching(pattern: string): string[] {
+    return Array.from(this.cache.keys()).filter(key => key.includes(pattern));
+  }
+
+  // Clear all cache entries matching a pattern
+  clearMatching(pattern: string): void {
+    const keysToDelete = this.getKeysMatching(pattern);
+    keysToDelete.forEach(key => this.delete(key));
+  }
 }
 
 class ChatService {
@@ -258,18 +269,10 @@ class ChatService {
    * Invalidates message cache for a specific chat
    */
   private invalidateMessageCache(chatId: string): void {
-    // Find and delete all cache entries for this chat
-    const keysToDelete: string[] = [];
-    
-    // Since we can't iterate over Map keys directly with a pattern,
-    // we'll use a simple approach to track and delete relevant keys
-    for (const key of Array.from(this.cacheManager['cache'].keys())) {
-      if (key.startsWith(`messages_${chatId}_`)) {
-        keysToDelete.push(key);
-      }
-    }
-    
-    keysToDelete.forEach(key => this.cacheManager.delete(key));
+    // Clear cache entries for this chat using public API
+    const pattern = `messages_${chatId}_`;
+    const keysToDelete = this.cacheManager.getKeysMatching(pattern);
+    this.cacheManager.clearMatching(pattern);
     
     if (keysToDelete.length > 0) {
       secureLogger.info('Invalidated message cache', { chatId, deletedKeys: keysToDelete.length });

@@ -25,8 +25,6 @@ export default function ChatScreen({ chatId: propChatId, userName, onBack, route
   // Get chatId from props or route params
   const chatId = propChatId || route?.params?.chatId;
   
-  // Debug logs removed for production
-  
   // Use chat hook with actual chatId
   const {
     messages,
@@ -44,8 +42,6 @@ export default function ChatScreen({ chatId: propChatId, userName, onBack, route
     typingUsers,
     isLoadingMessages
   } = useChat(chatId || '');
-  
-  // Debug state logging removed for production
   
   // Handle send message
   const handleSendMessage = useCallback(async () => {
