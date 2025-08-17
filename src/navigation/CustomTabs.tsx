@@ -29,11 +29,14 @@ import SearchScreen from '../screens/SearchScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import ProfileEditScreen from '../screens/ProfileEditScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
+import ChannelScreen from '../screens/ChannelScreen';
+import CreateSpaceScreen from '../screens/CreateSpaceScreen';
 
 const tabs = [
   { key: 'me', label: 'あなた', Component: ProfileScreen },
   { key: 'noti', label: '通知', Component: NotificationsScreen },
   { key: 'home', label: 'ホーム', Component: HomeScreen },
+  { key: 'rooms', label: 'ルーム', Component: RoomsScreen },
 ] as const;
 
 const Hidden = { compose: ComposeScreen } as const;

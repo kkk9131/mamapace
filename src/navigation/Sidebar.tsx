@@ -21,6 +21,7 @@ export default function Sidebar({ open, onClose, onNavigate }: { open: boolean; 
   const dock = [
     { key: 'home', label: 'ホーム', icon: '🏠' },
     { key: 'search', label: '検索', icon: '🔎' },
+    { key: 'rooms', label: 'ルーム', icon: '🏰' },
     { key: 'chats', label: 'チャット', icon: '💬' },
     { key: 'anon', label: '愚痴もたまには、、、', icon: '💭' },
     { key: 'createRoom', label: '作成', icon: '🆕' },
