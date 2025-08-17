@@ -336,8 +336,10 @@ export class RoomService {
 
       if (error) {
         console.error('[RoomService] Get chat list error:', error.message);
+        console.error('[RoomService] Error details:', error);
         // If function doesn't exist, return empty array
         if (error.message.toLowerCase().includes('could not find') || error.message.toLowerCase().includes('does not exist') || error.message.includes('schema cache')) {
+          console.log('[RoomService] Fallback: Returning empty chat list');
           return {
             success: true,
             data: []
@@ -372,6 +374,7 @@ export class RoomService {
         console.error('[RoomService] Get anonymous room error:', error.message);
         // If function doesn't exist, return default anonymous room
         if (error.message.toLowerCase().includes('could not find') || error.message.toLowerCase().includes('does not exist') || error.message.includes('schema cache')) {
+          console.log('[RoomService] Fallback: Returning default anonymous room');
           const currentSlot = 'anon_' + new Date().toISOString().slice(0, 13).replace(/[-:T]/g, '_');
           return {
             success: true,
@@ -520,10 +523,11 @@ export class RoomService {
         .eq('user_id', user.user.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+      if (error) {
         console.error('[RoomService] Get subscription error:', error.message);
-        // If table doesn't exist, return default free subscription
-        if (error.message.toLowerCase().includes('could not find') || error.message.toLowerCase().includes('does not exist') || error.message.includes('schema cache')) {
+        // If table doesn't exist or record not found, return default free subscription
+        if (error.code === 'PGRST116' || error.message.toLowerCase().includes('could not find') || error.message.toLowerCase().includes('does not exist') || error.message.includes('schema cache')) {
+          console.log('[RoomService] Fallback: Returning default free subscription');
           return {
             success: true,
             data: {
