@@ -10,7 +10,7 @@
  * 3. Follow existing security patterns from authService and chatService
  */
 
-import { supabase } from './supabaseClient';
+import { getSupabaseClient } from './supabaseClient';
 import { 
   Space, 
   SpaceWithOwner, 
@@ -53,7 +53,7 @@ export class RoomService {
    */
   static async createSpace(request: CreateSpaceRequest): Promise<ApiResponse<{ space_id: string; channel_id: string }>> {
     try {
-      const { data, error } = await supabase.rpc('create_space', {
+      const { data, error } = await getSupabaseClient().rpc('create_space', {
         p_name: request.name,
         p_description: request.description || null,
         p_tags: request.tags || [],
@@ -90,7 +90,7 @@ export class RoomService {
    */
   static async searchPublicSpaces(params: SpaceSearchParams = {}): Promise<ApiResponse<SpaceWithOwner[]>> {
     try {
-      const { data, error } = await supabase.rpc('search_public_spaces', {
+      const { data, error } = await getSupabaseClient().rpc('search_public_spaces', {
         p_query: params.query || null,
         p_tags: params.tags || null,
         p_limit: params.limit || 20,
@@ -118,7 +118,7 @@ export class RoomService {
    */
   static async joinPublicSpace(spaceId: string): Promise<ApiResponse<{ channel_id: string }>> {
     try {
-      const { data, error } = await supabase.rpc('join_public_space', {
+      const { data, error } = await getSupabaseClient().rpc('join_public_space', {
         p_space_id: spaceId
       });
 
@@ -160,11 +160,11 @@ export class RoomService {
       }
 
       // Remove user from channel members
-      const { error } = await supabase
+      const { error } = await getSupabaseClient()
         .from('channel_members')
         .delete()
         .eq('channel_id', channels.id)
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+        .eq('user_id', (await getSupabaseClient().auth.getUser()).data.user?.id);
 
       if (error) {
         console.error('[RoomService] Leave space error:', error.message);
@@ -187,7 +187,7 @@ export class RoomService {
    */
   static async getUserSpaces(): Promise<ApiResponse<ChannelWithSpace[]>> {
     try {
-      const { data, error } = await supabase.rpc('get_chat_list_with_new');
+      const { data, error } = await getSupabaseClient().rpc('get_chat_list_with_new');
 
       if (error) {
         console.error('[RoomService] Get user spaces error:', error.message);
@@ -240,7 +240,7 @@ export class RoomService {
    */
   static async sendChannelMessage(request: SendChannelMessageRequest): Promise<ApiResponse<{ message_id: string }>> {
     try {
-      const { data, error } = await supabase.rpc('send_channel_message', {
+      const { data, error } = await getSupabaseClient().rpc('send_channel_message', {
         p_channel_id: request.channel_id,
         p_content: request.content,
         p_message_type: request.message_type || 'text',
@@ -276,7 +276,7 @@ export class RoomService {
     params: MessagePaginationParams = {}
   ): Promise<ApiResponse<RoomMessageWithSender[]>> {
     try {
-      const { data, error } = await supabase.rpc('get_channel_messages', {
+      const { data, error } = await getSupabaseClient().rpc('get_channel_messages', {
         p_channel_id: channelId,
         p_limit: params.limit || 50,
         p_before_message_id: params.before_message_id || null
@@ -303,7 +303,7 @@ export class RoomService {
    */
   static async markChannelSeen(channelId: string): Promise<ApiResponse<void>> {
     try {
-      const { data, error } = await supabase.rpc('mark_seen', {
+      const { data, error } = await getSupabaseClient().rpc('mark_seen', {
         p_channel_id: channelId
       });
 
@@ -332,7 +332,7 @@ export class RoomService {
    */
   static async getChatListWithNew(): Promise<ApiResponse<ChatListItem[]>> {
     try {
-      const { data, error } = await supabase.rpc('get_chat_list_with_new');
+      const { data, error } = await getSupabaseClient().rpc('get_chat_list_with_new');
 
       if (error) {
         console.error('[RoomService] Get chat list error:', error.message);
@@ -359,7 +359,7 @@ export class RoomService {
    */
   static async getCurrentAnonymousRoom(): Promise<ApiResponse<AnonymousRoom>> {
     try {
-      const { data, error } = await supabase.rpc('get_or_create_current_anon_room');
+      const { data, error } = await getSupabaseClient().rpc('get_or_create_current_anon_room');
 
       if (error) {
         console.error('[RoomService] Get anonymous room error:', error.message);
@@ -390,7 +390,7 @@ export class RoomService {
    */
   static async sendAnonymousMessage(request: SendAnonymousMessageRequest): Promise<ApiResponse<{ message_id: string }>> {
     try {
-      const { data, error } = await supabase.rpc('send_anonymous_message', {
+      const { data, error } = await getSupabaseClient().rpc('send_anonymous_message', {
         p_room_id: request.room_id,
         p_content: request.content,
         p_display_name: request.display_name
@@ -422,7 +422,7 @@ export class RoomService {
    */
   static async getAnonymousMessages(roomId: string): Promise<ApiResponse<AnonymousMessage[]>> {
     try {
-      const { data, error } = await supabase.rpc('get_anonymous_messages', {
+      const { data, error } = await getSupabaseClient().rpc('get_anonymous_messages', {
         p_room_id: roomId,
         p_limit: 50
       });
@@ -452,7 +452,7 @@ export class RoomService {
    */
   static async reportMessage(request: ReportMessageRequest): Promise<ApiResponse<void>> {
     try {
-      const { data, error } = await supabase.rpc('report_message', {
+      const { data, error } = await getSupabaseClient().rpc('report_message', {
         p_message_id: request.message_id,
         p_reason: request.reason,
         p_description: request.description || null
@@ -487,12 +487,12 @@ export class RoomService {
    */
   static async getUserSubscription(): Promise<ApiResponse<Subscription | null>> {
     try {
-      const { data: user } = await supabase.auth.getUser();
+      const { data: user } = await getSupabaseClient().auth.getUser();
       if (!user.user) {
         return { error: 'Not authenticated' };
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('subscriptions')
         .select('*')
         .eq('user_id', user.user.id)
@@ -544,7 +544,7 @@ export class RoomService {
    */
   static async getRealtimeChannels(): Promise<ApiResponse<{ channel_name: string; channel_type: string }[]>> {
     try {
-      const { data, error } = await supabase.rpc('get_user_realtime_channels');
+      const { data, error } = await getSupabaseClient().rpc('get_user_realtime_channels');
 
       if (error) {
         console.error('[RoomService] Get realtime channels error:', error.message);
@@ -567,7 +567,7 @@ export class RoomService {
    */
   static async canSubscribeToChannel(channelId: string): Promise<boolean> {
     try {
-      const { data, error } = await supabase.rpc('can_subscribe_to_channel', {
+      const { data, error } = await getSupabaseClient().rpc('can_subscribe_to_channel', {
         p_channel_id: channelId
       });
 

@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../services/supabaseClient';
+import { getSupabaseClient } from '../services/supabaseClient';
 import { roomService } from '../services/roomService';
 import {
   Space,
@@ -241,7 +241,7 @@ export function useChannelMessages(channelId: string | null) {
       id: tempId,
       channel_id: channelId,
       anonymous_room_id: null,
-      sender_id: (await supabase.auth.getUser()).data.user?.id || '',
+      sender_id: (await getSupabaseClient().auth.getUser()).data.user?.id || '',
       display_name: null,
       message_type: messageType,
       content,
@@ -328,7 +328,7 @@ export function useChannelMessages(channelId: string | null) {
 
     return () => {
       if (realtimeRef.current) {
-        supabase.removeChannel(realtimeRef.current);
+        getSupabaseClient().removeChannel(realtimeRef.current);
       }
     };
   }, [channelId]);
@@ -449,7 +449,7 @@ export function useAnonymousRoom() {
 
     return () => {
       if (realtimeRef.current) {
-        supabase.removeChannel(realtimeRef.current);
+        getSupabaseClient().removeChannel(realtimeRef.current);
       }
     };
   }, [room]);
