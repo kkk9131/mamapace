@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, Pressable, Animated, ScrollView, TextInput, Alert, RefreshControl } from 'react-native';
 import { useTheme } from '../theme/theme';
 import { BlurView } from 'expo-blur';
-import { useSpaceSearch, useSpaceOperations, useSubscription, useChatList } from '../hooks/useRooms';
+import { useSpaceSearch, useSpaceOperations, useSpacePermissions, useChatList } from '../hooks/useRooms';
 import { SpaceWithOwner, ChatListItem } from '../types/room';
 import AnonRoomScreen from './AnonRoomScreen';
 import ChannelScreen from './ChannelScreen';
@@ -27,7 +27,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
   // Hooks
   const { spaces, loading: searchLoading, error: searchError, searchSpaces, clearResults } = useSpaceSearch();
   const { loading: operationLoading, error: operationError, joinSpace } = useSpaceOperations();
-  const { subscription, canCreateSpaces } = useSubscription();
+  const { canCreateSpaces } = useSpacePermissions();
   const { chatList, loading: chatLoading, refresh: refreshChatList } = useChatList();
 
   // Animation
@@ -250,23 +250,21 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                 </BlurView>
               </View>
               
-              {canCreateSpaces && (
-                <Pressable 
-                  onPress={() => setCurrentView('create')}
-                  style={({ pressed }) => [
-                    { 
-                      marginLeft: 12,
-                      backgroundColor: colors.pinkSoft, 
-                      borderRadius: theme.radius.md, 
-                      paddingHorizontal: 16, 
-                      paddingVertical: 12,
-                      transform: [{ scale: pressed ? 0.95 : 1 }]
-                    }
-                  ]}
-                >
-                  <Text style={{ color: '#302126', fontSize: 14, fontWeight: 'bold' }}>作成</Text>
-                </Pressable>
-              )}
+              <Pressable 
+                onPress={() => setCurrentView('create')}
+                style={({ pressed }) => [
+                  { 
+                    marginLeft: 12,
+                    backgroundColor: colors.pinkSoft, 
+                    borderRadius: theme.radius.md, 
+                    paddingHorizontal: 16, 
+                    paddingVertical: 12,
+                    transform: [{ scale: pressed ? 0.95 : 1 }]
+                  }
+                ]}
+              >
+                <Text style={{ color: '#302126', fontSize: 14, fontWeight: 'bold' }}>作成</Text>
+              </Pressable>
             </View>
 
             {/* Filter tabs */}

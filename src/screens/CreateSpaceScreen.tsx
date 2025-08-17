@@ -1,7 +1,7 @@
 /**
  * CREATE SPACE SCREEN
  * 
- * Screen for creating new spaces (paid users only)
+ * Screen for creating new spaces (available to all users)
  * Follows the requirements from room-feature-requirements-v1.md
  */
 
@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../theme/theme';
 import { BlurView } from 'expo-blur';
-import { useSpaceOperations, useSubscription } from '../hooks/useRooms';
+import { useSpaceOperations, useSpacePermissions } from '../hooks/useRooms';
 import { CreateSpaceRequest, RoomConstraints } from '../types/room';
 
 interface CreateSpaceScreenProps {
@@ -44,7 +44,7 @@ export default function CreateSpaceScreen({ onSuccess, onCancel }: CreateSpaceSc
   
   // Hooks
   const { loading, error, createSpace } = useSpaceOperations();
-  const { subscription, canCreateSpaces } = useSubscription();
+  const { canCreateSpaces } = useSpacePermissions();
 
   // Animation
   useEffect(() => {
@@ -55,16 +55,7 @@ export default function CreateSpaceScreen({ onSuccess, onCancel }: CreateSpaceSc
     }).start();
   }, []);
 
-  // Check permission
-  useEffect(() => {
-    if (!canCreateSpaces) {
-      Alert.alert(
-        '有料プラン限定',
-        'スペースの作成には有料プランの契約が必要です',
-        [{ text: 'OK', onPress: onCancel }]
-      );
-    }
-  }, [canCreateSpaces, onCancel]);
+  // All users can create spaces now - no permission check needed
 
   // Validate form
   const isFormValid = () => {
@@ -115,9 +106,7 @@ export default function CreateSpaceScreen({ onSuccess, onCancel }: CreateSpaceSc
     }
   };
 
-  if (!canCreateSpaces) {
-    return null; // Handled by useEffect
-  }
+  // All users can create spaces - no restriction needed
 
   return (
     <Animated.View style={{ 
@@ -464,30 +453,6 @@ export default function CreateSpaceScreen({ onSuccess, onCancel }: CreateSpaceSc
             </Text>
           </View>
 
-          {/* Subscription Info */}
-          <View style={{ 
-            backgroundColor: colors.pinkSoft + '20',
-            borderRadius: theme.radius.lg,
-            padding: 16,
-            marginBottom: 24,
-            borderWidth: 1,
-            borderColor: colors.pinkSoft
-          }}>
-            <Text style={{ 
-              color: colors.text, 
-              fontSize: 14, 
-              fontWeight: 'bold',
-              marginBottom: 4
-            }}>
-              💎 有料プラン特典
-            </Text>
-            <Text style={{ color: colors.subtext, fontSize: 13 }}>
-              現在のプラン: {subscription?.plan || 'unknown'}
-            </Text>
-            <Text style={{ color: colors.subtext, fontSize: 13 }}>
-              スペース作成は有料プランユーザー限定の機能です
-            </Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </Animated.View>

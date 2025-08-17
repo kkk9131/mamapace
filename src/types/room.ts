@@ -277,21 +277,9 @@ export interface RateLimitError {
 }
 
 // =====================================================
-// SUBSCRIPTION TYPES
+// SUBSCRIPTION TYPES - REMOVED
+// All users can now create spaces
 // =====================================================
-
-/**
- * User subscription for space creation permission
- */
-export interface Subscription {
-  user_id: string;
-  plan: 'free' | 'pro' | 'premium';
-  status: 'active' | 'paused' | 'canceled' | 'expired';
-  current_period_start: string;
-  current_period_end: string;
-  created_at: string;
-  updated_at: string;
-}
 
 // =====================================================
 // API RESPONSE TYPES
@@ -500,12 +488,10 @@ export const RoomConstraints = {
 // =====================================================
 
 /**
- * Check if user can create spaces
+ * Check if user can create spaces - now always returns true
  */
-export function canCreateSpaces(subscription?: Subscription): boolean {
-  return subscription?.plan !== 'free' && 
-         subscription?.status === 'active' && 
-         new Date(subscription.current_period_end) > new Date();
+export function canCreateSpaces(): boolean {
+  return true; // All users can create spaces now
 }
 
 /**

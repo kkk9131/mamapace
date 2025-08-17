@@ -23,7 +23,6 @@ import {
   SpaceSearchParams,
   MessagePaginationParams,
   ReportMessageRequest,
-  Subscription,
   MessageEvent,
   MemberEvent,
   TypingEvent,
@@ -294,7 +293,7 @@ export function useChannelMessages(channelId: string | null) {
   useEffect(() => {
     if (!channelId) return;
 
-    const channel = supabase
+    const channel = getSupabaseClient()
       .channel(`channel_messages:${channelId}`)
       .on('postgres_changes', {
         event: 'INSERT',
@@ -381,7 +380,7 @@ export function useAnonymousRoom() {
       setRoom(response.data);
       
       // Fetch messages for this room
-      const messagesResponse = await roomService.getAnonymousMessages(response.data.room_id);
+      const messagesResponse = await roomService.getAnonymousMessages(response.data.id);
       if (messagesResponse.success) {
         setMessages(messagesResponse.data || []);
       }
@@ -405,9 +404,9 @@ export function useAnonymousRoom() {
     setRateLimitError(null);
 
     const response = await roomService.sendAnonymousMessage({
-      room_id: room.room_id,
+      room_id: room.id,
       content,
-      display_name: room.ephemeral_name
+      display_name: `anon_${Date.now()}`
     });
 
     if (response.success) {
@@ -426,13 +425,13 @@ export function useAnonymousRoom() {
   useEffect(() => {
     if (!room) return;
 
-    const channel = supabase
-      .channel(`anonymous_messages:${room.room_id}`)
+    const channel = getSupabaseClient()
+      .channel(`anonymous_messages:${room.id}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'room_messages',
-        filter: `anonymous_room_id=eq.${room.room_id}`
+        filter: `anonymous_room_id=eq.${room.id}`
       }, (payload) => {
         const newMessage = payload.new as AnonymousMessage;
         setMessages(prev => {
@@ -460,7 +459,7 @@ export function useAnonymousRoom() {
 
     const checkExpiry = () => {
       const now = new Date();
-      const expiryTime = new Date(room.expires_at);
+      const expiryTime = new Date(room.closed_at);
       
       if (now >= expiryTime) {
         // Room expired, get new room
@@ -537,46 +536,18 @@ export function useChatList() {
 }
 
 // =====================================================
-// SUBSCRIPTION HOOK
+// SUBSCRIPTION HOOK - REMOVED
+// All users can now create spaces and use all features
 // =====================================================
 
 /**
- * Hook for user subscription management
+ * Hook for space creation permission - now always returns true
  */
-export function useSubscription() {
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [canCreateSpaces, setCanCreateSpaces] = useState(false);
-
-  const fetchSubscription = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    const response = await roomService.getUserSubscription();
-    if (response.success) {
-      setSubscription(response.data);
-      
-      // Check if user can create spaces
-      const canCreate = await roomService.canCreateSpaces();
-      setCanCreateSpaces(canCreate);
-    } else {
-      setError(response.error);
-    }
-
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchSubscription();
-  }, [fetchSubscription]);
-
+export function useSpacePermissions() {
   return {
-    subscription,
-    loading,
-    error,
-    canCreateSpaces,
-    refresh: fetchSubscription
+    canCreateSpaces: true,
+    loading: false,
+    error: null
   };
 }
 
