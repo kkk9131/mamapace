@@ -10,6 +10,10 @@
 # Dependencies
 node_modules/
 
+# Testing
+coverage/
+*.lcov
+
 # Expo
 .expo/
 dist/
