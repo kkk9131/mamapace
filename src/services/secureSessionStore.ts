@@ -19,26 +19,38 @@ try {
       },
       async setItem(key: string, value: string) {
         await SecureStore.setItemAsync(key, value, {
-          keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY
+          keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         });
       },
       async removeItem(key: string) {
         await SecureStore.deleteItemAsync(key);
-      }
+      },
     } as StorageProvider;
   } else {
     provider = {
-      async getItem(key: string) { return await AsyncStorage.getItem(key); },
-      async setItem(key: string, value: string) { await AsyncStorage.setItem(key, value); },
-      async removeItem(key: string) { await AsyncStorage.removeItem(key); }
+      async getItem(key: string) {
+        return await AsyncStorage.getItem(key);
+      },
+      async setItem(key: string, value: string) {
+        await AsyncStorage.setItem(key, value);
+      },
+      async removeItem(key: string) {
+        await AsyncStorage.removeItem(key);
+      },
     };
   }
 } catch {
   // フォールバック: AsyncStorage
   provider = {
-    async getItem(key: string) { return await AsyncStorage.getItem(key); },
-    async setItem(key: string, value: string) { await AsyncStorage.setItem(key, value); },
-    async removeItem(key: string) { await AsyncStorage.removeItem(key); }
+    async getItem(key: string) {
+      return await AsyncStorage.getItem(key);
+    },
+    async setItem(key: string, value: string) {
+      await AsyncStorage.setItem(key, value);
+    },
+    async removeItem(key: string) {
+      await AsyncStorage.removeItem(key);
+    },
   };
 }
 
@@ -49,9 +61,15 @@ const KEYS = {
   EXPIRES_AT: 'auth_expires_at',
 } as const;
 
-async function setItem(key: string, value: string): Promise<void> { await provider.setItem(key, value); }
-async function getItem(key: string): Promise<string | null> { return await provider.getItem(key); }
-async function removeItem(key: string): Promise<void> { await provider.removeItem(key); }
+async function setItem(key: string, value: string): Promise<void> {
+  await provider.setItem(key, value);
+}
+async function getItem(key: string): Promise<string | null> {
+  return await provider.getItem(key);
+}
+async function removeItem(key: string): Promise<void> {
+  await provider.removeItem(key);
+}
 
 export type StoredSession = {
   user: any | null;
@@ -61,7 +79,12 @@ export type StoredSession = {
 };
 
 export const secureSessionStore = {
-  async setSession(user: any, sessionToken: string, refreshToken: string, expiresAt: string): Promise<void> {
+  async setSession(
+    user: any,
+    sessionToken: string,
+    refreshToken: string,
+    expiresAt: string
+  ): Promise<void> {
     await Promise.all([
       setItem(KEYS.USER, JSON.stringify(user)),
       setItem(KEYS.SESSION_TOKEN, sessionToken),
@@ -85,7 +108,11 @@ export const secureSessionStore = {
     };
   },
 
-  async updateTokens(sessionToken: string, refreshToken: string, expiresAt: string): Promise<void> {
+  async updateTokens(
+    sessionToken: string,
+    refreshToken: string,
+    expiresAt: string
+  ): Promise<void> {
     await Promise.all([
       setItem(KEYS.SESSION_TOKEN, sessionToken),
       setItem(KEYS.REFRESH_TOKEN, refreshToken),

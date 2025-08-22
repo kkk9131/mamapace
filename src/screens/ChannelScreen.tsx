@@ -1,47 +1,65 @@
 /**
  * CHANNEL SCREEN
- * 
+ *
  * Screen for viewing and interacting with channel messages
  * Implements channel messaging with real-time updates and NEW badge functionality
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  TextInput, 
-  Pressable, 
-  KeyboardAvoidingView, 
+import {
+  View,
+  Text,
+  FlatList,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
   Platform,
   Alert,
   RefreshControl,
-  Animated
+  Animated,
 } from 'react-native';
 import { useTheme } from '../theme/theme';
+import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { BlurView } from 'expo-blur';
-import { useChannelMessages, useModeration } from '../hooks/useRooms';
+import {
+  useChannelMessages,
+  useModeration,
+  useSpaceOperations,
+} from '../hooks/useRooms';
 import { RoomMessageWithSender, ReportMessageRequest } from '../types/room';
+import ExpandableText from '../components/ExpandableText';
 
 interface ChannelScreenProps {
   channelId: string;
   spaceName: string;
+  spaceId?: string; // Optional - if not provided, exit functionality is disabled
   onBack?: () => void;
+  onExit?: () => void; // Called after successful exit
 }
 
-export default function ChannelScreen({ channelId, spaceName, onBack }: ChannelScreenProps) {
+export default function ChannelScreen({
+  channelId,
+  spaceName,
+  spaceId,
+  onBack,
+  onExit,
+}: ChannelScreenProps) {
   const theme = useTheme() as any;
   const { colors } = theme;
-  
+  const { handPreference } = useHandPreference();
+
   // State
   const [messageText, setMessageText] = useState('');
   const [showReportModal, setShowReportModal] = useState(false);
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
-  
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
+    null
+  );
+  const [showExitMenu, setShowExitMenu] = useState(false);
+
   // Refs
   const flatListRef = useRef<FlatList>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  
+
   // Hooks
   const {
     messages,
@@ -51,23 +69,34 @@ export default function ChannelScreen({ channelId, spaceName, onBack }: ChannelS
     sendMessage,
     loadMore,
     markSeen,
-    refresh
+    refresh,
   } = useChannelMessages(channelId);
-  
-  const { 
-    loading: reportLoading, 
-    error: reportError, 
-    reportMessage 
+
+  const {
+    loading: reportLoading,
+    error: reportError,
+    reportMessage,
   } = useModeration();
 
-  // Animation
+  const {
+    loading: exitLoading,
+    error: exitError,
+    leaveSpace,
+  } = useSpaceOperations();
+
+  // Animation - smart animation handling to prevent blank screen on back navigation
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, []);
+    // Ensure immediate display for smooth navigation experience
+    const timer = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [fadeAnim]);
 
   // Mark channel as seen when screen loads
   useEffect(() => {
@@ -93,11 +122,15 @@ export default function ChannelScreen({ channelId, spaceName, onBack }: ChannelS
   };
 
   // Handle message report
-  const handleReportMessage = async (messageId: string, reason: ReportMessageRequest['reason'], description?: string) => {
+  const handleReportMessage = async (
+    messageId: string,
+    reason: ReportMessageRequest['reason'],
+    description?: string
+  ) => {
     const success = await reportMessage({
       message_id: messageId,
       reason,
-      description
+      description,
     });
 
     if (success) {
@@ -109,144 +142,225 @@ export default function ChannelScreen({ channelId, spaceName, onBack }: ChannelS
     }
   };
 
+  // Handle room exit
+  const handleExitRoom = async () => {
+    if (!spaceId) return; // Exit functionality not available without spaceId
+
+    setShowExitMenu(false);
+
+    Alert.alert(
+      'ルーム退出',
+      `${spaceName}から退出しますか？\nこの操作は取り消せません。`,
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: '退出',
+          style: 'destructive',
+          onPress: async () => {
+            const success = await leaveSpace(spaceId);
+            if (success) {
+              Alert.alert('退出完了', `${spaceName}から退出しました`);
+              if (onExit) {
+                onExit();
+              } else if (onBack) {
+                onBack();
+              }
+            } else if (exitError) {
+              Alert.alert('エラー', exitError);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Render message item
-  const renderMessage = ({ item, index }: { item: RoomMessageWithSender; index: number }) => {
+  const renderMessage = ({
+    item,
+    index,
+  }: {
+    item: RoomMessageWithSender;
+    index: number;
+  }) => {
     const isOwnMessage = item.sender_id === ''; // Will be replaced with actual user ID check
-    const showAvatar = index === messages.length - 1 || 
-                      (index < messages.length - 1 && messages[index + 1].sender_id !== item.sender_id);
 
     return (
-      <View style={{ 
-        paddingHorizontal: theme.spacing(2), 
-        paddingVertical: theme.spacing(1),
-        flexDirection: 'row',
-        alignItems: 'flex-start'
-      }}>
-        {/* Avatar placeholder */}
-        <View style={{ 
-          width: 36, 
-          height: 36, 
-          borderRadius: 18, 
-          backgroundColor: colors.subtext + '20',
-          marginRight: 12,
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: showAvatar ? 1 : 0
-        }}>
-          <Text style={{ fontSize: 16 }}>
-            {item.sender_avatar_emoji || '👤'}
-          </Text>
-        </View>
-
-        {/* Message content */}
-        <View style={{ flex: 1 }}>
-          {showAvatar && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-              <Text style={{ 
-                color: colors.text, 
-                fontSize: 14, 
-                fontWeight: 'bold',
-                marginRight: 8
-              }}>
-                {item.sender_display_name || item.sender_username}
-              </Text>
-              <Text style={{ color: colors.subtext, fontSize: 12 }}>
-                {new Date(item.created_at).toLocaleString('ja-JP', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </Text>
-            </View>
-          )}
-
-          <Pressable
-            onLongPress={() => {
-              if (!isOwnMessage) {
-                setSelectedMessageId(item.id);
-                Alert.alert(
-                  'メッセージ操作',
-                  'このメッセージを報告しますか？',
-                  [
-                    { text: 'キャンセル', style: 'cancel' },
-                    { 
-                      text: '報告', 
-                      style: 'destructive',
-                      onPress: () => handleReportMessage(item.id, 'inappropriate')
-                    }
-                  ]
-                );
-              }
-            }}
-            style={({ pressed }) => [
+      <Pressable
+        onLongPress={() => {
+          if (!isOwnMessage) {
+            setSelectedMessageId(item.id);
+            Alert.alert('メッセージ操作', 'このメッセージを報告しますか？', [
+              { text: 'キャンセル', style: 'cancel' },
               {
-                backgroundColor: item.is_masked ? colors.subtext + '20' : 'transparent',
-                borderRadius: theme.radius.md,
-                padding: item.is_masked ? 8 : 0,
-                opacity: pressed ? 0.7 : 1
-              }
-            ]}
+                text: '報告',
+                style: 'destructive',
+                onPress: () => handleReportMessage(item.id, 'inappropriate'),
+              },
+            ]);
+          }
+        }}
+        style={({ pressed }) => [
+          {
+            transform: [{ scale: pressed ? 0.98 : 1 }],
+            marginHorizontal: theme.spacing(2),
+            marginVertical: theme.spacing(1),
+          },
+        ]}
+      >
+        <View style={{ borderRadius: theme.radius.lg, overflow: 'hidden' }}>
+          <BlurView
+            intensity={30}
+            tint="dark"
+            style={{
+              backgroundColor: '#ffffff10',
+              padding: theme.spacing(1.75),
+            }}
           >
-            <Text style={{ 
-              color: item.is_masked ? colors.subtext : colors.text, 
-              fontSize: 15,
-              lineHeight: 20
-            }}>
-              {item.content}
-            </Text>
-          </Pressable>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 8,
+              }}
+            >
+              <View style={{ 
+            flexDirection: handPreference === 'left' ? 'row' : 'row-reverse', 
+            alignItems: 'center' 
+          }}>
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    marginRight: 8,
+                  }}
+                >
+                  {item.sender_display_name || item.sender_username}
+                </Text>
+                <Text
+                  style={{
+                    color: colors.subtext,
+                    fontSize: 12,
+                  }}
+                >
+                  {item.sender_avatar_emoji || '👤'}
+                </Text>
+              </View>
 
-          {item.is_edited && (
-            <Text style={{ 
-              color: colors.subtext, 
-              fontSize: 11, 
-              marginTop: 2,
-              fontStyle: 'italic'
-            }}>
-              (編集済み)
+              {item.is_edited && (
+                <Text
+                  style={{
+                    color: colors.subtext,
+                    fontSize: 11,
+                    fontStyle: 'italic',
+                  }}
+                >
+                  (編集済み)
+                </Text>
+              )}
+            </View>
+
+            <ExpandableText
+              text={item.content || ''}
+              maxLines={3}
+              textStyle={{
+                color: item.is_masked ? colors.subtext : colors.text,
+                fontSize: 16,
+              }}
+              containerStyle={{ marginBottom: 8 }}
+            />
+
+            <Text style={{ color: colors.subtext, fontSize: 12 }}>
+              {new Date(item.created_at).toLocaleString('ja-JP', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </Text>
-          )}
+          </BlurView>
         </View>
-      </View>
+      </Pressable>
     );
   };
 
   return (
-    <Animated.View style={{ 
-      flex: 1, 
-      backgroundColor: 'transparent',
-      opacity: fadeAnim
-    }}>
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
+    <Animated.View
+      style={{
+        flex: 1,
+        backgroundColor: colors.bg || '#000000',
+        opacity: fadeAnim,
+      }}
+    >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {/* Header */}
-        <View style={{ 
-          paddingTop: 48, 
-          paddingBottom: 16, 
-          paddingHorizontal: theme.spacing(2),
-          borderBottomWidth: 1,
-          borderBottomColor: colors.subtext + '20'
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View
+          style={{
+            paddingTop: 48,
+            paddingBottom: 16,
+            paddingHorizontal: theme.spacing(2),
+            borderBottomWidth: 1,
+            borderBottomColor: colors.subtext + '20',
+          }}
+        >
+          <View style={{ 
+            flexDirection: handPreference === 'left' ? 'row' : 'row-reverse', 
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
             {onBack && (
-              <Pressable onPress={onBack} style={{ marginRight: 12 }}>
-                <Text style={{ color: colors.text, fontSize: 16 }}>←</Text>
+              <Pressable 
+                onPress={onBack} 
+                style={{ 
+                  ...(handPreference === 'left' ? { marginRight: 12 } : { marginLeft: 12 })
+                }}
+              >
+                <Text style={{ color: colors.text, fontSize: 16 }}>
+                  {handPreference === 'left' ? '←' : '→'}
+                </Text>
               </Pressable>
             )}
             <View style={{ flex: 1 }}>
-              <Text style={{ 
-                color: colors.text, 
-                fontSize: 18, 
-                fontWeight: 'bold' 
-              }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                }}
+              >
                 {spaceName}
               </Text>
               <Text style={{ color: colors.subtext, fontSize: 14 }}>
                 #general
               </Text>
             </View>
+
+            {/* Three dots menu - only show if spaceId is available */}
+            {spaceId && (
+              <Pressable
+                onPress={() => setShowExitMenu(true)}
+                style={({ pressed }) => [
+                  {
+                    padding: 8,
+                    marginRight: -8,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 20,
+                    fontWeight: 'bold',
+                  }}
+                >
+                  •••
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
 
@@ -254,7 +368,7 @@ export default function ChannelScreen({ channelId, spaceName, onBack }: ChannelS
         <FlatList
           ref={flatListRef}
           data={messages}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           renderItem={renderMessage}
           contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
           inverted={false}
@@ -273,27 +387,33 @@ export default function ChannelScreen({ channelId, spaceName, onBack }: ChannelS
           }}
           onEndReachedThreshold={0.1}
           ListEmptyComponent={() => (
-            <View style={{ 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              paddingVertical: 40 
-            }}>
+            <View
+              style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 40,
+              }}
+            >
               <Text style={{ color: colors.subtext, fontSize: 16 }}>
-                {loading ? 'メッセージを読み込み中...' : 'まだメッセージがありません'}
+                {loading
+                  ? 'メッセージを読み込み中...'
+                  : 'まだメッセージがありません'}
               </Text>
               {!loading && (
-                <Text style={{ 
-                  color: colors.subtext, 
-                  fontSize: 14, 
-                  marginTop: 8,
-                  textAlign: 'center'
-                }}>
+                <Text
+                  style={{
+                    color: colors.subtext,
+                    fontSize: 14,
+                    marginTop: 8,
+                    textAlign: 'center',
+                  }}
+                >
                   最初のメッセージを送信してみましょう
                 </Text>
               )}
             </View>
           )}
-          ListHeaderComponent={() => (
+          ListHeaderComponent={() =>
             hasMore ? (
               <View style={{ alignItems: 'center', padding: 16 }}>
                 <Text style={{ color: colors.subtext, fontSize: 14 }}>
@@ -301,27 +421,31 @@ export default function ChannelScreen({ channelId, spaceName, onBack }: ChannelS
                 </Text>
               </View>
             ) : null
-          )}
+          }
         />
 
         {/* Message Input */}
-        <View style={{ 
-          padding: theme.spacing(2),
-          paddingBottom: Platform.OS === 'ios' ? 34 : 16
-        }}>
-          <View style={{ 
-            borderRadius: theme.radius.lg, 
-            overflow: 'hidden' 
-          }}>
-            <BlurView 
-              intensity={30} 
-              tint="dark" 
-              style={{ 
+        <View
+          style={{
+            padding: theme.spacing(2),
+            paddingBottom: Platform.OS === 'ios' ? 90 : 20,
+          }}
+        >
+          <View
+            style={{
+              borderRadius: theme.radius.lg,
+              overflow: 'hidden',
+            }}
+          >
+            <BlurView
+              intensity={30}
+              tint="dark"
+              style={{
                 backgroundColor: '#ffffff10',
-                flexDirection: 'row',
+                flexDirection: handPreference === 'left' ? 'row-reverse' : 'row',
                 alignItems: 'flex-end',
                 paddingHorizontal: 16,
-                paddingVertical: 12
+                paddingVertical: 12,
               }}
             >
               <TextInput
@@ -330,7 +454,7 @@ export default function ChannelScreen({ channelId, spaceName, onBack }: ChannelS
                   color: colors.text,
                   fontSize: 16,
                   maxHeight: 100,
-                  textAlignVertical: 'top'
+                  textAlignVertical: 'top',
                 }}
                 placeholder="メッセージを入力..."
                 placeholderTextColor={colors.subtext}
@@ -341,26 +465,30 @@ export default function ChannelScreen({ channelId, spaceName, onBack }: ChannelS
                 onSubmitEditing={handleSendMessage}
                 blurOnSubmit={false}
               />
-              
+
               <Pressable
                 onPress={handleSendMessage}
-                disabled={!messageText.trim()}
+                disabled={!messageText.trim() || exitLoading}
                 style={({ pressed }) => [
                   {
-                    backgroundColor: messageText.trim() ? colors.pink : colors.subtext + '40',
+                    backgroundColor: messageText.trim()
+                      ? colors.pink
+                      : colors.subtext + '40',
                     borderRadius: theme.radius.md,
                     paddingHorizontal: 16,
                     paddingVertical: 8,
-                    marginLeft: 8,
-                    transform: [{ scale: pressed ? 0.95 : 1 }]
-                  }
+                    ...(handPreference === 'left' ? { marginRight: 8 } : { marginLeft: 8 }),
+                    transform: [{ scale: pressed ? 0.95 : 1 }],
+                  },
                 ]}
               >
-                <Text style={{ 
-                  color: messageText.trim() ? 'white' : colors.subtext,
-                  fontSize: 14,
-                  fontWeight: 'bold'
-                }}>
+                <Text
+                  style={{
+                    color: messageText.trim() ? 'white' : colors.subtext,
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                  }}
+                >
                   送信
                 </Text>
               </Pressable>
@@ -368,21 +496,121 @@ export default function ChannelScreen({ channelId, spaceName, onBack }: ChannelS
           </View>
         </View>
 
+        {/* Exit Menu Modal - only show if spaceId is available */}
+        {showExitMenu && spaceId && (
+          <Pressable
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+            onPress={() => setShowExitMenu(false)}
+          >
+            <Pressable
+              style={{
+                backgroundColor: colors.bg,
+                borderRadius: theme.radius.lg,
+                marginHorizontal: theme.spacing(4),
+                paddingVertical: theme.spacing(3),
+                paddingHorizontal: theme.spacing(2),
+                minWidth: 200,
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: colors.subtext + '20',
+              }}
+              onPress={e => e.stopPropagation()}
+            >
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                  marginBottom: theme.spacing(3),
+                }}
+              >
+                {spaceName}
+              </Text>
+
+              <Pressable
+                onPress={handleExitRoom}
+                disabled={exitLoading}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: exitLoading
+                      ? colors.subtext + '40'
+                      : colors.pink,
+                    borderRadius: theme.radius.md,
+                    paddingHorizontal: theme.spacing(4),
+                    paddingVertical: theme.spacing(1.5),
+                    marginBottom: theme.spacing(2),
+                    opacity: pressed ? 0.7 : 1,
+                    minWidth: 120,
+                    alignItems: 'center',
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    color: 'white',
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {exitLoading ? '退出中...' : '退出'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setShowExitMenu(false)}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: 'transparent',
+                    borderRadius: theme.radius.md,
+                    paddingHorizontal: theme.spacing(4),
+                    paddingVertical: theme.spacing(1.5),
+                    opacity: pressed ? 0.7 : 1,
+                    minWidth: 120,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.subtext + '40',
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 16,
+                  }}
+                >
+                  キャンセル
+                </Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        )}
+
         {/* Error display */}
-        {error && (
-          <View style={{ 
-            position: 'absolute',
-            top: 100,
-            left: theme.spacing(2),
-            right: theme.spacing(2),
-            backgroundColor: colors.pink + '20',
-            borderRadius: theme.radius.md,
-            padding: 12,
-            borderWidth: 1,
-            borderColor: colors.pink
-          }}>
+        {(error || exitError) && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 100,
+              left: theme.spacing(2),
+              right: theme.spacing(2),
+              backgroundColor: colors.pink + '20',
+              borderRadius: theme.radius.md,
+              padding: 12,
+              borderWidth: 1,
+              borderColor: colors.pink,
+            }}
+          >
             <Text style={{ color: colors.pink, fontSize: 14 }}>
-              {error}
+              {error || exitError}
             </Text>
           </View>
         )}

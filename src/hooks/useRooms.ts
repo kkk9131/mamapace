@@ -1,6 +1,6 @@
 /**
  * ROOM HOOKS
- * 
+ *
  * React hooks for room system state management
  * Handles spaces, channels, messages, and real-time updates
  */
@@ -28,7 +28,7 @@ import {
   TypingEvent,
   RoomEventType,
   OptimisticRoomMessage,
-  getCurrentAnonymousSlotId
+  getCurrentAnonymousSlotId,
 } from '../types/room';
 
 // =====================================================
@@ -69,7 +69,7 @@ export function useUserSpaces() {
     spaces,
     loading,
     error,
-    refresh
+    refresh,
   };
 }
 
@@ -106,7 +106,55 @@ export function useSpaceSearch() {
     loading,
     error,
     searchSpaces,
-    clearResults
+    clearResults,
+  };
+}
+
+/**
+ * Hook for popular spaces (sorted by member count)
+ */
+export function usePopularSpaces() {
+  const [spaces, setSpaces] = useState<SpaceWithOwner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPopularSpaces = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    // Search with empty query to get all public spaces, sorted by popularity
+    const response = await roomService.searchPublicSpaces({
+      query: '',
+      limit: 50,
+    });
+
+    if (response.success) {
+      // Sort by member count descending (most popular first)
+      const sortedSpaces = (response.data || []).sort(
+        (a, b) => b.member_count - a.member_count
+      );
+      setSpaces(sortedSpaces);
+    } else {
+      setError(response.error);
+      setSpaces([]);
+    }
+
+    setLoading(false);
+  }, []);
+
+  const refresh = useCallback(() => {
+    fetchPopularSpaces();
+  }, [fetchPopularSpaces]);
+
+  useEffect(() => {
+    fetchPopularSpaces();
+  }, [fetchPopularSpaces]);
+
+  return {
+    spaces,
+    loading,
+    error,
+    refresh,
   };
 }
 
@@ -167,7 +215,7 @@ export function useSpaceOperations() {
     error,
     createSpace,
     joinSpace,
-    leaveSpace
+    leaveSpace,
   };
 }
 
@@ -186,35 +234,38 @@ export function useChannelMessages(channelId: string | null) {
   const realtimeRef = useRef<any>(null);
 
   // Fetch initial messages
-  const fetchMessages = useCallback(async (beforeMessageId?: string) => {
-    if (!channelId) return;
+  const fetchMessages = useCallback(
+    async (beforeMessageId?: string) => {
+      if (!channelId) return;
 
-    setLoading(true);
-    if (!beforeMessageId) {
-      setError(null);
-    }
-
-    const response = await roomService.getChannelMessages(channelId, {
-      limit: 50,
-      before_message_id: beforeMessageId
-    });
-
-    if (response.success) {
-      const newMessages = response.data || [];
-      if (beforeMessageId) {
-        setMessages(prev => [...newMessages, ...prev]);
-      } else {
-        setMessages(newMessages);
-      }
-      setHasMore(newMessages.length === 50);
-    } else {
+      setLoading(true);
       if (!beforeMessageId) {
-        setError(response.error);
+        setError(null);
       }
-    }
 
-    setLoading(false);
-  }, [channelId]);
+      const response = await roomService.getChannelMessages(channelId, {
+        limit: 50,
+        before_message_id: beforeMessageId,
+      });
+
+      if (response.success) {
+        const newMessages = response.data || [];
+        if (beforeMessageId) {
+          setMessages(prev => [...newMessages, ...prev]);
+        } else {
+          setMessages(newMessages);
+        }
+        setHasMore(newMessages.length === 50);
+      } else {
+        if (!beforeMessageId) {
+          setError(response.error);
+        }
+      }
+
+      setLoading(false);
+    },
+    [channelId]
+  );
 
   // Load more messages (pagination)
   const loadMore = useCallback(async () => {
@@ -225,62 +276,73 @@ export function useChannelMessages(channelId: string | null) {
   }, [hasMore, loading, messages, fetchMessages]);
 
   // Send message
-  const sendMessage = useCallback(async (content: string, messageType: 'text' | 'image' | 'file' = 'text') => {
-    if (!channelId) return null;
+  const sendMessage = useCallback(
+    async (
+      content: string,
+      messageType: 'text' | 'image' | 'file' = 'text'
+    ) => {
+      if (!channelId) return null;
 
-    const validation = roomService.validateMessageContent(content);
-    if (!validation.isValid) {
-      setError(validation.error || 'Invalid message');
-      return null;
-    }
+      const validation = roomService.validateMessageContent(content);
+      if (!validation.isValid) {
+        setError(validation.error || 'Invalid message');
+        return null;
+      }
 
-    // Add optimistic message
-    const tempId = `temp_${Date.now()}`;
-    const optimisticMessage: OptimisticRoomMessage = {
-      id: tempId,
-      channel_id: channelId,
-      anonymous_room_id: null,
-      sender_id: (await getSupabaseClient().auth.getUser()).data.user?.id || '',
-      display_name: null,
-      message_type: messageType,
-      content,
-      attachments: [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      deleted_at: null,
-      expires_at: null,
-      is_edited: false,
-      report_count: 0,
-      is_masked: false,
-      sender_username: 'You',
-      sender_display_name: 'You',
-      sender_avatar_emoji: null,
-      isOptimistic: true,
-      tempId
-    };
+      // Add optimistic message
+      const tempId = `temp_${Date.now()}`;
+      const optimisticMessage: OptimisticRoomMessage = {
+        id: tempId,
+        channel_id: channelId,
+        anonymous_room_id: null,
+        sender_id:
+          (await getSupabaseClient().auth.getUser()).data.user?.id || '',
+        display_name: null,
+        message_type: messageType,
+        content,
+        attachments: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deleted_at: null,
+        expires_at: null,
+        is_edited: false,
+        report_count: 0,
+        is_masked: false,
+        sender_username: 'You',
+        sender_display_name: 'You',
+        sender_avatar_emoji: null,
+        isOptimistic: true,
+        tempId,
+      };
 
-    setMessages(prev => [...prev, optimisticMessage]);
+      setMessages(prev => [...prev, optimisticMessage]);
 
-    const response = await roomService.sendChannelMessage({
-      channel_id: channelId,
-      content,
-      message_type: messageType
-    });
+      const response = await roomService.sendChannelMessage({
+        channel_id: channelId,
+        content,
+        message_type: messageType,
+      });
 
-    if (response.success) {
-      // Remove optimistic message (real message will come via realtime)
-      setMessages(prev => prev.filter(msg => (msg as OptimisticRoomMessage).tempId !== tempId));
-      return response.data;
-    } else {
-      // Update optimistic message with error
-      setMessages(prev => prev.map(msg => 
-        (msg as OptimisticRoomMessage).tempId === tempId 
-          ? { ...msg, error: response.error }
-          : msg
-      ));
-      return null;
-    }
-  }, [channelId]);
+      if (response.success) {
+        // Remove optimistic message (real message will come via realtime)
+        setMessages(prev =>
+          prev.filter(msg => (msg as OptimisticRoomMessage).tempId !== tempId)
+        );
+        return response.data;
+      } else {
+        // Update optimistic message with error
+        setMessages(prev =>
+          prev.map(msg =>
+            (msg as OptimisticRoomMessage).tempId === tempId
+              ? { ...msg, error: response.error }
+              : msg
+          )
+        );
+        return null;
+      }
+    },
+    [channelId]
+  );
 
   // Mark channel as seen
   const markSeen = useCallback(async () => {
@@ -295,32 +357,42 @@ export function useChannelMessages(channelId: string | null) {
 
     const channel = getSupabaseClient()
       .channel(`channel_messages:${channelId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'room_messages',
-        filter: `channel_id=eq.${channelId}`
-      }, (payload) => {
-        const newMessage = payload.new as RoomMessageWithSender;
-        setMessages(prev => {
-          // Avoid duplicates
-          if (prev.find(msg => msg.id === newMessage.id)) {
-            return prev;
-          }
-          return [...prev, newMessage];
-        });
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'room_messages',
-        filter: `channel_id=eq.${channelId}`
-      }, (payload) => {
-        const updatedMessage = payload.new as RoomMessageWithSender;
-        setMessages(prev => prev.map(msg => 
-          msg.id === updatedMessage.id ? updatedMessage : msg
-        ));
-      })
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'room_messages',
+          filter: `channel_id=eq.${channelId}`,
+        },
+        payload => {
+          const newMessage = payload.new as RoomMessageWithSender;
+          setMessages(prev => {
+            // Avoid duplicates
+            if (prev.find(msg => msg.id === newMessage.id)) {
+              return prev;
+            }
+            return [...prev, newMessage];
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'room_messages',
+          filter: `channel_id=eq.${channelId}`,
+        },
+        payload => {
+          const updatedMessage = payload.new as RoomMessageWithSender;
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === updatedMessage.id ? updatedMessage : msg
+            )
+          );
+        }
+      )
       .subscribe();
 
     realtimeRef.current = channel;
@@ -351,7 +423,7 @@ export function useChannelMessages(channelId: string | null) {
     sendMessage,
     loadMore,
     markSeen,
-    refresh: () => fetchMessages()
+    refresh: () => fetchMessages(),
   };
 }
 
@@ -378,9 +450,11 @@ export function useAnonymousRoom() {
     const response = await roomService.getCurrentAnonymousRoom();
     if (response.success) {
       setRoom(response.data);
-      
+
       // Fetch messages for this room
-      const messagesResponse = await roomService.getAnonymousMessages(response.data.id);
+      const messagesResponse = await roomService.getAnonymousMessages(
+        response.data.room_id
+      );
       if (messagesResponse.success) {
         setMessages(messagesResponse.data || []);
       }
@@ -392,56 +466,65 @@ export function useAnonymousRoom() {
   }, []);
 
   // Send anonymous message
-  const sendMessage = useCallback(async (content: string) => {
-    if (!room) return null;
+  const sendMessage = useCallback(
+    async (content: string) => {
+      if (!room) return null;
 
-    const validation = roomService.validateMessageContent(content);
-    if (!validation.isValid) {
-      setError(validation.error || 'Invalid message');
-      return null;
-    }
-
-    setRateLimitError(null);
-
-    const response = await roomService.sendAnonymousMessage({
-      room_id: room.id,
-      content,
-      display_name: `anon_${Date.now()}`
-    });
-
-    if (response.success) {
-      return response.data;
-    } else {
-      if (response.retry_after_seconds) {
-        setRateLimitError(`Please wait ${response.retry_after_seconds} seconds before sending another message`);
-      } else {
-        setError(response.error);
+      const validation = roomService.validateMessageContent(content);
+      if (!validation.isValid) {
+        setError(validation.error || 'Invalid message');
+        return null;
       }
-      return null;
-    }
-  }, [room]);
+
+      setRateLimitError(null);
+
+      const response = await roomService.sendAnonymousMessage({
+        room_id: room.room_id,
+        content,
+        display_name: `anon_${Date.now()}`,
+      });
+
+      if (response.success) {
+        return response.data;
+      } else {
+        if (response.retry_after_seconds) {
+          setRateLimitError(
+            `Please wait ${response.retry_after_seconds} seconds before sending another message`
+          );
+        } else {
+          setError(response.error);
+        }
+        return null;
+      }
+    },
+    [room]
+  );
 
   // Set up real-time subscription for current room
   useEffect(() => {
     if (!room) return;
 
     const channel = getSupabaseClient()
-      .channel(`anonymous_messages:${room.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'room_messages',
-        filter: `anonymous_room_id=eq.${room.id}`
-      }, (payload) => {
-        const newMessage = payload.new as AnonymousMessage;
-        setMessages(prev => {
-          // Avoid duplicates
-          if (prev.find(msg => msg.id === newMessage.id)) {
-            return prev;
-          }
-          return [...prev, newMessage];
-        });
-      })
+      .channel(`anonymous_messages:${room.room_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'room_messages',
+          filter: `anonymous_room_id=eq.${room.room_id}`,
+        },
+        payload => {
+          const newMessage = payload.new as AnonymousMessage;
+          setMessages(prev => {
+            // Avoid duplicates
+            if (prev.find(msg => msg.id === newMessage.id)) {
+              return prev;
+            }
+            return [...prev, newMessage];
+          });
+        }
+      )
       .subscribe();
 
     realtimeRef.current = channel;
@@ -459,8 +542,8 @@ export function useAnonymousRoom() {
 
     const checkExpiry = () => {
       const now = new Date();
-      const expiryTime = new Date(room.closed_at);
-      
+      const expiryTime = new Date(room.expires_at);
+
       if (now >= expiryTime) {
         // Room expired, get new room
         enterRoom();
@@ -480,7 +563,7 @@ export function useAnonymousRoom() {
     error,
     rateLimitError,
     enterRoom,
-    sendMessage
+    sendMessage,
   };
 }
 
@@ -514,11 +597,13 @@ export function useChatList() {
   const markChannelSeen = useCallback(async (channelId: string) => {
     const response = await roomService.markChannelSeen(channelId);
     if (response.success) {
-      setChatList(prev => prev.map(item =>
-        item.channel_id === channelId
-          ? { ...item, has_new: false, unread_count: 0 }
-          : item
-      ));
+      setChatList(prev =>
+        prev.map(item =>
+          item.channel_id === channelId
+            ? { ...item, has_new: false, unread_count: 0 }
+            : item
+        )
+      );
     }
   }, []);
 
@@ -531,7 +616,7 @@ export function useChatList() {
     loading,
     error,
     refresh: fetchChatList,
-    markChannelSeen
+    markChannelSeen,
   };
 }
 
@@ -547,7 +632,7 @@ export function useSpacePermissions() {
   return {
     canCreateSpaces: true,
     loading: false,
-    error: null
+    error: null,
   };
 }
 
@@ -580,6 +665,6 @@ export function useModeration() {
   return {
     loading,
     error,
-    reportMessage
+    reportMessage,
   };
 }

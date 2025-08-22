@@ -1,9 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, Pressable, Animated, ScrollView, TextInput, Alert, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  Animated,
+  ScrollView,
+  TextInput,
+  Alert,
+  RefreshControl,
+} from 'react-native';
 import { useTheme } from '../theme/theme';
 import { BlurView } from 'expo-blur';
-import { useSpaceSearch, useSpaceOperations, useSpacePermissions, useChatList } from '../hooks/useRooms';
-import { SpaceWithOwner, ChatListItem } from '../types/room';
+import {
+  useSpaceSearch,
+  useSpaceOperations,
+  useSpacePermissions,
+  usePopularSpaces,
+} from '../hooks/useRooms';
+import { SpaceWithOwner } from '../types/room';
 import AnonRoomScreen from './AnonRoomScreen';
 import ChannelScreen from './ChannelScreen';
 import CreateSpaceScreen from './CreateSpaceScreen';
@@ -15,25 +30,63 @@ interface RoomsScreenProps {
 export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
   const theme = useTheme() as any;
   const { colors } = theme;
-  const fade = new Animated.Value(0);
-  
+  const fade = useRef(new Animated.Value(0)).current;
+
   // State management
-  const [currentView, setCurrentView] = useState<'list' | 'search' | 'anonymous' | 'channel' | 'create'>('list');
+  const [currentView, setCurrentView] = useState<
+    'list' | 'search' | 'anonymous' | 'channel' | 'create'
+  >('list');
   const [selectedFilter, setSelectedFilter] = useState<string>('すべて');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(
+    null
+  );
   const [selectedSpaceName, setSelectedSpaceName] = useState<string>('');
-  
-  // Hooks
-  const { spaces, loading: searchLoading, error: searchError, searchSpaces, clearResults } = useSpaceSearch();
-  const { loading: operationLoading, error: operationError, joinSpace } = useSpaceOperations();
-  const { canCreateSpaces } = useSpacePermissions();
-  const { chatList, loading: chatLoading, refresh: refreshChatList } = useChatList();
+  const [selectedSpaceId, setSelectedSpaceId] = useState<string>('');
 
-  // Animation
+  // Hooks
+  const {
+    spaces: searchSpaces,
+    loading: searchLoading,
+    error: searchError,
+    searchSpaces: doSearch,
+    clearResults,
+  } = useSpaceSearch();
+  const {
+    spaces: popularSpaces,
+    loading: popularLoading,
+    error: popularError,
+    refresh: refreshPopular,
+  } = usePopularSpaces();
+  const {
+    loading: operationLoading,
+    error: operationError,
+    joinSpace,
+  } = useSpaceOperations();
+  const { canCreateSpaces } = useSpacePermissions();
+
+  // Animation - smart animation handling to prevent blank screen on back navigation
   useEffect(() => {
-    Animated.timing(fade, { toValue: 1, duration: 200, useNativeDriver: true }).start();
-  }, []);
+    if (currentView === 'list' || currentView === 'search') {
+      // Only animate from 0 when switching to search view
+      // For returning from anonymous/channel/create, fade should already be set to 1
+      if (currentView === 'search' && fade._value === 0) {
+        const timer = setTimeout(() => {
+          fade.setValue(0);
+          Animated.timing(fade, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }).start();
+        }, 50);
+
+        return () => clearTimeout(timer);
+      } else if (currentView === 'list') {
+        // Ensure immediate display when returning to list view
+        fade.setValue(1);
+      }
+    }
+  }, [currentView, fade]);
 
   // Filter categories
   const filterCategories = ['すべて', '育児', '相談', '月齢', '地域', '趣味'];
@@ -41,9 +94,9 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
   // Handle search
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      searchSpaces({ 
+      doSearch({
         query: searchQuery.trim(),
-        limit: 20
+        limit: 20,
       });
       setCurrentView('search');
     }
@@ -52,15 +105,15 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
   // Handle join space
   const handleJoinSpace = async (space: SpaceWithOwner) => {
     if (!space.can_join) {
-      Alert.alert('参加できません', 'このスペースは満員かすでに参加済みです');
+      Alert.alert('参加できません', 'このルームは満員かすでに参加済みです');
       return;
     }
 
     const result = await joinSpace(space.id);
     if (result) {
       Alert.alert('参加完了', `${space.name}に参加しました`);
-      // Refresh chat list to show new space
-      refreshChatList();
+      // Refresh popular spaces to update join status
+      refreshPopular();
       setCurrentView('list');
     } else if (operationError) {
       Alert.alert('エラー', operationError);
@@ -68,9 +121,14 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
   };
 
   // Handle channel selection
-  const handleChannelSelect = (channelId: string, spaceName: string) => {
+  const handleChannelSelect = (
+    channelId: string,
+    spaceName: string,
+    spaceId?: string
+  ) => {
     setSelectedChannelId(channelId);
     setSelectedSpaceName(spaceName);
+    setSelectedSpaceId(spaceId || '');
     if (onNavigateToChannel) {
       onNavigateToChannel(channelId, spaceName);
     } else {
@@ -80,15 +138,33 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
 
   // Render different views
   if (currentView === 'anonymous') {
-    return <AnonRoomScreen onBack={() => setCurrentView('list')} />;
+    return (
+      <AnonRoomScreen
+        onBack={() => {
+          fade.setValue(1);
+          setCurrentView('list');
+        }}
+      />
+    );
   }
 
   if (currentView === 'channel' && selectedChannelId) {
     return (
-      <ChannelScreen 
+      <ChannelScreen
         channelId={selectedChannelId}
         spaceName={selectedSpaceName}
-        onBack={() => setCurrentView('list')}
+        spaceId={selectedSpaceId || undefined}
+        onBack={() => {
+          // Ensure immediate display when returning to prevent blank screen
+          fade.setValue(1);
+          setCurrentView('list');
+        }}
+        onExit={() => {
+          // Handle exit - refresh popular spaces and return to list view
+          refreshPopular();
+          fade.setValue(1);
+          setCurrentView('list');
+        }}
       />
     );
   }
@@ -97,70 +173,132 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
     return (
       <CreateSpaceScreen
         onSuccess={() => {
+          fade.setValue(1);
           setCurrentView('list');
-          refreshChatList();
+          refreshPopular();
         }}
-        onCancel={() => setCurrentView('list')}
+        onCancel={() => {
+          fade.setValue(1);
+          setCurrentView('list');
+        }}
       />
     );
   }
 
-  // Filter chat list based on selected filter
-  const filteredChatList = chatList.filter(item => {
+  // Filter popular spaces based on selected filter
+  const filteredPopularSpaces = popularSpaces.filter(space => {
     if (selectedFilter === 'すべて') return true;
-    return item.space_name.includes(selectedFilter) || 
-           item.channel_name.includes(selectedFilter);
+    return (
+      space.name.includes(selectedFilter) ||
+      space.description?.includes(selectedFilter) ||
+      space.tags.some(tag => tag.includes(selectedFilter))
+    );
   });
 
   // Render space search results
   const renderSearchResults = () => (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg || '#000000' }}>
       {/* Search Header */}
-      <View style={{ paddingHorizontal: theme.spacing(2), paddingTop: 48, paddingBottom: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-          <Pressable onPress={() => { setCurrentView('list'); clearResults(); setSearchQuery(''); }}>
-            <Text style={{ color: colors.text, fontSize: 16 }}>← 戻る</Text>
+      <View
+        style={{
+          paddingHorizontal: theme.spacing(2),
+          paddingTop: 48,
+          paddingBottom: 16,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 16,
+          }}
+        >
+          <Pressable
+            onPress={() => {
+              setCurrentView('list');
+              clearResults();
+              setSearchQuery('');
+            }}
+          >
+            <Text style={{ color: colors.text, fontSize: 16 }}>←</Text>
           </Pressable>
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginLeft: 16 }}>
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 18,
+              fontWeight: 'bold',
+              marginLeft: 16,
+            }}
+          >
             検索結果
           </Text>
         </View>
-        
+
         {searchQuery && (
-          <Text style={{ color: colors.subtext, fontSize: 14, marginBottom: 8 }}>
-            「{searchQuery}」の検索結果 ({spaces.length}件)
+          <Text
+            style={{ color: colors.subtext, fontSize: 14, marginBottom: 8 }}
+          >
+            「{searchQuery}」の検索結果 ({searchSpaces.length}件)
           </Text>
         )}
       </View>
 
       {/* Search Results */}
       <FlatList
-        data={spaces}
-        keyExtractor={(item) => item.id}
+        data={searchSpaces}
+        keyExtractor={item => item.id}
         contentContainerStyle={{ padding: theme.spacing(2), paddingTop: 0 }}
-        ItemSeparatorComponent={() => <View style={{ height: theme.spacing(1.5) }} />}
+        ItemSeparatorComponent={() => (
+          <View style={{ height: theme.spacing(1.5) }} />
+        )}
         renderItem={({ item }) => (
-          <Pressable 
+          <Pressable
             onPress={() => handleJoinSpace(item)}
             disabled={operationLoading}
             style={({ pressed }) => [
-              { 
-                borderRadius: theme.radius.lg, 
-                overflow: 'hidden', 
-                transform: [{ scale: pressed ? 0.98 : 1 }], 
+              {
+                borderRadius: theme.radius.lg,
+                overflow: 'hidden',
+                transform: [{ scale: pressed ? 0.98 : 1 }],
                 ...theme.shadow.card,
-                opacity: operationLoading ? 0.6 : 1
-              }
+                opacity: operationLoading ? 0.6 : 1,
+              },
             ]}
           >
-            <BlurView intensity={30} tint="dark" style={{ padding: theme.spacing(1.75), backgroundColor: '#ffffff10' }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <BlurView
+              intensity={30}
+              tint="dark"
+              style={{
+                padding: theme.spacing(1.75),
+                backgroundColor: '#ffffff10',
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                }}
+              >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.text, fontSize: 16, fontWeight: 'bold', marginBottom: 4 }}>
+                  <Text
+                    style={{
+                      color: colors.text,
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                      marginBottom: 4,
+                    }}
+                  >
                     {item.name}
                   </Text>
                   {item.description && (
-                    <Text style={{ color: colors.subtext, fontSize: 14, marginBottom: 8 }}>
+                    <Text
+                      style={{
+                        color: colors.subtext,
+                        fontSize: 14,
+                        marginBottom: 8,
+                      }}
+                    >
                       {item.description}
                     </Text>
                   )}
@@ -168,43 +306,63 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                     <Text style={{ color: colors.subtext, fontSize: 12 }}>
                       {item.member_count}/{item.max_members}人
                     </Text>
-                    <Text style={{ color: colors.subtext, fontSize: 12, marginLeft: 8 }}>
-                      by {item.owner_display_name || item.owner_username}
+                    <Text
+                      style={{
+                        color: colors.subtext,
+                        fontSize: 12,
+                        marginLeft: 8,
+                      }}
+                    >
+                      by {item.owner.display_name || item.owner.username}
                     </Text>
                   </View>
                 </View>
-                
-                <View style={{ 
-                  backgroundColor: item.can_join ? colors.pinkSoft : colors.subtext + '40', 
-                  borderRadius: theme.radius.sm, 
-                  paddingHorizontal: theme.spacing(1.25), 
-                  paddingVertical: 4 
-                }}>
-                  <Text style={{ 
-                    color: item.can_join ? '#302126' : colors.subtext, 
-                    fontSize: 12, 
-                    fontWeight: 'bold' 
-                  }}>
+
+                <View
+                  style={{
+                    backgroundColor: item.can_join
+                      ? colors.pinkSoft
+                      : colors.subtext + '40',
+                    borderRadius: theme.radius.sm,
+                    paddingHorizontal: theme.spacing(1.25),
+                    paddingVertical: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: item.can_join ? '#302126' : colors.subtext,
+                      fontSize: 12,
+                      fontWeight: 'bold',
+                    }}
+                  >
                     {item.can_join ? '参加' : '満員'}
                   </Text>
                 </View>
               </View>
-              
+
               {item.tags.length > 0 && (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    marginTop: 8,
+                  }}
+                >
                   {item.tags.slice(0, 3).map((tag, index) => (
-                    <View 
+                    <View
                       key={index}
-                      style={{ 
-                        backgroundColor: colors.subtext + '20', 
-                        borderRadius: theme.radius.sm, 
-                        paddingHorizontal: 8, 
-                        paddingVertical: 2, 
+                      style={{
+                        backgroundColor: colors.subtext + '20',
+                        borderRadius: theme.radius.sm,
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
                         marginRight: 4,
-                        marginBottom: 4
+                        marginBottom: 4,
                       }}
                     >
-                      <Text style={{ color: colors.subtext, fontSize: 10 }}>#{tag}</Text>
+                      <Text style={{ color: colors.subtext, fontSize: 10 }}>
+                        #{tag}
+                      </Text>
                     </View>
                   ))}
                 </View>
@@ -225,22 +383,43 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
 
   // Render main room list
   return (
-    <Animated.View style={{ flex: 1, backgroundColor: 'transparent', paddingTop: 48, opacity: fade }}>
-      {currentView === 'search' ? renderSearchResults() : (
+    <Animated.View
+      style={{
+        flex: 1,
+        backgroundColor: colors.bg || '#000000',
+        paddingTop: 48,
+        opacity: fade,
+      }}
+    >
+      {currentView === 'search' ? (
+        renderSearchResults()
+      ) : currentView === 'list' ? (
         <>
           {/* Header with search */}
-          <View style={{ paddingHorizontal: theme.spacing(2), marginBottom: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+          <View
+            style={{ paddingHorizontal: theme.spacing(2), marginBottom: 16 }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: 16,
+              }}
+            >
               <View style={{ flex: 1, borderRadius: 999, overflow: 'hidden' }}>
-                <BlurView intensity={30} tint="dark" style={{ backgroundColor: '#ffffff10' }}>
+                <BlurView
+                  intensity={30}
+                  tint="dark"
+                  style={{ backgroundColor: '#ffffff10' }}
+                >
                   <TextInput
-                    style={{ 
-                      color: colors.text, 
-                      fontSize: 16, 
-                      paddingVertical: 12, 
-                      paddingHorizontal: 16 
+                    style={{
+                      color: colors.text,
+                      fontSize: 16,
+                      paddingVertical: 12,
+                      paddingHorizontal: 16,
                     }}
-                    placeholder="スペースを検索..."
+                    placeholder="ルームを検索..."
                     placeholderTextColor={colors.subtext}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -249,41 +428,60 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                   />
                 </BlurView>
               </View>
-              
-              <Pressable 
+
+              <Pressable
                 onPress={() => setCurrentView('create')}
                 style={({ pressed }) => [
-                  { 
+                  {
                     marginLeft: 12,
-                    backgroundColor: colors.pinkSoft, 
-                    borderRadius: theme.radius.md, 
-                    paddingHorizontal: 16, 
+                    backgroundColor: colors.pinkSoft,
+                    borderRadius: theme.radius.md,
+                    paddingHorizontal: 16,
                     paddingVertical: 12,
-                    transform: [{ scale: pressed ? 0.95 : 1 }]
-                  }
+                    transform: [{ scale: pressed ? 0.95 : 1 }],
+                  },
                 ]}
               >
-                <Text style={{ color: '#302126', fontSize: 14, fontWeight: 'bold' }}>作成</Text>
+                <Text
+                  style={{ color: '#302126', fontSize: 14, fontWeight: 'bold' }}
+                >
+                  作成
+                </Text>
               </Pressable>
             </View>
 
             {/* Filter tabs */}
             <View style={{ borderRadius: 999, overflow: 'hidden' }}>
-              <BlurView intensity={30} tint="dark" style={{ paddingVertical: 8, paddingHorizontal: 10, backgroundColor: '#ffffff10' }}>
+              <BlurView
+                intensity={30}
+                tint="dark"
+                style={{
+                  paddingVertical: 8,
+                  paddingHorizontal: 10,
+                  backgroundColor: '#ffffff10',
+                }}
+              >
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {filterCategories.map((category) => (
+                  {filterCategories.map(category => (
                     <View key={category} style={{ marginRight: 8 }}>
-                      <Pressable 
-                        onPress={() => setSelectedFilter(category)} 
-                        style={({ pressed }) => [{ 
-                          backgroundColor: selectedFilter === category ? '#ffffff24' : '#ffffff12', 
-                          paddingVertical: 6, 
-                          paddingHorizontal: 12, 
-                          borderRadius: 999, 
-                          transform: [{ scale: pressed ? 0.97 : 1 }] 
-                        }]}
+                      <Pressable
+                        onPress={() => setSelectedFilter(category)}
+                        style={({ pressed }) => [
+                          {
+                            backgroundColor:
+                              selectedFilter === category
+                                ? '#ffffff24'
+                                : '#ffffff12',
+                            paddingVertical: 6,
+                            paddingHorizontal: 12,
+                            borderRadius: 999,
+                            transform: [{ scale: pressed ? 0.97 : 1 }],
+                          },
+                        ]}
                       >
-                        <Text style={{ color: colors.text, fontSize: 12 }}>{category}</Text>
+                        <Text style={{ color: colors.text, fontSize: 12 }}>
+                          {category}
+                        </Text>
                       </Pressable>
                     </View>
                   ))}
@@ -292,130 +490,191 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
             </View>
           </View>
 
-          {/* Content */}
+          {/* Popular Rooms Header */}
+          <View
+            style={{ paddingHorizontal: theme.spacing(2), marginBottom: 16 }}
+          >
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: 20,
+                fontWeight: 'bold',
+                marginBottom: 8,
+              }}
+            >
+              人気ルーム
+            </Text>
+            <Text style={{ color: colors.subtext, fontSize: 14 }}>
+              参加人数が多い順で表示しています
+            </Text>
+          </View>
+
+          {/* Popular Rooms List */}
           <FlatList
-            data={[
-              // Anonymous room (always first)
-              { 
-                id: 'anonymous', 
-                type: 'anonymous' as const,
-                name: '愚痴もたまには、、、', 
-                desc: '完全匿名・1時間でポストが消えます', 
-                badge: '匿名' 
-              },
-              // User's spaces
-              ...filteredChatList.map(item => ({
-                id: item.channel_id,
-                type: 'channel' as const,
-                name: item.space_name,
-                desc: item.latest_message_content || 'メッセージがありません',
-                badge: item.space_is_public ? '公開' : '非公開',
-                has_new: item.has_new,
-                unread_count: item.unread_count,
-                latest_message_at: item.latest_message_at,
-                space_name: item.space_name
-              }))
-            ]}
-            keyExtractor={(item) => item.id}
+            data={filteredPopularSpaces}
+            keyExtractor={item => item.id}
             contentContainerStyle={{ padding: theme.spacing(2), paddingTop: 8 }}
-            ItemSeparatorComponent={() => <View style={{ height: theme.spacing(1.5) }} />}
+            ItemSeparatorComponent={() => (
+              <View style={{ height: theme.spacing(1.5) }} />
+            )}
             refreshControl={
               <RefreshControl
-                refreshing={chatLoading}
-                onRefresh={refreshChatList}
+                refreshing={popularLoading}
+                onRefresh={refreshPopular}
                 tintColor={colors.text}
               />
             }
             renderItem={({ item }) => (
-              <Pressable 
-                onPress={() => {
-                  if (item.type === 'anonymous') {
-                    setCurrentView('anonymous');
-                  } else {
-                    handleChannelSelect(item.id, item.space_name || item.name);
-                  }
-                }}
+              <Pressable
+                onPress={() => handleJoinSpace(item)}
+                disabled={operationLoading}
                 style={({ pressed }) => [
-                  { 
-                    borderRadius: theme.radius.lg, 
-                    overflow: 'hidden', 
-                    transform: [{ scale: pressed ? 0.98 : 1 }], 
-                    ...theme.shadow.card 
-                  }
+                  {
+                    borderRadius: theme.radius.lg,
+                    overflow: 'hidden',
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                    ...theme.shadow.card,
+                  },
                 ]}
               >
-                <BlurView 
-                  intensity={30} 
-                  tint="dark" 
-                  style={{ 
-                    padding: theme.spacing(1.75), 
-                    backgroundColor: item.type === 'anonymous' ? '#F6C6D040' : '#ffffff10' 
+                <BlurView
+                  intensity={30}
+                  tint="dark"
+                  style={{
+                    padding: theme.spacing(1.75),
+                    backgroundColor: '#ffffff10',
+                    opacity: operationLoading ? 0.6 : 1,
                   }}
                 >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                    }}
+                  >
                     <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={{ color: colors.text, fontSize: 16, marginBottom: 6, fontWeight: 'bold' }}>
-                          {item.name}
-                        </Text>
-                        {item.type === 'channel' && item.has_new && (
-                          <View style={{ 
-                            backgroundColor: colors.pink, 
-                            borderRadius: 8, 
-                            width: 16, 
-                            height: 16, 
-                            marginLeft: 8,
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
-                              {item.unread_count > 9 ? '9+' : item.unread_count}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      
-                      <Text style={{ color: colors.subtext, fontSize: 14 }} numberOfLines={2}>
-                        {item.desc}
+                      <Text
+                        style={{
+                          color: colors.text,
+                          fontSize: 16,
+                          fontWeight: 'bold',
+                          marginBottom: 4,
+                        }}
+                      >
+                        {item.name}
                       </Text>
-                      
-                      {item.type === 'channel' && item.latest_message_at && (
-                        <Text style={{ color: colors.subtext, fontSize: 12, marginTop: 4 }}>
-                          {new Date(item.latest_message_at).toLocaleString('ja-JP', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                      {item.description && (
+                        <Text
+                          style={{
+                            color: colors.subtext,
+                            fontSize: 14,
+                            marginBottom: 8,
+                          }}
+                          numberOfLines={2}
+                        >
+                          {item.description}
                         </Text>
                       )}
+                      <View
+                        style={{ flexDirection: 'row', alignItems: 'center' }}
+                      >
+                        <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                          {item.member_count}/{item.max_members}人
+                        </Text>
+                        <Text
+                          style={{
+                            color: colors.subtext,
+                            fontSize: 12,
+                            marginLeft: 8,
+                          }}
+                        >
+                          by {item.owner.display_name || item.owner.username}
+                        </Text>
+                      </View>
                     </View>
-                    
-                    <View style={{ 
-                      backgroundColor: colors.pinkSoft, 
-                      borderRadius: theme.radius.sm, 
-                      paddingHorizontal: theme.spacing(1.25), 
-                      paddingVertical: 4 
-                    }}>
-                      <Text style={{ color: '#302126', fontSize: 12 }}>{item.badge}</Text>
+
+                    <View
+                      style={{
+                        backgroundColor: item.can_join
+                          ? colors.pinkSoft
+                          : colors.subtext + '40',
+                        borderRadius: theme.radius.sm,
+                        paddingHorizontal: theme.spacing(1.25),
+                        paddingVertical: 4,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: item.can_join ? '#302126' : colors.subtext,
+                          fontSize: 12,
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {item.can_join ? '参加' : '満員'}
+                      </Text>
                     </View>
                   </View>
+
+                  {item.tags.length > 0 && (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        marginTop: 8,
+                      }}
+                    >
+                      {item.tags.slice(0, 3).map((tag, index) => (
+                        <View
+                          key={index}
+                          style={{
+                            backgroundColor: colors.subtext + '20',
+                            borderRadius: theme.radius.sm,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            marginRight: 4,
+                            marginBottom: 4,
+                          }}
+                        >
+                          <Text style={{ color: colors.subtext, fontSize: 10 }}>
+                            #{tag}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                 </BlurView>
               </Pressable>
             )}
             ListEmptyComponent={() => (
               <View style={{ alignItems: 'center', marginTop: 40 }}>
-                <Text style={{ color: colors.subtext, fontSize: 16, marginBottom: 8 }}>
-                  参加しているスペースがありません
+                <Text
+                  style={{
+                    color: colors.subtext,
+                    fontSize: 16,
+                    marginBottom: 8,
+                  }}
+                >
+                  {popularLoading
+                    ? '人気ルームを読み込み中...'
+                    : '人気ルームがありません'}
                 </Text>
-                <Text style={{ color: colors.subtext, fontSize: 14, textAlign: 'center' }}>
-                  検索でスペースを見つけて参加してみましょう
-                </Text>
+                {!popularLoading && (
+                  <Text
+                    style={{
+                      color: colors.subtext,
+                      fontSize: 14,
+                      textAlign: 'center',
+                    }}
+                  >
+                    検索で新しいルームを見つけて参加してみましょう
+                  </Text>
+                )}
               </View>
             )}
           />
         </>
-      )}
+      ) : null}
     </Animated.View>
   );
 }

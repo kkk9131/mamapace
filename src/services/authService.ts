@@ -1,6 +1,6 @@
 /**
  * SECURE AUTHENTICATION SERVICE
- * 
+ *
  * CRITICAL SECURITY RULES:
  * 1. NEVER log maternal_health_id values
  * 2. Always sanitize data before logging
@@ -30,7 +30,7 @@ import {
   MaternalHealthIdValidation,
   UsernameValidation,
   PasswordValidation,
-  SecurityActionType
+  SecurityActionType,
 } from '../types/auth';
 import { appConfig } from '../config/appConfig';
 
@@ -43,7 +43,7 @@ const SESSION_CONFIG = {
   TOKEN_EXPIRY_HOURS: 24,
   REFRESH_TOKEN_EXPIRY_DAYS: 30,
   MAX_LOGIN_ATTEMPTS: 5,
-  LOCK_DURATION_MINUTES: 30
+  LOCK_DURATION_MINUTES: 30,
 } as const;
 
 // =====================================================
@@ -53,7 +53,11 @@ const SESSION_CONFIG = {
 class AuthService {
   private isInitialized = false;
   // In-memory tokens (fallback). Phase 1/2 判定に応じて安全保存層を使い分け
-  private phase1Session: { sessionToken: string; refreshToken: string; expiresAt: string } | null = null;
+  private phase1Session: {
+    sessionToken: string;
+    refreshToken: string;
+    expiresAt: string;
+  } | null = null;
 
   constructor() {}
 
@@ -80,14 +84,16 @@ class AuthService {
         await Promise.all([
           initializeSupabase(),
           initializeEncryption(),
-          initializeSessionManager()
+          initializeSessionManager(),
         ]);
       }
 
       this.isInitialized = true;
       secureLogger.info('Authentication service initialized successfully');
     } catch (error) {
-      secureLogger.error('Failed to initialize authentication service', { error });
+      secureLogger.error('Failed to initialize authentication service', {
+        error,
+      });
       throw new Error('Authentication service initialization failed');
     }
   }
@@ -109,7 +115,10 @@ class AuthService {
    * Validates maternal health ID using server-side validation
    * Client-side validation for UX, server validation for security
    */
-  async validateMaternalHealthId(id: string, context?: { action?: 'registration' | 'login' }): Promise<MaternalHealthIdValidation> {
+  async validateMaternalHealthId(
+    id: string,
+    context?: { action?: 'registration' | 'login' }
+  ): Promise<MaternalHealthIdValidation> {
     await this.ensureInitialized();
     return await validationService.validateMaternalHealthIdServer(id, context);
   }
@@ -124,7 +133,10 @@ class AuthService {
   /**
    * Validates username using server-side validation
    */
-  async validateUsername(username: string, context?: { userId?: string; action?: 'registration' | 'update' }): Promise<UsernameValidation> {
+  async validateUsername(
+    username: string,
+    context?: { userId?: string; action?: 'registration' | 'update' }
+  ): Promise<UsernameValidation> {
     await this.ensureInitialized();
     return await validationService.validateUsernameServer(username, context);
   }
@@ -139,7 +151,10 @@ class AuthService {
   /**
    * Validates password using server-side validation
    */
-  async validatePassword(password: string, context?: { username?: string; action?: 'registration' | 'change' }): Promise<PasswordValidation> {
+  async validatePassword(
+    password: string,
+    context?: { username?: string; action?: 'registration' | 'change' }
+  ): Promise<PasswordValidation> {
     await this.ensureInitialized();
     return await validationService.validatePasswordServer(password, context);
   }
@@ -164,9 +179,9 @@ class AuthService {
     return {
       device_type: 'ios', // Platform.OS would give us 'ios' or 'android'
       device_model: 'iPhone', // Device.modelName
-      os_version: '15.0', // Device.osVersion  
+      os_version: '15.0', // Device.osVersion
       app_version: '1.0.0', // From app.json or expo-constants
-      device_id: 'anonymous_device_id' // Generated unique identifier
+      device_id: 'anonymous_device_id', // Generated unique identifier
     };
   }
 
@@ -179,7 +194,7 @@ class AuthService {
    */
   async register(request: RegistrationRequest): Promise<AuthResponse> {
     await this.ensureInitialized();
-    
+
     try {
       secureLogger.info('Registration attempt', sanitizeForLogging(request));
 
@@ -189,7 +204,9 @@ class AuthService {
       // Prepare maternal health ID payload
       // When either server hashing is enabled or client encryption is disabled,
       // send plaintext to server and let server handle hashing/encryption.
-      const sendPlainToServer = appConfig.useServerHashing === true || (appConfig as any).disableClientEncryption === true;
+      const sendPlainToServer =
+        appConfig.useServerHashing === true ||
+        (appConfig as any).disableClientEncryption === true;
 
       // Call secure registration function
       const client = supabaseClient.getClient();
@@ -197,49 +214,52 @@ class AuthService {
         p_username: request.username,
         ...(sendPlainToServer
           ? { p_maternal_health_id: request.maternal_health_id }
-          : { p_encrypted_maternal_health_id: await encryptionService.encryptMaternalHealthId(
-              request.maternal_health_id,
-              request.password
-            ) }),
+          : {
+              p_encrypted_maternal_health_id:
+                await encryptionService.encryptMaternalHealthId(
+                  request.maternal_health_id,
+                  request.password
+                ),
+            }),
         p_password: request.password,
         p_display_name: request.display_name,
         p_bio: request.bio,
         p_avatar_emoji: request.avatar_emoji,
-        p_device_info: await this.getDeviceInfo()
+        p_device_info: await this.getDeviceInfo(),
       });
 
       if (error) {
         secureLogger.error('Registration RPC error', { error });
-        
+
         // Map specific errors
         if (error.message.includes('already exists')) {
           return {
             success: false,
             error: 'ユーザー名または母子手帳番号が既に登録されています',
-            error_code: AuthErrorCode.USERNAME_EXISTS
+            error_code: AuthErrorCode.USERNAME_EXISTS,
           };
         }
 
         return {
           success: false,
           error: '登録に失敗しました。もう一度お試しください。',
-          error_code: AuthErrorCode.SYSTEM_ERROR
+          error_code: AuthErrorCode.SYSTEM_ERROR,
         };
       }
 
       const result = data as any;
-      
+
       if (!result.success) {
         return {
           success: false,
           error: result.error || '登録に失敗しました。',
-          error_code: AuthErrorCode.SYSTEM_ERROR
+          error_code: AuthErrorCode.SYSTEM_ERROR,
         };
       }
 
       secureLogger.security('Registration successful', {
         userId: result.user?.id,
-        username: result.user?.username
+        username: result.user?.username,
       });
 
       // Persist session
@@ -263,7 +283,7 @@ class AuthService {
         this.phase1Session = {
           sessionToken: result.session_token,
           refreshToken: result.refresh_token,
-          expiresAt: result.expires_at
+          expiresAt: result.expires_at,
         };
       }
 
@@ -272,15 +292,14 @@ class AuthService {
         user: result.user,
         session_token: result.session_token,
         refresh_token: result.refresh_token,
-        expires_at: result.expires_at
+        expires_at: result.expires_at,
       };
-
     } catch (error) {
       secureLogger.error('Registration exception', { error });
       return {
         success: false,
         error: '登録中にエラーが発生しました。',
-        error_code: AuthErrorCode.SYSTEM_ERROR
+        error_code: AuthErrorCode.SYSTEM_ERROR,
       };
     }
   }
@@ -294,19 +313,21 @@ class AuthService {
    */
   async login(request: LoginRequest): Promise<AuthResponse> {
     await this.ensureInitialized();
-    
+
     try {
       secureLogger.info('Login attempt', sanitizeForLogging(request));
 
       // Phase 1: Skip server-side validation layer
 
       // Get device info
-      const deviceInfo = request.device_info || await this.getDeviceInfo();
+      const deviceInfo = request.device_info || (await this.getDeviceInfo());
 
       // Prepare maternal health ID payload
       // When either server hashing is enabled or client encryption is disabled,
       // send plaintext to server and let server handle hashing/encryption.
-      const sendPlainToServer = appConfig.useServerHashing === true || (appConfig as any).disableClientEncryption === true;
+      const sendPlainToServer =
+        appConfig.useServerHashing === true ||
+        (appConfig as any).disableClientEncryption === true;
 
       // Call secure authentication function
       const client = supabaseClient.getClient();
@@ -314,13 +335,16 @@ class AuthService {
         p_username: request.username,
         ...(sendPlainToServer
           ? { p_maternal_health_id: request.maternal_health_id }
-          : { p_encrypted_maternal_health_id: await encryptionService.encryptMaternalHealthId(
-              request.maternal_health_id,
-              request.password
-            ) }),
+          : {
+              p_encrypted_maternal_health_id:
+                await encryptionService.encryptMaternalHealthId(
+                  request.maternal_health_id,
+                  request.password
+                ),
+            }),
         p_password: request.password,
         p_device_info: deviceInfo,
-        p_ip_address: null // In a real app, get client IP
+        p_ip_address: null, // In a real app, get client IP
       });
 
       if (error) {
@@ -328,7 +352,7 @@ class AuthService {
         return {
           success: false,
           error: 'ログインに失敗しました。',
-          error_code: AuthErrorCode.SYSTEM_ERROR
+          error_code: AuthErrorCode.SYSTEM_ERROR,
         };
       }
 
@@ -336,26 +360,31 @@ class AuthService {
 
       if (!result.success) {
         // Map specific error messages
-        const errorMapping: Record<string, { error: string; code: AuthErrorCode }> = {
+        const errorMapping: Record<
+          string,
+          { error: string; code: AuthErrorCode }
+        > = {
           'Invalid credentials': {
-            error: 'ユーザー名、母子手帳番号、またはパスワードが正しくありません。',
-            code: AuthErrorCode.INVALID_CREDENTIALS
+            error:
+              'ユーザー名、母子手帳番号、またはパスワードが正しくありません。',
+            code: AuthErrorCode.INVALID_CREDENTIALS,
           },
           'Account temporarily locked': {
-            error: 'アカウントが一時的にロックされています。しばらく待ってからお試しください。',
-            code: AuthErrorCode.ACCOUNT_LOCKED
-          }
+            error:
+              'アカウントが一時的にロックされています。しばらく待ってからお試しください。',
+            code: AuthErrorCode.ACCOUNT_LOCKED,
+          },
         };
 
         const mappedError = errorMapping[result.error] || {
           error: 'ログインに失敗しました。',
-          code: AuthErrorCode.SYSTEM_ERROR
+          code: AuthErrorCode.SYSTEM_ERROR,
         };
 
         return {
           success: false,
           error: mappedError.error,
-          error_code: mappedError.code
+          error_code: mappedError.code,
         };
       }
 
@@ -380,13 +409,13 @@ class AuthService {
         this.phase1Session = {
           sessionToken: result.session_token,
           refreshToken: result.refresh_token,
-          expiresAt: result.expires_at
+          expiresAt: result.expires_at,
         };
       }
 
       secureLogger.security('Login successful', {
         userId: result.user?.id,
-        username: result.user?.username
+        username: result.user?.username,
       });
 
       return {
@@ -394,21 +423,20 @@ class AuthService {
         user: result.user,
         session_token: result.session_token,
         refresh_token: result.refresh_token,
-        expires_at: result.expires_at
+        expires_at: result.expires_at,
       };
-
     } catch (error) {
       secureLogger.error('Login exception', { error });
       return {
         success: false,
         error: 'ログイン中にエラーが発生しました。',
-        error_code: AuthErrorCode.SYSTEM_ERROR
+        error_code: AuthErrorCode.SYSTEM_ERROR,
       };
     }
   }
 
   // =====================================================
-  // SESSION MANAGEMENT  
+  // SESSION MANAGEMENT
   // =====================================================
 
   /**
@@ -416,7 +444,10 @@ class AuthService {
    */
   async loadSession(): Promise<PublicUserProfile | null> {
     await this.ensureInitialized();
-    if (appConfig.useServerHashing || (appConfig as any).disableClientEncryption) {
+    if (
+      appConfig.useServerHashing ||
+      (appConfig as any).disableClientEncryption
+    ) {
       // Phase 2: restore from secure store
       const sess = await secureSessionStore.getSession();
       return sess.user;
@@ -432,7 +463,10 @@ class AuthService {
         return null;
       }
 
-      secureLogger.info('Session loaded successfully', { userId: sessionData.user.id, username: sessionData.user.username });
+      secureLogger.info('Session loaded successfully', {
+        userId: sessionData.user.id,
+        username: sessionData.user.username,
+      });
       return sessionData.user;
     } catch (error) {
       secureLogger.error('Failed to load session', { error });
@@ -448,7 +482,7 @@ class AuthService {
     try {
       const client = supabaseClient.getClient();
       const { data, error } = await client.rpc('validate_session_token', {
-        p_session_token: token
+        p_session_token: token,
       });
 
       if (error) {
@@ -468,7 +502,10 @@ class AuthService {
    */
   async refreshToken(): Promise<boolean> {
     await this.ensureInitialized();
-    if (appConfig.useServerHashing || (appConfig as any).disableClientEncryption) {
+    if (
+      appConfig.useServerHashing ||
+      (appConfig as any).disableClientEncryption
+    ) {
       try {
         const sess = await secureSessionStore.getSession();
         if (!sess.refreshToken) {
@@ -477,13 +514,17 @@ class AuthService {
         }
         const client = supabaseClient.getClient();
         const { data, error } = await client.rpc('refresh_session_token', {
-          p_refresh_token: sess.refreshToken
+          p_refresh_token: sess.refreshToken,
         });
         if (error || !data?.success) {
           secureLogger.error('Token refresh RPC error (Phase 2)', { error });
           return false;
         }
-        await secureSessionStore.updateTokens(data.session_token, data.refresh_token, data.expires_at);
+        await secureSessionStore.updateTokens(
+          data.session_token,
+          data.refresh_token,
+          data.expires_at
+        );
         secureLogger.security('Token refresh successful (Phase 2)');
         return true;
       } catch (error) {
@@ -493,7 +534,7 @@ class AuthService {
     }
     try {
       const refreshToken = sessionManager.getCurrentRefreshToken();
-      
+
       if (!refreshToken) {
         secureLogger.warn('No refresh token available');
         return false;
@@ -501,7 +542,7 @@ class AuthService {
 
       const client = supabaseClient.getClient();
       const { data, error } = await client.rpc('refresh_session_token', {
-        p_refresh_token: refreshToken
+        p_refresh_token: refreshToken,
       });
 
       if (error) {
@@ -533,7 +574,10 @@ class AuthService {
    */
   async logout(): Promise<void> {
     await this.ensureInitialized();
-    if (appConfig.useServerHashing || (appConfig as any).disableClientEncryption) {
+    if (
+      appConfig.useServerHashing ||
+      (appConfig as any).disableClientEncryption
+    ) {
       // Phase 2: clear secure store
       await secureSessionStore.clear();
       secureLogger.security('Logout (Phase 2)');
@@ -543,12 +587,12 @@ class AuthService {
     try {
       const sessionToken = sessionManager.getCurrentSessionToken();
       const currentUser = sessionManager.getCurrentUser();
-      
+
       if (sessionToken && currentUser) {
         // Invalidate session on server
         const client = supabaseClient.getClient();
         await client.rpc('invalidate_session', {
-          p_session_token: sessionToken
+          p_session_token: sessionToken,
         });
 
         // Log security event
@@ -557,7 +601,7 @@ class AuthService {
 
       // Clear session from session manager
       await sessionManager.clearSession();
-      
+
       secureLogger.security('Logout successful');
     } catch (error) {
       secureLogger.error('Logout error', { error });
@@ -592,22 +636,20 @@ class AuthService {
       const currentUser = sessionManager.getCurrentUser();
 
       const client = supabaseClient.getClient();
-      await client
-        .from('security_audit_log')
-        .insert({
-          user_id: currentUser?.id || null,
-          action_type: actionType,
-          success,
-          failure_reason: failureReason,
-          metadata: sanitizedMetadata,
-          user_agent: 'React Native App', // In a real app, get actual user agent
-          ip_address: null // In a real app, get client IP
-        });
+      await client.from('security_audit_log').insert({
+        user_id: currentUser?.id || null,
+        action_type: actionType,
+        success,
+        failure_reason: failureReason,
+        metadata: sanitizedMetadata,
+        user_agent: 'React Native App', // In a real app, get actual user agent
+        ip_address: null, // In a real app, get client IP
+      });
 
       secureLogger.security('Security event logged', {
         action_type: actionType,
         success,
-        failure_reason: failureReason
+        failure_reason: failureReason,
       });
     } catch (error) {
       secureLogger.error('Failed to log security event', { error });
@@ -673,7 +715,7 @@ class AuthService {
       authService: this.isInitialized,
       supabase: supabaseClient.getStats().isInitialized,
       encryption: encryptionService.getStats().isInitialized,
-      sessionManager: sessionManager.getConfig().isInitialized
+      sessionManager: sessionManager.getConfig().isInitialized,
     };
   }
 
@@ -685,7 +727,7 @@ class AuthService {
       supabase: supabaseClient.getStats(),
       encryption: encryptionService.getStats(),
       sessionManager: sessionManager.getStats(),
-      validation: validationService.getStats()
+      validation: validationService.getStats(),
     };
   }
 }

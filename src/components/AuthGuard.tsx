@@ -1,6 +1,6 @@
 /**
  * AUTHENTICATION GUARD COMPONENT
- * 
+ *
  * Protects authenticated routes and manages navigation state:
  * - Redirects unauthenticated users to login
  * - Shows loading state during authentication checks
@@ -28,11 +28,11 @@ interface AuthGuardProps {
 /**
  * Authentication guard that protects routes requiring authentication
  */
-export default function AuthGuard({ 
-  children, 
+export default function AuthGuard({
+  children,
   loadingComponent,
   unauthenticatedComponent,
-  showDebugInfo = false
+  showDebugInfo = false,
 }: AuthGuardProps) {
   const theme = useTheme() as any;
   const { colors } = theme;
@@ -48,58 +48,71 @@ export default function AuthGuard({
     }
 
     return (
-      <View style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'transparent',
-        padding: theme.spacing(2)
-      }}>
-        <View style={{
-          backgroundColor: colors.card + '88',
-          borderRadius: theme.radius.lg,
-          padding: theme.spacing(2),
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
           alignItems: 'center',
-          borderWidth: 1,
-          borderColor: colors.surface
-        }}>
-          <ActivityIndicator 
-            size="large" 
-            color={colors.pink} 
+          backgroundColor: 'transparent',
+          padding: theme.spacing(2),
+        }}
+      >
+        <View
+          style={{
+            backgroundColor: colors.card + '88',
+            borderRadius: theme.radius.lg,
+            padding: theme.spacing(2),
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: colors.surface,
+          }}
+        >
+          <ActivityIndicator
+            size="large"
+            color={colors.pink}
             style={{ marginBottom: theme.spacing(1) }}
           />
-          
-          <Text style={{
-            color: colors.text,
-            fontSize: 16,
-            fontWeight: '600',
-            marginBottom: 4
-          }}>
+
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 16,
+              fontWeight: '600',
+              marginBottom: 4,
+            }}
+          >
             認証確認中...
           </Text>
-          
-          <Text style={{
-            color: colors.subtext,
-            fontSize: 12,
-            textAlign: 'center'
-          }}>
+
+          <Text
+            style={{
+              color: colors.subtext,
+              fontSize: 12,
+              textAlign: 'center',
+            }}
+          >
             セキュアなセッションを復元しています
           </Text>
 
           {showDebugInfo && (
-            <View style={{
-              marginTop: theme.spacing(1),
-              padding: theme.spacing(0.75),
-              backgroundColor: colors.surface,
-              borderRadius: theme.radius.sm,
-              alignSelf: 'stretch'
-            }}>
-              <Text style={{
-                color: colors.subtext,
-                fontSize: 10,
-                fontFamily: 'monospace'
-              }}>
-                AuthGuard: Loading={String(isLoading)} | Auth={String(isAuthenticated)} | User={user ? 'Present' : 'None'}
+            <View
+              style={{
+                marginTop: theme.spacing(1),
+                padding: theme.spacing(0.75),
+                backgroundColor: colors.surface,
+                borderRadius: theme.radius.sm,
+                alignSelf: 'stretch',
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.subtext,
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                }}
+              >
+                AuthGuard: Loading={String(isLoading)} | Auth=
+                {String(isAuthenticated)} | User={user ? 'Present' : 'None'}
               </Text>
             </View>
           )}
@@ -114,43 +127,51 @@ export default function AuthGuard({
 
   if (error && error.includes('critical')) {
     secureLogger.error('Critical authentication error in AuthGuard', { error });
-    
+
     return (
-      <View style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'transparent',
-        padding: theme.spacing(2)
-      }}>
-        <View style={{
-          backgroundColor: colors.danger + '10',
-          borderRadius: theme.radius.lg,
-          padding: theme.spacing(2),
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
           alignItems: 'center',
-          borderWidth: 1,
-          borderColor: colors.danger + '30'
-        }}>
+          backgroundColor: 'transparent',
+          padding: theme.spacing(2),
+        }}
+      >
+        <View
+          style={{
+            backgroundColor: colors.danger + '10',
+            borderRadius: theme.radius.lg,
+            padding: theme.spacing(2),
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: colors.danger + '30',
+          }}
+        >
           <Text style={{ fontSize: 24, marginBottom: theme.spacing(1) }}>
             🚨
           </Text>
-          
-          <Text style={{
-            color: colors.danger,
-            fontSize: 16,
-            fontWeight: '700',
-            marginBottom: theme.spacing(0.5),
-            textAlign: 'center'
-          }}>
+
+          <Text
+            style={{
+              color: colors.danger,
+              fontSize: 16,
+              fontWeight: '700',
+              marginBottom: theme.spacing(0.5),
+              textAlign: 'center',
+            }}
+          >
             セキュリティエラー
           </Text>
-          
-          <Text style={{
-            color: colors.danger,
-            fontSize: 14,
-            textAlign: 'center',
-            lineHeight: 20
-          }}>
+
+          <Text
+            style={{
+              color: colors.danger,
+              fontSize: 14,
+              textAlign: 'center',
+              lineHeight: 20,
+            }}
+          >
             セキュリティ上の理由により、アプリケーションを再起動してください。
             問題が続く場合は、サポートにお問い合わせください。
           </Text>
@@ -164,84 +185,102 @@ export default function AuthGuard({
   // =====================================================
 
   if (!isAuthenticated || !user) {
-    secureLogger.debug('AuthGuard: User not authenticated, showing unauthenticated component');
+    secureLogger.debug(
+      'AuthGuard: User not authenticated, showing unauthenticated component'
+    );
 
     if (unauthenticatedComponent) {
       return <>{unauthenticatedComponent}</>;
     }
 
     return (
-      <View style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'transparent',
-        padding: theme.spacing(2)
-      }}>
-        <View style={{
-          backgroundColor: colors.card + '88',
-          borderRadius: theme.radius.lg,
-          padding: theme.spacing(2),
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
           alignItems: 'center',
-          borderWidth: 1,
-          borderColor: colors.surface
-        }}>
+          backgroundColor: 'transparent',
+          padding: theme.spacing(2),
+        }}
+      >
+        <View
+          style={{
+            backgroundColor: colors.card + '88',
+            borderRadius: theme.radius.lg,
+            padding: theme.spacing(2),
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: colors.surface,
+          }}
+        >
           <Text style={{ fontSize: 32, marginBottom: theme.spacing(1) }}>
             🔐
           </Text>
-          
-          <Text style={{
-            color: colors.text,
-            fontSize: 18,
-            fontWeight: '700',
-            marginBottom: theme.spacing(0.5),
-            textAlign: 'center'
-          }}>
+
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 18,
+              fontWeight: '700',
+              marginBottom: theme.spacing(0.5),
+              textAlign: 'center',
+            }}
+          >
             ログインが必要です
           </Text>
-          
-          <Text style={{
-            color: colors.subtext,
-            fontSize: 14,
-            textAlign: 'center',
-            lineHeight: 20,
-            marginBottom: theme.spacing(1.5)
-          }}>
-            このページを表示するには、
-            ログインまたは新規登録が必要です。
+
+          <Text
+            style={{
+              color: colors.subtext,
+              fontSize: 14,
+              textAlign: 'center',
+              lineHeight: 20,
+              marginBottom: theme.spacing(1.5),
+            }}
+          >
+            このページを表示するには、 ログインまたは新規登録が必要です。
           </Text>
 
-          <View style={{
-            backgroundColor: colors.mint + '15',
-            borderRadius: theme.radius.sm,
-            padding: theme.spacing(1),
-            borderWidth: 1,
-            borderColor: colors.mint + '30',
-            alignSelf: 'stretch'
-          }}>
-            <Text style={{
-              color: colors.mint,
-              fontSize: 12,
-              textAlign: 'center'
-            }}>
+          <View
+            style={{
+              backgroundColor: colors.mint + '15',
+              borderRadius: theme.radius.sm,
+              padding: theme.spacing(1),
+              borderWidth: 1,
+              borderColor: colors.mint + '30',
+              alignSelf: 'stretch',
+            }}
+          >
+            <Text
+              style={{
+                color: colors.mint,
+                fontSize: 12,
+                textAlign: 'center',
+              }}
+            >
               🛡️ あなたの個人情報は安全に保護されます
             </Text>
           </View>
 
           {showDebugInfo && (
-            <View style={{
-              marginTop: theme.spacing(1),
-              padding: theme.spacing(0.75),
-              backgroundColor: colors.surface,
-              borderRadius: theme.radius.sm,
-              alignSelf: 'stretch'
-            }}>
-              <Text style={{
-                color: colors.subtext,
-                fontSize: 10,
-                fontFamily: 'monospace'
-              }}>
-                AuthGuard: Loading={String(isLoading)} | Auth={String(isAuthenticated)} | User={user ? 'Present' : 'None'}
+            <View
+              style={{
+                marginTop: theme.spacing(1),
+                padding: theme.spacing(0.75),
+                backgroundColor: colors.surface,
+                borderRadius: theme.radius.sm,
+                alignSelf: 'stretch',
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.subtext,
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                }}
+              >
+                AuthGuard: Loading={String(isLoading)} | Auth=
+                {String(isAuthenticated)} | User={user ? 'Present' : 'None'}
               </Text>
             </View>
           )}
@@ -254,16 +293,15 @@ export default function AuthGuard({
   // AUTHENTICATED STATE
   // =====================================================
 
-  secureLogger.debug('AuthGuard: User authenticated, rendering protected content', {
-    userId: user.id,
-    username: user.username
-  });
-
-  return (
-    <>
-      {children}
-    </>
+  secureLogger.debug(
+    'AuthGuard: User authenticated, rendering protected content',
+    {
+      userId: user.id,
+      username: user.username,
+    }
   );
+
+  return <>{children}</>;
 }
 
 // =====================================================
@@ -303,13 +341,13 @@ export function withAuthGuard<P extends object>(
  */
 export function useAuthStatus() {
   const { isAuthenticated, isLoading, user, error } = useAuth();
-  
+
   return {
     isAuthenticated,
     isLoading,
     hasUser: !!user,
     hasError: !!error,
     isCriticalError: error?.includes('critical'),
-    isReady: !isLoading && !error
+    isReady: !isLoading && !error,
   };
 }

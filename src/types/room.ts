@@ -1,9 +1,9 @@
 /**
  * ROOM SYSTEM TYPES
- * 
+ *
  * Types for the Discord-like space/channel system with anonymous rooms
  * Following the requirements in room-feature-requirements-v1.md
- * 
+ *
  * SECURITY RULES:
  * 1. NEVER log message content or user information
  * 2. Use appropriate privacy protection for sensitive data
@@ -321,28 +321,28 @@ export enum RoomEventType {
   SPACE_CREATED = 'space_created',
   SPACE_UPDATED = 'space_updated',
   SPACE_DELETED = 'space_deleted',
-  
+
   // Channel events
   CHANNEL_CREATED = 'channel_created',
   CHANNEL_UPDATED = 'channel_updated',
   CHANNEL_DELETED = 'channel_deleted',
-  
+
   // Member events
   MEMBER_JOINED = 'member_joined',
   MEMBER_LEFT = 'member_left',
   MEMBER_ROLE_CHANGED = 'member_role_changed',
   MEMBER_SEEN_UPDATED = 'member_seen_updated',
   MEMBER_REMOVED = 'member_removed',
-  
+
   // Message events
   MESSAGE_SENT = 'message_sent',
   MESSAGE_EDITED = 'message_edited',
   MESSAGE_MASKED = 'message_masked',
   MESSAGE_DELETED = 'message_deleted',
-  
+
   // Typing events
   TYPING_START = 'typing_start',
-  TYPING_STOP = 'typing_stop'
+  TYPING_STOP = 'typing_stop',
 }
 
 /**
@@ -358,7 +358,11 @@ export interface RoomEvent {
  * Message realtime event
  */
 export interface MessageEvent extends RoomEvent {
-  event_type: RoomEventType.MESSAGE_SENT | RoomEventType.MESSAGE_EDITED | RoomEventType.MESSAGE_MASKED | RoomEventType.MESSAGE_DELETED;
+  event_type:
+    | RoomEventType.MESSAGE_SENT
+    | RoomEventType.MESSAGE_EDITED
+    | RoomEventType.MESSAGE_MASKED
+    | RoomEventType.MESSAGE_DELETED;
   message_id: string;
   channel_id?: string;
   anonymous_room_id?: string;
@@ -371,7 +375,11 @@ export interface MessageEvent extends RoomEvent {
  * Member event
  */
 export interface MemberEvent extends RoomEvent {
-  event_type: RoomEventType.MEMBER_JOINED | RoomEventType.MEMBER_LEFT | RoomEventType.MEMBER_ROLE_CHANGED | RoomEventType.MEMBER_REMOVED;
+  event_type:
+    | RoomEventType.MEMBER_JOINED
+    | RoomEventType.MEMBER_LEFT
+    | RoomEventType.MEMBER_ROLE_CHANGED
+    | RoomEventType.MEMBER_REMOVED;
   channel_id: string;
   space_id: string;
   user_id: string;
@@ -467,20 +475,20 @@ export const RoomConstraints = {
     description: { maxLength: 500 },
     maxTags: 20,
     maxMembersPublic: 500,
-    maxMembersPrivate: 50
+    maxMembersPrivate: 50,
   },
   channel: {
     name: { minLength: 1, maxLength: 50 },
-    description: { maxLength: 200 }
+    description: { maxLength: 200 },
   },
   message: {
-    content: { minLength: 1, maxLength: 2000 }
+    content: { minLength: 1, maxLength: 2000 },
   },
   anonymous: {
     rateLimitSeconds: 10,
     maxMessagesPerMinute: 6,
-    slotDurationHours: 1
-  }
+    slotDurationHours: 1,
+  },
 } as const;
 
 // =====================================================
@@ -517,7 +525,9 @@ export function getCurrentAnonymousSlotId(): string {
  * Check if anonymous message is expired
  */
 export function isAnonymousMessageExpired(message: RoomMessage): boolean {
-  return message.expires_at ? new Date(message.expires_at) <= new Date() : false;
+  return message.expires_at
+    ? new Date(message.expires_at) <= new Date()
+    : false;
 }
 
 /**
@@ -538,9 +548,13 @@ export function sanitizeRoomMessageForLogging(message: any): any {
   return {
     ...message,
     content: '[MESSAGE_CONTENT_REDACTED]',
-    display_name: message.anonymous_room_id ? '[ANONYMOUS_NAME_REDACTED]' : message.display_name,
-    sender: message.sender ? { id: message.sender.id, username: '[REDACTED]' } : null,
-    attachments: message.attachments ? '[ATTACHMENTS_REDACTED]' : null
+    display_name: message.anonymous_room_id
+      ? '[ANONYMOUS_NAME_REDACTED]'
+      : message.display_name,
+    sender: message.sender
+      ? { id: message.sender.id, username: '[REDACTED]' }
+      : null,
+    attachments: message.attachments ? '[ATTACHMENTS_REDACTED]' : null,
   };
 }
 
@@ -554,6 +568,6 @@ export function sanitizeSpaceForLogging(space: any): any {
 
   return {
     ...space,
-    owner: space.owner ? { id: space.owner.id, username: '[REDACTED]' } : null
+    owner: space.owner ? { id: space.owner.id, username: '[REDACTED]' } : null,
   };
 }

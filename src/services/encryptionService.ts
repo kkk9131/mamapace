@@ -1,6 +1,6 @@
 /**
  * CLIENT-SIDE ENCRYPTION SERVICE
- * 
+ *
  * CRITICAL SECURITY RULES:
  * 1. NEVER store encryption keys in plaintext
  * 2. Use secure random number generation
@@ -58,12 +58,12 @@ const ENCRYPTION_CONFIG = {
   SALT_LENGTH: 32, // 256 bits
   TAG_LENGTH: 16, // 128 bits
   KEY_DERIVATION_ITERATIONS: 100000, // PBKDF2 iterations
-  KEY_DERIVATION_ALGORITHM: 'PBKDF2'
+  KEY_DERIVATION_ALGORITHM: 'PBKDF2',
 } as const;
 
 const STORAGE_KEYS = {
   MASTER_KEY_SALT: 'mamapace_master_key_salt',
-  KEY_DERIVATION_PARAMS: 'mamapace_key_derivation_params'
+  KEY_DERIVATION_PARAMS: 'mamapace_key_derivation_params',
 } as const;
 
 // =====================================================
@@ -101,10 +101,9 @@ class EncryptionService {
 
       // Load or generate master key salt
       await this.initializeMasterKeySalt();
-      
+
       this.isInitialized = true;
       secureLogger.info('Encryption service initialized successfully');
-
     } catch (error) {
       secureLogger.error('Failed to initialize encryption service', { error });
       throw new Error('Encryption service initialization failed');
@@ -117,21 +116,25 @@ class EncryptionService {
   private async initializeMasterKeySalt(): Promise<void> {
     try {
       // Try to load existing salt
-      const storedSalt = await AsyncStorage.getItem(STORAGE_KEYS.MASTER_KEY_SALT);
-      
+      const storedSalt = await AsyncStorage.getItem(
+        STORAGE_KEYS.MASTER_KEY_SALT
+      );
+
       if (storedSalt) {
         this.masterKeySalt = new Uint8Array(JSON.parse(storedSalt));
         secureLogger.debug('Loaded existing master key salt');
       } else {
         // Generate new salt
-        this.masterKeySalt = this.generateSecureRandom(ENCRYPTION_CONFIG.SALT_LENGTH);
-        
+        this.masterKeySalt = this.generateSecureRandom(
+          ENCRYPTION_CONFIG.SALT_LENGTH
+        );
+
         // Store salt securely
         await AsyncStorage.setItem(
           STORAGE_KEYS.MASTER_KEY_SALT,
           JSON.stringify(Array.from(this.masterKeySalt))
         );
-        
+
         secureLogger.info('Generated new master key salt');
       }
     } catch (error) {
@@ -168,12 +171,12 @@ class EncryptionService {
           name: 'PBKDF2',
           salt: salt,
           iterations: iterations,
-          hash: 'SHA-256'
+          hash: 'SHA-256',
         },
         keyMaterial,
         {
           name: ENCRYPTION_CONFIG.ALGORITHM,
-          length: ENCRYPTION_CONFIG.KEY_LENGTH * 8 // Convert to bits
+          length: ENCRYPTION_CONFIG.KEY_LENGTH * 8, // Convert to bits
         },
         false, // Not extractable
         ['encrypt', 'decrypt']
@@ -182,7 +185,7 @@ class EncryptionService {
       secureLogger.debug('Key derived successfully', {
         algorithm: ENCRYPTION_CONFIG.ALGORITHM,
         keyLength: ENCRYPTION_CONFIG.KEY_LENGTH,
-        iterations
+        iterations,
       });
 
       return key;
@@ -219,7 +222,7 @@ class EncryptionService {
       const {
         keyDerivationIterations = ENCRYPTION_CONFIG.KEY_DERIVATION_ITERATIONS,
         algorithm = ENCRYPTION_CONFIG.ALGORITHM,
-        keyLength = ENCRYPTION_CONFIG.KEY_LENGTH
+        keyLength = ENCRYPTION_CONFIG.KEY_LENGTH,
       } = options;
 
       // Generate random salt and IV
@@ -234,7 +237,7 @@ class EncryptionService {
       const encrypted = await crypto.subtle.encrypt(
         {
           name: algorithm,
-          iv: iv
+          iv: iv,
         },
         key,
         plaintextBytes
@@ -251,13 +254,13 @@ class EncryptionService {
         salt: this.arrayToBase64(salt),
         tag: this.arrayToBase64(tag),
         algorithm,
-        keyDerivation: ENCRYPTION_CONFIG.KEY_DERIVATION_ALGORITHM
+        keyDerivation: ENCRYPTION_CONFIG.KEY_DERIVATION_ALGORITHM,
       };
 
       secureLogger.debug('Data encrypted successfully', {
         algorithm,
         ciphertextLength: result.ciphertext.length,
-        keyDerivationIterations
+        keyDerivationIterations,
       });
 
       // Clear sensitive data from memory
@@ -305,7 +308,7 @@ class EncryptionService {
       const decrypted = await crypto.subtle.decrypt(
         {
           name: encryptedData.algorithm,
-          iv: iv
+          iv: iv,
         },
         key,
         encryptedBuffer
@@ -315,7 +318,7 @@ class EncryptionService {
 
       secureLogger.debug('Data decrypted successfully', {
         algorithm: encryptedData.algorithm,
-        plaintextLength: plaintext.length
+        plaintextLength: plaintext.length,
       });
 
       // Clear sensitive data from memory
@@ -345,15 +348,17 @@ class EncryptionService {
 
     try {
       // Add additional entropy by combining with master salt
-      const enhancedPassword = await this.enhancePasswordWithMasterSalt(userPassword);
-      
+      const enhancedPassword =
+        await this.enhancePasswordWithMasterSalt(userPassword);
+
       const encrypted = await this.encrypt(maternalHealthId, enhancedPassword, {
-        keyDerivationIterations: ENCRYPTION_CONFIG.KEY_DERIVATION_ITERATIONS * 2 // Extra iterations for sensitive data
+        keyDerivationIterations:
+          ENCRYPTION_CONFIG.KEY_DERIVATION_ITERATIONS * 2, // Extra iterations for sensitive data
       });
 
       secureLogger.security('Maternal health ID encrypted', {
         algorithm: encrypted.algorithm,
-        keyDerivation: encrypted.keyDerivation
+        keyDerivation: encrypted.keyDerivation,
       });
 
       // Clear maternal health ID from memory immediately
@@ -375,7 +380,8 @@ class EncryptionService {
     userPassword: string
   ): Promise<string> {
     try {
-      const enhancedPassword = await this.enhancePasswordWithMasterSalt(userPassword);
+      const enhancedPassword =
+        await this.enhancePasswordWithMasterSalt(userPassword);
       const decrypted = await this.decrypt(encryptedData, enhancedPassword);
 
       if (!this.validateMaternalHealthId(decrypted)) {
@@ -401,7 +407,9 @@ class EncryptionService {
   /**
    * Enhances password with master salt for additional security
    */
-  private async enhancePasswordWithMasterSalt(password: string): Promise<string> {
+  private async enhancePasswordWithMasterSalt(
+    password: string
+  ): Promise<string> {
     if (!this.masterKeySalt) {
       throw new Error('Master key salt not initialized');
     }
@@ -440,12 +448,12 @@ class EncryptionService {
     try {
       // Use user ID as part of the encryption key
       const sessionKey = await this.deriveSessionKey(userId);
-      
+
       const encrypted = await this.encrypt(token, sessionKey);
-      
+
       secureLogger.debug('Session token encrypted', {
         userId: userId.substring(0, 8) + '...',
-        algorithm: encrypted.algorithm
+        algorithm: encrypted.algorithm,
       });
 
       return encrypted;
@@ -465,9 +473,9 @@ class EncryptionService {
     try {
       const sessionKey = await this.deriveSessionKey(userId);
       const decrypted = await this.decrypt(encryptedData, sessionKey);
-      
+
       secureLogger.debug('Session token decrypted', {
-        userId: userId.substring(0, 8) + '...'
+        userId: userId.substring(0, 8) + '...',
       });
 
       return decrypted;
@@ -584,7 +592,7 @@ class EncryptionService {
     try {
       await Promise.all([
         AsyncStorage.removeItem(STORAGE_KEYS.MASTER_KEY_SALT),
-        AsyncStorage.removeItem(STORAGE_KEYS.KEY_DERIVATION_PARAMS)
+        AsyncStorage.removeItem(STORAGE_KEYS.KEY_DERIVATION_PARAMS),
       ]);
 
       this.masterKeySalt = null;
@@ -610,7 +618,7 @@ class EncryptionService {
       isInitialized: this.isInitialized,
       algorithm: ENCRYPTION_CONFIG.ALGORITHM,
       keyLength: ENCRYPTION_CONFIG.KEY_LENGTH,
-      keyDerivationIterations: ENCRYPTION_CONFIG.KEY_DERIVATION_ITERATIONS
+      keyDerivationIterations: ENCRYPTION_CONFIG.KEY_DERIVATION_ITERATIONS,
     };
   }
 }

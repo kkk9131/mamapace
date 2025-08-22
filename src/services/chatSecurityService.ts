@@ -1,6 +1,6 @@
 /**
  * CHAT SECURITY SERVICE
- * 
+ *
  * Advanced security features for chat system:
  * - Content sanitization and validation
  * - Profanity filtering
@@ -22,20 +22,20 @@ const SECURITY_CONFIG = {
   MAX_MENTIONS_PER_MESSAGE: 5,
   MAX_LINKS_PER_MESSAGE: 2,
   SUSPICIOUS_PATTERN_THRESHOLD: 0.7,
-  
+
   // Rate limiting
   RATE_LIMIT_WINDOW_MS: 60 * 1000, // 1 minute
   RATE_LIMIT_BURST_THRESHOLD: 5,
   RATE_LIMIT_STRICT_THRESHOLD: 10,
-  
+
   // Spam detection
   SPAM_SCORE_THRESHOLD: 0.8,
   REPEATED_MESSAGE_THRESHOLD: 3,
   RAPID_FIRE_THRESHOLD: 1000, // 1 second
-  
+
   // Content moderation
   AUTO_MODERATE_SCORE: 0.9,
-  HUMAN_REVIEW_SCORE: 0.7
+  HUMAN_REVIEW_SCORE: 0.7,
 } as const;
 
 // =====================================================
@@ -97,13 +97,13 @@ export function validateMessageContent(
   const sanitizedContent = sanitizeMessageContent(content);
   const warnings: string[] = [];
   let securityScore = 0;
-  
+
   const flags = {
     hasSuspiciousPatterns: false,
     hasExcessiveLinks: false,
     hasExcessiveMentions: false,
     hasPotentialSpam: false,
-    needsHumanReview: false
+    needsHumanReview: false,
   };
 
   // Check content length
@@ -113,7 +113,7 @@ export function validateMessageContent(
       sanitizedContent,
       warnings: ['メッセージが短すぎます。'],
       securityScore: 0,
-      flags
+      flags,
     };
   }
 
@@ -146,7 +146,7 @@ export function validateMessageContent(
     /[A-Z]{20,}/g, // Excessive caps
     /(win|free|money|prize|urgent|act now|limited time)/gi, // Spam keywords
     /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g, // Credit card patterns
-    /\b\d{3}[-.]?\d{2}[-.]?\d{4}\b/g // SSN patterns
+    /\b\d{3}[-.]?\d{2}[-.]?\d{4}\b/g, // SSN patterns
   ];
 
   suspiciousPatterns.forEach(pattern => {
@@ -181,7 +181,7 @@ export function validateMessageContent(
     sanitizedContent,
     warnings,
     securityScore: Math.min(securityScore, 1),
-    flags
+    flags,
   };
 }
 
@@ -210,7 +210,7 @@ function detectSpamContent(content: string, senderId: string): number {
       messages: [],
       timestamps: [],
       lastRapidFireTime: 0,
-      rapidFireCount: 0
+      rapidFireCount: 0,
     });
   }
 
@@ -220,7 +220,7 @@ function detectSpamContent(content: string, senderId: string): number {
   // Clean old history (keep last hour)
   const oneHourAgo = now - 60 * 60 * 1000;
   const validIndices = history.timestamps
-    .map((ts, index) => ts > oneHourAgo ? index : -1)
+    .map((ts, index) => (ts > oneHourAgo ? index : -1))
     .filter(index => index >= 0);
 
   history.messages = validIndices.map(i => history.messages[i]);
@@ -292,86 +292,91 @@ export function checkRateLimit(
   customLimit?: number
 ): RateLimitResult {
   const now = Date.now();
-  
+
   // Get limits based on action
   const limits = {
     message: ChatConstraints.rateLimit.messagesPerMinute,
     chat_create: ChatConstraints.rateLimit.chatsPerHour / 60, // Per minute
-    typing: 10 // Typing updates per minute
+    typing: 10, // Typing updates per minute
   };
-  
+
   const limit = customLimit || limits[action];
-  const windowMs = action === 'chat_create' ? 60 * 60 * 1000 : SECURITY_CONFIG.RATE_LIMIT_WINDOW_MS;
-  
+  const windowMs =
+    action === 'chat_create'
+      ? 60 * 60 * 1000
+      : SECURITY_CONFIG.RATE_LIMIT_WINDOW_MS;
+
   const key = `${userId}_${action}`;
-  
+
   if (!rateLimitState.has(key)) {
     rateLimitState.set(key, {
       count: 1,
       resetTime: now + windowMs,
       violations: 0,
-      lastViolationTime: 0
+      lastViolationTime: 0,
     });
-    
+
     return {
       allowed: true,
       remainingRequests: limit - 1,
       resetTime: now + windowMs,
-      waitTime: 0
+      waitTime: 0,
     };
   }
-  
+
   const state = rateLimitState.get(key)!;
-  
+
   // Reset if window expired
   if (now >= state.resetTime) {
     state.count = 1;
     state.resetTime = now + windowMs;
-    
+
     return {
       allowed: true,
       remainingRequests: limit - 1,
       resetTime: state.resetTime,
-      waitTime: 0
+      waitTime: 0,
     };
   }
-  
+
   // Check if limit exceeded
   if (state.count >= limit) {
     // Intelligent backoff for repeat violators
     const timeSinceLastViolation = now - state.lastViolationTime;
     let backoffMultiplier = 1;
-    
-    if (state.violations > 0 && timeSinceLastViolation < 60000) { // Within 1 minute
+
+    if (state.violations > 0 && timeSinceLastViolation < 60000) {
+      // Within 1 minute
       backoffMultiplier = Math.min(Math.pow(2, state.violations), 8); // Exponential backoff, max 8x
     }
-    
-    const waitTime = Math.ceil((state.resetTime - now) / 1000) * backoffMultiplier;
-    
+
+    const waitTime =
+      Math.ceil((state.resetTime - now) / 1000) * backoffMultiplier;
+
     state.violations++;
     state.lastViolationTime = now;
-    
+
     let reason = 'レート制限に達しました。';
     if (backoffMultiplier > 1) {
       reason += ` 連続違反のため待機時間が延長されました。`;
     }
-    
+
     return {
       allowed: false,
       remainingRequests: 0,
       resetTime: state.resetTime,
       waitTime,
-      reason
+      reason,
     };
   }
-  
+
   state.count++;
-  
+
   return {
     allowed: true,
     remainingRequests: limit - state.count,
     resetTime: state.resetTime,
-    waitTime: 0
+    waitTime: 0,
   };
 }
 
@@ -403,7 +408,9 @@ export function moderateContent(
   // Auto-block high-risk content
   if (validation.securityScore >= SECURITY_CONFIG.AUTO_MODERATE_SCORE) {
     action = 'block';
-    reasons.push('自動モデレーションにより、このメッセージはブロックされました。');
+    reasons.push(
+      '自動モデレーションにより、このメッセージはブロックされました。'
+    );
   }
   // Flag suspicious content
   else if (validation.securityScore >= SECURITY_CONFIG.HUMAN_REVIEW_SCORE) {
@@ -421,7 +428,7 @@ export function moderateContent(
     action,
     confidence,
     reasons,
-    needsHumanReview: validation.flags.needsHumanReview
+    needsHumanReview: validation.flags.needsHumanReview,
   };
 }
 
@@ -446,12 +453,15 @@ export function encryptSensitiveContent(content: string, key: string): string {
   }
 }
 
-export function decryptSensitiveContent(encryptedContent: string, key: string): string {
+export function decryptSensitiveContent(
+  encryptedContent: string,
+  key: string
+): string {
   try {
     if (!encryptedContent.startsWith('enc:')) {
       return encryptedContent; // Not encrypted
     }
-    
+
     const encrypted = encryptedContent.substring(4);
     const decrypted = Buffer.from(encrypted, 'base64').toString('utf8');
     return decrypted;
@@ -483,7 +493,7 @@ export function cleanupSecurityData(): void {
   for (const [userId, history] of userMessageHistory.entries()) {
     history.timestamps = history.timestamps.filter(ts => ts > oneHourAgo);
     history.messages = history.messages.slice(-history.timestamps.length);
-    
+
     if (history.timestamps.length === 0) {
       userMessageHistory.delete(userId);
     }
@@ -491,7 +501,7 @@ export function cleanupSecurityData(): void {
 
   secureLogger.info('Security data cleanup completed', {
     rateLimitEntries: rateLimitState.size,
-    historyEntries: userMessageHistory.size
+    historyEntries: userMessageHistory.size,
   });
 }
 

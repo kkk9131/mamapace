@@ -1,6 +1,6 @@
 /**
  * SECURE CHAT TYPES
- * 
+ *
  * CRITICAL SECURITY RULES:
  * 1. NEVER log message content or participant information
  * 2. Use SecureString for sensitive data handling
@@ -37,7 +37,7 @@ export enum OnlineStatus {
   AWAY = 'away',
   BUSY = 'busy',
   OFFLINE = 'offline',
-  INVISIBLE = 'invisible'
+  INVISIBLE = 'invisible',
 }
 
 /**
@@ -57,7 +57,7 @@ export enum ReadReceiptStatus {
   UNREAD = 'unread',
   DELIVERED = 'delivered',
   READ = 'read',
-  SEEN = 'seen'
+  SEEN = 'seen',
 }
 
 /**
@@ -120,7 +120,7 @@ export enum MessageType {
   IMAGE = 'image',
   FILE = 'file',
   SYSTEM = 'system', // For system notifications
-  DELETED = 'deleted' // For deleted message placeholders
+  DELETED = 'deleted', // For deleted message placeholders
 }
 
 /**
@@ -143,7 +143,7 @@ export enum SystemEventType {
   USER_JOINED = 'user_joined',
   USER_LEFT = 'user_left',
   CHAT_CREATED = 'chat_created',
-  SETTINGS_CHANGED = 'settings_changed'
+  SETTINGS_CHANGED = 'settings_changed',
 }
 
 // =====================================================
@@ -196,7 +196,7 @@ export interface ChatParticipant {
 export enum ParticipantRole {
   MEMBER = 'member',
   ADMIN = 'admin', // For future group chat features
-  OWNER = 'owner'  // For future group chat features
+  OWNER = 'owner', // For future group chat features
 }
 
 // =====================================================
@@ -338,7 +338,7 @@ export enum ChatErrorCode {
   SYSTEM_ERROR = 'SYSTEM_ERROR',
   AUTHENTICATION_REQUIRED = 'AUTHENTICATION_REQUIRED',
   SUPABASE_ERROR = 'SUPABASE_ERROR',
-  VALIDATION_ERROR = 'VALIDATION_ERROR'
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
 }
 
 // =====================================================
@@ -395,7 +395,7 @@ export enum ChatEventType {
   PARTICIPANT_LEFT = 'participant_left',
   USER_ONLINE = 'user_online',
   USER_OFFLINE = 'user_offline',
-  USER_STATUS_CHANGED = 'user_status_changed'
+  USER_STATUS_CHANGED = 'user_status_changed',
 }
 
 /**
@@ -413,7 +413,10 @@ export interface ChatEvent {
  * Real-time message event
  */
 export interface MessageEvent extends ChatEvent {
-  type: ChatEventType.NEW_MESSAGE | ChatEventType.MESSAGE_UPDATED | ChatEventType.MESSAGE_DELETED;
+  type:
+    | ChatEventType.NEW_MESSAGE
+    | ChatEventType.MESSAGE_UPDATED
+    | ChatEventType.MESSAGE_DELETED;
   data: MessageWithSender;
 }
 
@@ -445,7 +448,10 @@ export interface ReadStatusEvent extends ChatEvent {
  * Real-time presence event
  */
 export interface PresenceEvent extends ChatEvent {
-  type: ChatEventType.USER_ONLINE | ChatEventType.USER_OFFLINE | ChatEventType.USER_STATUS_CHANGED;
+  type:
+    | ChatEventType.USER_ONLINE
+    | ChatEventType.USER_OFFLINE
+    | ChatEventType.USER_STATUS_CHANGED;
   data: {
     user: PublicUserProfile;
     presence: UserPresence;
@@ -493,20 +499,26 @@ export interface ChatValidation {
 export const ChatConstraints = {
   message: {
     maxLength: 2000,
-    minLength: 1
+    minLength: 1,
   },
   chat: {
     maxParticipants: 100, // For future group chat features
-    maxChatsPerUser: 500
+    maxChatsPerUser: 500,
   },
   file: {
     maxSize: 10 * 1024 * 1024, // 10MB
-    allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain']
+    allowedTypes: [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'application/pdf',
+      'text/plain',
+    ],
   },
   rateLimit: {
     messagesPerMinute: 30,
-    chatsPerHour: 10
-  }
+    chatsPerHour: 10,
+  },
 } as const;
 
 // =====================================================
@@ -550,13 +562,13 @@ export function sanitizeChatForLogging(chat: any): any {
   }
 
   const sanitized = { ...chat };
-  
+
   // Remove sensitive fields that shouldn't be logged
   const sensitiveFields = [
     'content', // Message content
     'metadata', // May contain sensitive information
     'participants', // User information
-    'sender' // User profile data
+    'sender', // User profile data
   ];
 
   sensitiveFields.forEach(field => {
@@ -585,8 +597,10 @@ export function sanitizeMessageForLogging(message: any): any {
   return {
     ...message,
     content: '[MESSAGE_CONTENT_REDACTED]',
-    sender: message.sender ? { id: message.sender.id, username: '[REDACTED]' } : null,
-    metadata: message.metadata ? '[METADATA_REDACTED]' : null
+    sender: message.sender
+      ? { id: message.sender.id, username: '[REDACTED]' }
+      : null,
+    metadata: message.metadata ? '[METADATA_REDACTED]' : null,
   };
 }
 
@@ -605,7 +619,7 @@ export function createSendMessageRequest(data: {
     content: data.content,
     message_type: data.message_type || MessageType.TEXT,
     reply_to_message_id: data.reply_to_message_id,
-    metadata: data.metadata
+    metadata: data.metadata,
   };
 }
 
@@ -622,7 +636,7 @@ export function createChatRequest(data: {
     participant_id: data.participant_id,
     initial_message: data.initial_message,
     chat_type: data.chat_type || 'direct',
-    metadata: data.metadata
+    metadata: data.metadata,
   };
 }
 
@@ -630,7 +644,4 @@ export function createChatRequest(data: {
 // EXPORT STATEMENT
 // =====================================================
 
-export type {
-  MessageContent,
-  EncryptedMessage
-};
+export type { MessageContent, EncryptedMessage };

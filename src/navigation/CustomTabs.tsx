@@ -5,18 +5,19 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import Sidebar from './Sidebar';
 import RoomsScreen from '../screens/RoomsScreen';
-import CreateRoomScreen from '../screens/CreateRoomScreen';
+// import CreateRoomScreen from '../screens/CreateRoomScreen'; // Replaced with CreateSpaceScreen
 import ChatsListScreen from '../screens/ChatsListScreen';
 import ChatScreen from '../screens/ChatScreen';
 import { Pressable, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useHandPreference } from '../contexts/HandPreferenceContext';
 import AuthGuard from '../components/AuthGuard';
 
 import ComposeScreen from '../screens/ComposeScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import AnonFeedScreen from '../screens/AnonFeedScreen';
+// import AnonFeedScreen from '../screens/AnonFeedScreen'; // Removed - now handled within RoomsScreen
 import RoomsListScreen from '../screens/RoomsListScreen';
 import CommentComposeScreen from '../screens/CommentComposeScreen';
 import CommentsListScreen from '../screens/CommentsListScreen';
@@ -25,7 +26,7 @@ import FollowingListScreen from '../screens/FollowingListScreen';
 import LikedPostsListScreen from '../screens/LikedPostsListScreen';
 import MyPostsListScreen from '../screens/MyPostsListScreen';
 import LoginScreen from '../screens/LoginScreen';
-import SearchScreen from '../screens/SearchScreen';
+// import SearchScreen from '../screens/SearchScreen'; // Removed - now handled within RoomsScreen
 import SignUpScreen from '../screens/SignUpScreen';
 import ProfileEditScreen from '../screens/ProfileEditScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
@@ -41,18 +42,55 @@ const tabs = [
 
 const Hidden = { compose: ComposeScreen } as const;
 
-function TextButton({ label, active, onPress, onLongPress }: { label: string; active: boolean; onPress: () => void; onLongPress?: () => void }) {
+function TextButton({
+  label,
+  active,
+  onPress,
+  onLongPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  onLongPress?: () => void;
+}) {
   const { colors } = useTheme();
   const scale = new Animated.Value(1);
   const pulse = () => {
     Animated.sequence([
-      Animated.spring(scale, { toValue: 0.9, useNativeDriver: true, speed: 14, bounciness: 10 }),
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 10 }),
+      Animated.spring(scale, {
+        toValue: 0.9,
+        useNativeDriver: true,
+        speed: 14,
+        bounciness: 10,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 14,
+        bounciness: 10,
+      }),
     ]).start();
   };
   return (
-    <Pressable onPress={async () => { pulse(); await Haptics.selectionAsync(); onPress(); }} onLongPress={onLongPress} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.Text style={{ transform: [{ scale }], color: active ? colors.pink : colors.subtext, fontSize: 16, fontWeight: '700' }}>{label}</Animated.Text>
+    <Pressable
+      onPress={async () => {
+        pulse();
+        await Haptics.selectionAsync();
+        onPress();
+      }}
+      onLongPress={onLongPress}
+      style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+    >
+      <Animated.Text
+        style={{
+          transform: [{ scale }],
+          color: active ? colors.pink : colors.subtext,
+          fontSize: 16,
+          fontWeight: '700',
+        }}
+      >
+        {label}
+      </Animated.Text>
     </Pressable>
   );
 }
@@ -61,16 +99,19 @@ export default function CustomTabs() {
   const theme = useTheme() as any;
   const { colors } = theme;
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { handPreference } = useHandPreference();
   const [active, setActive] = useState<any>('home');
   const [homeRefreshKey, setHomeRefreshKey] = useState<number>(0);
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
-  const [activeChatUserName, setActiveChatUserName] = useState<string | null>(null);
+  const [activeChatUserName, setActiveChatUserName] = useState<string | null>(
+    null
+  );
   const [chatReturnTo, setChatReturnTo] = useState<string>('chats'); // Track where to return from chat
   const [commentsRefreshKey, setCommentsRefreshKey] = useState<number>(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   // Authentication flow - show login/signup screens when not authenticated
   if (!isLoading && !isAuthenticated) {
     if (active === 'signup') {
@@ -79,108 +120,225 @@ export default function CustomTabs() {
       return <LoginScreen onSignup={() => setActive('signup' as any)} />;
     }
   }
-  
+
   // Handle compose screen (no auth guard needed as it's already protected by the above check)
-  if (active === 'compose') return (
-    <ComposeScreen 
-      onPosted={() => { setActive('home' as any); setHomeRefreshKey((k: number) => k + 1); }}
-      onClose={() => setActive('home' as any)}
-    />
-  );
+  if (active === 'compose')
+    return (
+      <ComposeScreen
+        onPosted={() => {
+          setActive('home' as any);
+          setHomeRefreshKey((k: number) => k + 1);
+        }}
+        onClose={() => setActive('home' as any)}
+      />
+    );
 
   return (
     <AuthGuard>
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
-        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onNavigate={(key) => {
-          setActive(key as any);
-          setSidebarOpen(false);
-        }} />
+        <Sidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onNavigate={key => {
+            setActive(key as any);
+            setSidebarOpen(false);
+          }}
+        />
         <View style={{ flex: 1 }}>
           {active === 'home' ? (
-            <HomeScreen refreshKey={homeRefreshKey} onCompose={() => setActive('compose' as any)} onOpenPost={(postId) => { setActivePostId(postId); setActive('comments' as any); }} onOpenProfileEdit={() => setActive('profileEdit' as any)} onOpenUser={(userId) => { setActiveUserId(userId); setActive('userProfile' as any); }} />
+            <HomeScreen
+              refreshKey={homeRefreshKey}
+              onCompose={() => setActive('compose' as any)}
+              onOpenPost={postId => {
+                setActivePostId(postId);
+                setActive('comments' as any);
+              }}
+              onOpenProfileEdit={() => setActive('profileEdit' as any)}
+              onOpenUser={userId => {
+                setActiveUserId(userId);
+                setActive('userProfile' as any);
+              }}
+            />
           ) : active === 'search' ? (
-            <SearchScreen />
+            // Redirect to home if search is accessed directly
+            (() => {
+              setActive('home');
+              return (
+                <HomeScreen
+                  refreshKey={homeRefreshKey}
+                  onCompose={() => setActive('compose' as any)}
+                  onOpenPost={postId => {
+                    setActivePostId(postId);
+                    setActive('comments' as any);
+                  }}
+                  onOpenProfileEdit={() => setActive('profileEdit' as any)}
+                  onOpenUser={userId => {
+                    setActiveUserId(userId);
+                    setActive('userProfile' as any);
+                  }}
+                />
+              );
+            })()
           ) : active === 'rooms' ? (
             <RoomsScreen />
           ) : active === 'createRoom' ? (
-            <CreateRoomScreen />
+            <CreateSpaceScreen
+              onSuccess={() => {
+                setActive('rooms' as any);
+              }}
+              onCancel={() => setActive('rooms' as any)}
+            />
           ) : active === 'chats' ? (
-            <ChatsListScreen onOpen={(chatId: string, userName: string) => {
-              setActiveChatId(chatId);
-              setActiveChatUserName(userName);
-              setChatReturnTo('chats');
-              setActive('chat' as any);
-            }} />
+            <ChatsListScreen
+              onOpen={(chatId: string, userName: string) => {
+                setActiveChatId(chatId);
+                setActiveChatUserName(userName);
+                setChatReturnTo('chats');
+                setActive('chat' as any);
+              }}
+            />
           ) : active === 'anon' ? (
-            <AnonFeedScreen onComment={() => setActive('comment' as any)} onOpenPost={() => setActive('comments' as any)} />
+            // Redirect to home if anon is accessed directly
+            (() => {
+              setActive('home');
+              return (
+                <HomeScreen
+                  refreshKey={homeRefreshKey}
+                  onCompose={() => setActive('compose' as any)}
+                  onOpenPost={postId => {
+                    setActivePostId(postId);
+                    setActive('comments' as any);
+                  }}
+                  onOpenProfileEdit={() => setActive('profileEdit' as any)}
+                  onOpenUser={userId => {
+                    setActiveUserId(userId);
+                    setActive('userProfile' as any);
+                  }}
+                />
+              );
+            })()
           ) : active === 'chat' ? (
             activeChatId ? (
-              (
-                  <ChatScreen 
-                    chatId={activeChatId} 
-                    userName={activeChatUserName || 'ユーザー'}
-                    onBack={() => {
-                      setActiveChatId(null);
-                      setActiveChatUserName(null);
-                      setActive(chatReturnTo as any);
-                    }}
-                  />
-                )
-            ) : <ChatsListScreen onOpen={(chatId: string, userName: string) => {
-              setActiveChatId(chatId);
-              setActiveChatUserName(userName);
-              setChatReturnTo('chats');
-              setActive('chat' as any);
-            }} />
+              <ChatScreen
+                chatId={activeChatId}
+                userName={activeChatUserName || 'ユーザー'}
+                onBack={() => {
+                  setActiveChatId(null);
+                  setActiveChatUserName(null);
+                  setActive(chatReturnTo as any);
+                }}
+              />
+            ) : (
+              <ChatsListScreen
+                onOpen={(chatId: string, userName: string) => {
+                  setActiveChatId(chatId);
+                  setActiveChatUserName(userName);
+                  setChatReturnTo('chats');
+                  setActive('chat' as any);
+                }}
+              />
+            )
           ) : active === 'noti' ? (
             <NotificationsScreen />
           ) : active === 'settings' ? (
-            <SettingsScreen onLogoutNavigate={() => {
-              // Logout will be handled by AuthContext, which will trigger re-render
-              // and show login screen due to !isAuthenticated check above
-            }} />
+            <SettingsScreen
+              onLogoutNavigate={() => {
+                // Logout will be handled by AuthContext, which will trigger re-render
+                // and show login screen due to !isAuthenticated check above
+              }}
+            />
           ) : active === 'roomsList' ? (
-            <RoomsListScreen />
+            <RoomsListScreen onBack={() => setActive('me' as any)} />
           ) : active === 'comment' ? (
-            activePostId ? <CommentComposeScreen postId={activePostId} onPosted={() => { 
-              setActive('comments' as any); 
-              setCommentsRefreshKey((k: number) => k + 1);
-            }} onClose={() => setActive('comments' as any)} /> : null
+            activePostId ? (
+              <CommentComposeScreen
+                postId={activePostId}
+                onPosted={() => {
+                  setActive('comments' as any);
+                  setCommentsRefreshKey((k: number) => k + 1);
+                }}
+                onClose={() => setActive('comments' as any)}
+              />
+            ) : null
           ) : active === 'comments' ? (
-            activePostId ? <CommentsListScreen refreshKey={commentsRefreshKey} postId={activePostId} onCompose={() => setActive('comment' as any)} /> : null
+            activePostId ? (
+              <CommentsListScreen
+                refreshKey={commentsRefreshKey}
+                postId={activePostId}
+                onCompose={() => setActive('comment' as any)}
+              />
+            ) : null
           ) : active === 'followers' ? (
             <FollowersListScreen />
           ) : active === 'following' ? (
             <FollowingListScreen />
           ) : active === 'liked' ? (
-            <LikedPostsListScreen onOpen={(postId) => { setActivePostId(postId); setActive('comments' as any); }} />
+            <LikedPostsListScreen
+              onOpen={postId => {
+                setActivePostId(postId);
+                setActive('comments' as any);
+              }}
+            />
           ) : active === 'myPosts' ? (
             <MyPostsListScreen />
           ) : active === 'profileEdit' ? (
-            <ProfileEditScreen navigation={{ goBack: () => setActive('me' as any) }} />
+            <ProfileEditScreen
+              navigation={{ goBack: () => setActive('me' as any) }}
+            />
           ) : active === 'userProfile' ? (
-            activeUserId ? <UserProfileScreen 
-              userId={activeUserId} 
-              onBack={() => { 
-                setActiveUserId(null); 
-                setActive('home' as any); 
-              }}
-              onNavigateToChat={(chatId: string, userName: string) => {
-                setActiveChatId(chatId);
-                setActiveChatUserName(userName);
-                setChatReturnTo('userProfile');
-                setActive('chat' as any);
-              }}
-            /> : null
+            activeUserId ? (
+              <UserProfileScreen
+                userId={activeUserId}
+                onBack={() => {
+                  setActiveUserId(null);
+                  setActive('home' as any);
+                }}
+                onNavigateToChat={(chatId: string, userName: string) => {
+                  setActiveChatId(chatId);
+                  setActiveChatUserName(userName);
+                  setChatReturnTo('userProfile');
+                  setActive('chat' as any);
+                }}
+              />
+            ) : null
           ) : (
-            <ProfileScreen onNavigate={(key: string) => setActive(key as any)} />
+            <ProfileScreen
+              onNavigate={(key: string) => setActive(key as any)}
+            />
           )}
         </View>
         {/* Hide tab bar when in chat mode */}
         {active !== 'chat' && (
-          <View style={{ position: 'absolute', left: 12, right: 12, bottom: 8, height: 56, borderRadius: 16, flexDirection: 'row', backgroundColor: colors.card + '88', borderColor: '#22252B', borderWidth: 1, overflow: 'hidden' }}>
-            {(['me','noti','home'] as const).map((k) => (
-              <TextButton key={k} label={k==='me'?'👤':k==='noti'?'🔔':'🏠'} active={active===k} onPress={() => k==='home'? setActive('home'): setActive(k)} onLongPress={k==='home'? () => setSidebarOpen(true): undefined} />
+          <View
+            style={{
+              position: 'absolute',
+              left: 12,
+              right: 12,
+              bottom: 8,
+              height: 56,
+              borderRadius: 16,
+              flexDirection: 'row',
+              backgroundColor: colors.card + '88',
+              borderColor: '#22252B',
+              borderWidth: 1,
+              overflow: 'hidden',
+            }}
+          >
+            {(['me', 'noti', 'home'] as const).map(k => (
+              <TextButton
+                key={k}
+                label={k === 'me' ? '◐' : k === 'noti' ? '◎' : '◆'}
+                active={active === k}
+                onPress={() => setActive(k as any)}
+                onLongPress={
+                  (handPreference === 'right' && k === 'home') || 
+                  (handPreference === 'left' && k === 'me')
+                    ? () => {
+                        setSidebarOpen(true);
+                      }
+                    : undefined
+                }
+              />
             ))}
           </View>
         )}

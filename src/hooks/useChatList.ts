@@ -1,6 +1,6 @@
 /**
  * SECURE CHAT LIST HOOK
- * 
+ *
  * React hook for managing chat list with:
  * - Real-time updates for new messages and chat changes
  * - Pagination and infinite scroll support
@@ -25,7 +25,7 @@ import {
   ChatPaginationParams,
   ChatSearchParams,
   sanitizeChatForLogging,
-  createChatRequest
+  createChatRequest,
 } from '../types/chat';
 import { PublicUserProfile } from '../types/auth';
 import { useAuth } from '../contexts/AuthContext';
@@ -64,7 +64,7 @@ const HOOK_CONFIG = {
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY_MS: 1000,
   REFRESH_INTERVAL_MS: 30000, // Refresh chat list every 30 seconds
-  UNREAD_UPDATE_DEBOUNCE_MS: 500
+  UNREAD_UPDATE_DEBOUNCE_MS: 500,
 } as const;
 
 // =====================================================
@@ -83,7 +83,7 @@ export function useChatList(filters: ChatListFilters = {}) {
     totalCount: 0,
     searchQuery: '',
     searchResults: [],
-    isSearching: false
+    isSearching: false,
   });
 
   // Refs for managing timeouts and subscriptions
@@ -100,15 +100,18 @@ export function useChatList(filters: ChatListFilters = {}) {
     setState(prev => ({ ...prev, ...updates }));
   }, []);
 
-  const setError = useCallback((error: string | null) => {
-    updateState({ 
-      error, 
-      isLoading: false, 
-      isLoadingMore: false, 
-      isCreatingChat: false,
-      isSearching: false 
-    });
-  }, [updateState]);
+  const setError = useCallback(
+    (error: string | null) => {
+      updateState({
+        error,
+        isLoading: false,
+        isLoadingMore: false,
+        isCreatingChat: false,
+        isSearching: false,
+      });
+    },
+    [updateState]
+  );
 
   const clearError = useCallback(() => {
     setError(null);
@@ -123,8 +126,10 @@ export function useChatList(filters: ChatListFilters = {}) {
    */
   const updateChatInList = useCallback((updatedChat: ChatWithParticipants) => {
     setState(prev => {
-      const existingIndex = prev.chats.findIndex(chat => chat.id === updatedChat.id);
-      
+      const existingIndex = prev.chats.findIndex(
+        chat => chat.id === updatedChat.id
+      );
+
       if (existingIndex >= 0) {
         // 既存のチャットを同じ位置で更新（位置は変更しない）
         const newChats = [...prev.chats];
@@ -133,16 +138,16 @@ export function useChatList(filters: ChatListFilters = {}) {
           // 重要な情報のみ更新して順序に影響するデータは更新しない
           last_message: updatedChat.last_message,
           last_message_at: newChats[existingIndex].last_message_at, // 既存の時刻を保持
-          unread_count: updatedChat.unread_count
+          unread_count: updatedChat.unread_count,
         };
-        
+
         return { ...prev, chats: newChats };
       } else {
         // 新しいチャットは末尾に追加
         return {
           ...prev,
           chats: [...prev.chats, updatedChat],
-          totalCount: prev.totalCount + 1
+          totalCount: prev.totalCount + 1,
         };
       }
     });
@@ -155,21 +160,24 @@ export function useChatList(filters: ChatListFilters = {}) {
     setState(prev => ({
       ...prev,
       chats: prev.chats.filter(chat => chat.id !== chatId),
-      totalCount: Math.max(0, prev.totalCount - 1)
+      totalCount: Math.max(0, prev.totalCount - 1),
     }));
   }, []);
 
   /**
    * Updates unread count for a chat
    */
-  const updateUnreadCount = useCallback((chatId: string, unreadCount: number) => {
-    setState(prev => ({
-      ...prev,
-      chats: prev.chats.map(chat =>
-        chat.id === chatId ? { ...chat, unread_count: unreadCount } : chat
-      )
-    }));
-  }, []);
+  const updateUnreadCount = useCallback(
+    (chatId: string, unreadCount: number) => {
+      setState(prev => ({
+        ...prev,
+        chats: prev.chats.map(chat =>
+          chat.id === chatId ? { ...chat, unread_count: unreadCount } : chat
+        ),
+      }));
+    },
+    []
+  );
 
   // =====================================================
   // REAL-TIME EVENT HANDLERS
@@ -178,39 +186,42 @@ export function useChatList(filters: ChatListFilters = {}) {
   /**
    * Handles incoming chat events for list updates
    */
-  const handleChatListEvent = useCallback((chatId: string) => {
-    return async (event: ChatEvent) => {
-      try {
-        switch (event.type) {
-          case ChatEventType.NEW_MESSAGE: {
-            // リアルタイム更新を無効化（順序固定のため）
-            break;
-          }
+  const handleChatListEvent = useCallback(
+    (chatId: string) => {
+      return async (event: ChatEvent) => {
+        try {
+          switch (event.type) {
+            case ChatEventType.NEW_MESSAGE: {
+              // リアルタイム更新を無効化（順序固定のため）
+              break;
+            }
 
-          case ChatEventType.MESSAGE_READ: {
-            // 既読イベントも無効化（順序固定のため）
-            break;
-          }
+            case ChatEventType.MESSAGE_READ: {
+              // 既読イベントも無効化（順序固定のため）
+              break;
+            }
 
-          case ChatEventType.CHAT_UPDATED: {
-            // リアルタイム更新を無効化（順序固定のため）
-            // 必要に応じて手動でリフレッシュしてもらう
-            break;
-          }
+            case ChatEventType.CHAT_UPDATED: {
+              // リアルタイム更新を無効化（順序固定のため）
+              // 必要に応じて手動でリフレッシュしてもらう
+              break;
+            }
 
-          default:
-            // Handle other events as needed
-            break;
+            default:
+              // Handle other events as needed
+              break;
+          }
+        } catch (error) {
+          secureLogger.error('Error handling chat list event', {
+            error,
+            eventType: event.type,
+            chatId,
+          });
         }
-      } catch (error) {
-        secureLogger.error('Error handling chat list event', { 
-          error, 
-          eventType: event.type, 
-          chatId 
-        });
-      }
-    };
-  }, [user?.id, state.chats, updateChatInList, updateUnreadCount]);
+      };
+    },
+    [user?.id, state.chats, updateChatInList, updateUnreadCount]
+  );
 
   // =====================================================
   // CORE FUNCTIONS
@@ -219,66 +230,71 @@ export function useChatList(filters: ChatListFilters = {}) {
   /**
    * Loads the initial chat list
    */
-  const loadChats = useCallback(async (reset: boolean = false) => {
-    if (!isAuthenticated || !user) {
-      return;
-    }
-
-
-    try {
-      if (reset) {
-        updateState({ isLoading: true, error: null, chats: [], hasMore: true });
-      } else if (!reset && state.chats.length > 0) {
-        updateState({ isLoadingMore: true, error: null });
-      } else {
-        updateState({ isLoading: true, error: null });
+  const loadChats = useCallback(
+    async (reset: boolean = false) => {
+      if (!isAuthenticated || !user) {
+        return;
       }
 
-      const params: ChatPaginationParams = {
-        limit: HOOK_CONFIG.PAGE_SIZE,
-        order: 'desc'
-      };
+      try {
+        if (reset) {
+          updateState({
+            isLoading: true,
+            error: null,
+            chats: [],
+            hasMore: true,
+          });
+        } else if (!reset && state.chats.length > 0) {
+          updateState({ isLoadingMore: true, error: null });
+        } else {
+          updateState({ isLoading: true, error: null });
+        }
 
-      if (!reset && state.nextCursor) {
-        params.cursor = state.nextCursor;
+        const params: ChatPaginationParams = {
+          limit: HOOK_CONFIG.PAGE_SIZE,
+          order: 'desc',
+        };
+
+        if (!reset && state.nextCursor) {
+          params.cursor = state.nextCursor;
+        }
+
+        const response = await chatService.getChats(params);
+        // API response received
+
+        if (response.success) {
+          const newChats = reset
+            ? response.data.chats
+            : [...state.chats, ...response.data.chats];
+
+          updateState({
+            chats: newChats,
+            totalCount: response.data.total_count,
+            hasMore: response.data.has_more,
+            nextCursor: response.data.next_cursor,
+            isLoading: false,
+            isLoadingMore: false,
+          });
+
+          // リアルタイム購読を無効化（順序固定のため）
+
+          secureLogger.info('Chat list loaded successfully', {
+            chatCount: newChats.length,
+            totalCount: response.data.total_count,
+            hasMore: response.data.has_more,
+          });
+        } else {
+          setError(response.error);
+        }
+      } catch (error) {
+        secureLogger.warn('Chat list temporarily unavailable', { error });
+        setError(`チャット一覧の読み込みエラー: ${error}`);
       }
-
-      const response = await chatService.getChats(params);
-      // API response received
-
-      if (response.success) {
-        const newChats = reset ? 
-          response.data.chats : 
-          [...state.chats, ...response.data.chats];
-
-        updateState({
-          chats: newChats,
-          totalCount: response.data.total_count,
-          hasMore: response.data.has_more,
-          nextCursor: response.data.next_cursor,
-          isLoading: false,
-          isLoadingMore: false
-        });
-
-        // リアルタイム購読を無効化（順序固定のため）
-
-        secureLogger.info('Chat list loaded successfully', {
-          chatCount: newChats.length,
-          totalCount: response.data.total_count,
-          hasMore: response.data.has_more
-        });
-
-      } else {
-        setError(response.error);
-      }
-
-    } catch (error) {
-      secureLogger.warn('Chat list temporarily unavailable', { error });
-      setError(`チャット一覧の読み込みエラー: ${error}`);
-    }
-    // Remove functions from dependencies to prevent infinite loop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user, state.chats, state.nextCursor]);
+      // Remove functions from dependencies to prevent infinite loop
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [isAuthenticated, user, state.chats, state.nextCursor]
+  );
 
   /**
    * Loads more chats (pagination)
@@ -304,91 +320,95 @@ export function useChatList(filters: ChatListFilters = {}) {
   /**
    * Creates a new chat
    */
-  const createChat = useCallback(async (
-    participantId: string,
-    initialMessage?: string
-  ): Promise<ChatWithParticipants | null> => {
-    if (!user || state.isCreatingChat) {
-      return null;
-    }
-
-    try {
-      updateState({ isCreatingChat: true, error: null });
-
-      const request = createChatRequest({
-        participant_id: participantId,
-        initial_message: initialMessage,
-        chat_type: 'direct'
-      });
-
-      const response = await chatService.createChat(request);
-
-      updateState({ isCreatingChat: false });
-
-      if (response.success) {
-        // Add new chat to the top of the list
-        updateChatInList(response.data);
-
-        secureLogger.info('Chat created successfully', {
-          chatId: response.data.id,
-          participantId
-        });
-
-        return response.data;
-      } else {
-        setError(response.error);
+  const createChat = useCallback(
+    async (
+      participantId: string,
+      initialMessage?: string
+    ): Promise<ChatWithParticipants | null> => {
+      if (!user || state.isCreatingChat) {
         return null;
       }
 
-    } catch (error) {
-      updateState({ isCreatingChat: false });
-      secureLogger.error('Error creating chat', { error, participantId });
-      setError('チャットの作成中にエラーが発生しました。');
-      return null;
-    }
-  }, [user, state.isCreatingChat, updateState, setError, updateChatInList]);
+      try {
+        updateState({ isCreatingChat: true, error: null });
+
+        const request = createChatRequest({
+          participant_id: participantId,
+          initial_message: initialMessage,
+          chat_type: 'direct',
+        });
+
+        const response = await chatService.createChat(request);
+
+        updateState({ isCreatingChat: false });
+
+        if (response.success) {
+          // Add new chat to the top of the list
+          updateChatInList(response.data);
+
+          secureLogger.info('Chat created successfully', {
+            chatId: response.data.id,
+            participantId,
+          });
+
+          return response.data;
+        } else {
+          setError(response.error);
+          return null;
+        }
+      } catch (error) {
+        updateState({ isCreatingChat: false });
+        secureLogger.error('Error creating chat', { error, participantId });
+        setError('チャットの作成中にエラーが発生しました。');
+        return null;
+      }
+    },
+    [user, state.isCreatingChat, updateState, setError, updateChatInList]
+  );
 
   /**
    * Searches chats
    */
-  const searchChats = useCallback(async (query: string) => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    updateState({ searchQuery: query });
-
-    if (!query.trim()) {
-      updateState({ searchResults: [], isSearching: false });
-      return;
-    }
-
-    updateState({ isSearching: true });
-
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const searchParams: ChatSearchParams = {
-          query: query.trim(),
-          ...filters
-        };
-
-        const response = await chatService.searchChats(searchParams);
-
-        if (response.success) {
-          updateState({
-            searchResults: response.data,
-            isSearching: false
-          });
-        } else {
-          setError(response.error);
-        }
-
-      } catch (error) {
-        secureLogger.error('Error searching chats', { error, query });
-        setError('チャット検索中にエラーが発生しました。');
+  const searchChats = useCallback(
+    async (query: string) => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
       }
-    }, HOOK_CONFIG.SEARCH_DEBOUNCE_MS);
-  }, [filters, updateState, setError]);
+
+      updateState({ searchQuery: query });
+
+      if (!query.trim()) {
+        updateState({ searchResults: [], isSearching: false });
+        return;
+      }
+
+      updateState({ isSearching: true });
+
+      searchTimeoutRef.current = setTimeout(async () => {
+        try {
+          const searchParams: ChatSearchParams = {
+            query: query.trim(),
+            ...filters,
+          };
+
+          const response = await chatService.searchChats(searchParams);
+
+          if (response.success) {
+            updateState({
+              searchResults: response.data,
+              isSearching: false,
+            });
+          } else {
+            setError(response.error);
+          }
+        } catch (error) {
+          secureLogger.error('Error searching chats', { error, query });
+          setError('チャット検索中にエラーが発生しました。');
+        }
+      }, HOOK_CONFIG.SEARCH_DEBOUNCE_MS);
+    },
+    [filters, updateState, setError]
+  );
 
   /**
    * Clears search results
@@ -400,7 +420,7 @@ export function useChatList(filters: ChatListFilters = {}) {
     updateState({
       searchQuery: '',
       searchResults: [],
-      isSearching: false
+      isSearching: false,
     });
   }, [updateState]);
 
@@ -415,7 +435,7 @@ export function useChatList(filters: ChatListFilters = {}) {
 
     retryCountRef.current++;
     clearError();
-    
+
     setTimeout(() => {
       refreshChats();
     }, HOOK_CONFIG.RETRY_DELAY_MS * retryCountRef.current);
@@ -439,11 +459,13 @@ export function useChatList(filters: ChatListFilters = {}) {
     }
 
     if (filters.chatType) {
-      filteredChats = filteredChats.filter(chat => chat.chat_type === filters.chatType);
+      filteredChats = filteredChats.filter(
+        chat => chat.chat_type === filters.chatType
+      );
     }
 
     if (filters.participantId) {
-      filteredChats = filteredChats.filter(chat => 
+      filteredChats = filteredChats.filter(chat =>
         chat.participant_ids.includes(filters.participantId!)
       );
     }
@@ -526,7 +548,7 @@ export function useChatList(filters: ChatListFilters = {}) {
     canLoadMore: state.hasMore && !state.isLoadingMore,
     isEmpty: state.chats.length === 0 && !state.isLoading,
     isSearchActive: !!state.searchQuery,
-    hasSearchResults: state.searchResults.length > 0
+    hasSearchResults: state.searchResults.length > 0,
   };
 }
 
