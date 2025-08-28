@@ -14,14 +14,21 @@
       "backgroundColor": "#0E0F12"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "プロフィール画像を選択するためにフォトライブラリへアクセスします。",
+        "NSCameraUsageDescription": "プロフィール画像を撮影するためにカメラへアクセスします。"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0E0F12"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,7 +38,8 @@
       "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4bnNsY3drdHVmc3NhbWlyY3hmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1NzMzMDIsImV4cCI6MjA3MDE0OTMwMn0.sBQxs6L0-mDDqdqzK0gQmk-lDcDQ-l5IztdA5tUo3JM"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-image-picker"
     ]
   }
 }
