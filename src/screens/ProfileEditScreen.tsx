@@ -12,12 +12,8 @@ import {
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
+import * as ImagePicker from 'expo-image-picker';
 import { updateMyProfile, updateMyAvatarUrl } from '../services/profileService';
-// MCP: not used for this task.
-let ImagePicker: any;
-try {
-  ImagePicker = require('expo-image-picker');
-} catch {}
 import { uploadAvatarImage } from '../services/storageService';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { secureLogger } from '../utils/privacyProtection';
@@ -254,10 +250,6 @@ export default function ProfileEditScreen({ navigation }: any) {
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable
                     onPress={async () => {
-                      if (!ImagePicker) {
-                        Alert.alert('設定が必要', '画像選択には expo-image-picker の追加が必要です');
-                        return;
-                      }
                       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
                       if (perm.status !== 'granted') {
                         Alert.alert('権限が必要', 'フォトライブラリへのアクセスを許可してください');
