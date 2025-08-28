@@ -225,19 +225,28 @@ export default function CommentsListScreen({
                 )}
               </View>
               {(() => {
-                const text = item.body || '';
-                const urlMatch = text.match(/https?:\/\/[^\s]+/g) || [];
-                const imgUrl = urlMatch.find(u => /(post-images|\.png|\.jpg|\.jpeg|\.webp)/i.test(u));
-                const textWithoutUrl = imgUrl ? text.replace(imgUrl, '').trim() : text;
+                const attachments = (item as any).attachments || [];
                 return (
                   <>
-                    {imgUrl && (
-                      <View style={{ marginBottom: 8, borderRadius: 12, overflow: 'hidden' }}>
-                        <Animated.Image source={{ uri: imgUrl }} style={{ width: '100%', height: 180 }} />
+                    {attachments.length > 0 && (
+                      <View style={{ marginBottom: 8 }}>
+                        {attachments.length === 1 ? (
+                          <View style={{ borderRadius: 12, overflow: 'hidden' }}>
+                            <Animated.Image source={{ uri: attachments[0] }} style={{ width: '100%', height: 180 }} />
+                          </View>
+                        ) : (
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                            {attachments.slice(0, 4).map((url: string) => (
+                              <View key={url} style={{ width: '48%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden' }}>
+                                <Animated.Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} />
+                              </View>
+                            ))}
+                          </View>
+                        )}
                       </View>
                     )}
-                    {textWithoutUrl ? (
-                      <ExpandableText text={textWithoutUrl} maxLines={3} textStyle={{ color: colors.text }} />
+                    {item.body ? (
+                      <ExpandableText text={item.body} maxLines={3} textStyle={{ color: colors.text }} />
                     ) : null}
                   </>
                 );

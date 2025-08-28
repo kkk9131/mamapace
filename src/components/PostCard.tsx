@@ -7,6 +7,7 @@ import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { PostWithMeta } from '../types/post';
 import ExpandableText from './ExpandableText';
 import Avatar from './Avatar';
+import { View as RNView } from 'react-native';
 
 export default function PostCard({
   post,
@@ -60,12 +61,7 @@ export default function PostCard({
     const img = urls.find(u => /(post-images|\.png|\.jpg|\.jpeg|\.webp)/i.test(u));
     return img || null;
   };
-  const imageUrl = extractFirstImageUrl(post.body);
-  const bodyWithoutImageUrl = React.useMemo(() => {
-    if (!post.body) return '';
-    if (!imageUrl) return post.body;
-    return post.body.replace(imageUrl, '').replace(/\n\n+/g, '\n').trim();
-  }, [post.body, imageUrl]);
+  const attachments = (post as any).attachments || [];
   const handleLike = async () => {
     if (likeBusy) return;
     setLikeBusy(true);
@@ -152,14 +148,26 @@ export default function PostCard({
         </View>
 
         {/* CONTENT SECTION: Post Body + Optional Image */}
-        {imageUrl && (
-          <View style={{ marginBottom: theme.spacing(1.5), borderRadius: 16, overflow: 'hidden', backgroundColor: '#00000020' }}>
-            <Animated.Image source={{ uri: imageUrl }} style={{ width: '100%', height: 220 }} />
+        {attachments.length > 0 && (
+          <View style={{ marginBottom: theme.spacing(1.5) }}>
+            {attachments.length === 1 ? (
+              <View style={{ borderRadius: 16, overflow: 'hidden' }}>
+                <Animated.Image source={{ uri: attachments[0] }} style={{ width: '100%', height: 220 }} />
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {attachments.slice(0, 4).map((url: string, idx: number) => (
+                  <View key={url} style={{ width: '48%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden' }}>
+                    <Animated.Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} />
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
-        {bodyWithoutImageUrl && (
+        {post.body && (
           <ExpandableText
-            text={bodyWithoutImageUrl}
+            text={post.body || ''}
             maxLines={3}
             containerStyle={{ marginBottom: theme.spacing(2) }}
             textStyle={{ color: colors.text, fontSize: 16, lineHeight: 24 }}

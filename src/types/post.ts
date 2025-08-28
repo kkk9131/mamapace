@@ -3,6 +3,7 @@ export interface Post {
   user_id: string;
   body: string;
   created_at: string;
+  attachments?: string[]; // URLs of attached images
 }
 
 export interface ReactionSummary {
@@ -32,6 +33,7 @@ export interface Comment {
   user_id: string;
   body: string;
   created_at: string;
+  attachments?: string[];
   user?: {
     id: string;
     username: string;

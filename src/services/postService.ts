@@ -173,11 +173,11 @@ export async function fetchLikedPosts(options: {
   return { items, nextCursor: computeNextCursor(items) };
 }
 
-export async function createPost(body: string): Promise<Post> {
-  if (!body || body.trim().length === 0) throw new Error('投稿が空です');
+export async function createPost(body: string, attachments: string[] = []): Promise<Post> {
+  if (!body && attachments.length === 0) throw new Error('投稿内容がありません');
   if (body.length > 300) throw new Error('投稿は300文字以内にしてください');
   const client = getSupabaseClient();
-  const { data, error } = await client.rpc('create_post_v2', { p_body: body });
+  const { data, error } = await client.rpc('create_post_v2', { p_body: body || '', p_attachments: attachments });
   if (error) throw error;
   return data as Post;
 }
@@ -225,6 +225,7 @@ export async function fetchComments(
     user_id: row.user_id,
     body: row.body,
     created_at: row.created_at,
+    attachments: (row.attachments as any) || [],
     user: {
       id: row.user_id,
       username: row.user_username,

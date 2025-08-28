@@ -43,7 +43,7 @@ export default function CommentComposeScreen({
     }).start();
   }, [fade]);
   const [body, setBody] = useState('');
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUris, setImageUris] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   return (
     <KeyboardAvoidingView
@@ -124,9 +124,27 @@ export default function CommentComposeScreen({
                     }}
                     scrollEnabled={true}
                   />
-                  {imageUri && (
-                    <View style={{ marginTop: 10, borderRadius: 12, overflow: 'hidden' }}>
-                      <Animated.Image source={{ uri: imageUri }} style={{ width: '100%', height: 200 }} />
+                  {imageUris.length > 0 && (
+                    <View style={{ marginTop: 10, gap: 8 }}>
+                      {imageUris.length === 1 ? (
+                        <View style={{ borderRadius: 12, overflow: 'hidden' }}>
+                          <Animated.Image source={{ uri: imageUris[0] }} style={{ width: '100%', height: 200 }} />
+                        </View>
+                      ) : (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                          {imageUris.slice(0, 4).map(uri => (
+                            <View key={uri} style={{ width: '48%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden' }}>
+                              <Animated.Image source={{ uri }} style={{ width: '100%', height: '100%' }} />
+                              <Pressable
+                                onPress={() => setImageUris(prev => prev.filter(u => u !== uri))}
+                                style={{ position: 'absolute', top: 6, right: 6, backgroundColor: '#00000080', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4 }}
+                              >
+                                <Text style={{ color: 'white', fontWeight: '700' }}>×</Text>
+                              </Pressable>
+                            </View>
+                          ))}
+                        </View>
+                      )}
                     </View>
                   )}
                   <View style={{ alignItems: 'flex-end', marginTop: 4 }}>
@@ -163,12 +181,16 @@ export default function CommentComposeScreen({
                   if (perm.status !== 'granted' && (perm as any).status !== 'limited') return;
                   const result = await ImagePicker.launchImageLibraryAsync({
                     mediaTypes: (ImagePicker as any).MediaType ? [((ImagePicker as any).MediaType as any).Images] : (ImagePicker as any).MediaTypeOptions?.Images,
-                    allowsEditing: true,
-                    aspect: [1, 1],
+                    allowsMultipleSelection: true as any,
+                    selectionLimit: 4 as any,
                     quality: 0.9,
                   });
                   if (!(result as any).canceled && (result as any).assets?.length) {
-                    setImageUri((result as any).assets[0].uri);
+                    const uris = (result as any).assets.map((a: any) => a.uri).slice(0, 4);
+                    setImageUris(prev => Array.from(new Set([...
+                      prev,
+                      ...uris
+                    ])).slice(0, 4));
                   }
                 }}
                 style={({ pressed }) => [
@@ -188,19 +210,19 @@ export default function CommentComposeScreen({
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="コメントを送信"
-                    disabled={submitting || (!body.trim() && !imageUri)}
+                    disabled={submitting || (!body.trim() && imageUris.length === 0)}
                     onPress={async () => {
-                      if (!body.trim() && !imageUri) return;
+                      if (!body.trim() && imageUris.length === 0) return;
                       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSubmitting(true);
                       try {
                         if (!user?.id) throw new Error('ログインが必要です');
-                        let content = body.trim();
-                        if (imageUri) {
-                          const url = await uploadCommentImage(user.id, imageUri);
-                          content = content ? content + "\n" + url : url;
+                        const uploaded: string[] = [];
+                        for (const uri of imageUris) {
+                          const url = await uploadCommentImage(user.id, uri);
+                          uploaded.push(url);
                         }
-                        await createComment(postId, content);
+                        await createComment(postId, body.trim(), uploaded);
                         Keyboard.dismiss();
                         if (onPosted) onPosted();
                         else onClose && onClose();
@@ -272,19 +294,19 @@ export default function CommentComposeScreen({
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="コメントを送信"
-                    disabled={submitting || (!body.trim() && !imageUri)}
+                    disabled={submitting || (!body.trim() && imageUris.length === 0)}
                     onPress={async () => {
-                      if (!body.trim() && !imageUri) return;
+                      if (!body.trim() && imageUris.length === 0) return;
                       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSubmitting(true);
                       try {
                         if (!user?.id) throw new Error('ログインが必要です');
-                        let content = body.trim();
-                        if (imageUri) {
-                          const url = await uploadCommentImage(user.id, imageUri);
-                          content = content ? content + "\n" + url : url;
+                        const uploaded: string[] = [];
+                        for (const uri of imageUris) {
+                          const url = await uploadCommentImage(user.id, uri);
+                          uploaded.push(url);
                         }
-                        await createComment(postId, content);
+                        await createComment(postId, body.trim(), uploaded);
                         Keyboard.dismiss();
                         if (onPosted) onPosted();
                         else onClose && onClose();
