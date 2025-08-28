@@ -12,6 +12,7 @@ import {
   Space,
   SpaceWithOwner,
   Channel,
+  ChannelMemberWithUser,
   ChannelWithSpace,
   RoomMessageWithSender,
   AnonymousRoom,
@@ -424,6 +425,49 @@ export function useChannelMessages(channelId: string | null) {
     loadMore,
     markSeen,
     refresh: () => fetchMessages(),
+  };
+}
+
+// =====================================================
+// MEMBERS HOOKS
+// =====================================================
+
+/**
+ * Hook to fetch channel members
+ */
+export function useChannelMembers(channelId: string | null) {
+  const [members, setMembers] = useState<ChannelMemberWithUser[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMembers = useCallback(async () => {
+    if (!channelId) return;
+    setLoading(true);
+    setError(null);
+    const res = await roomService.getChannelMembers(channelId);
+    if (res.success) {
+      setMembers(res.data || []);
+    } else {
+      setError(res.error);
+      setMembers([]);
+    }
+    setLoading(false);
+  }, [channelId]);
+
+  useEffect(() => {
+    if (channelId) {
+      fetchMembers();
+    } else {
+      setMembers([]);
+      setError(null);
+    }
+  }, [channelId, fetchMembers]);
+
+  return {
+    members,
+    loading,
+    error,
+    refresh: fetchMembers,
   };
 }
 

@@ -5,7 +5,6 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import Sidebar from './Sidebar';
 import RoomsScreen from '../screens/RoomsScreen';
-// import CreateRoomScreen from '../screens/CreateRoomScreen'; // Replaced with CreateSpaceScreen
 import ChatsListScreen from '../screens/ChatsListScreen';
 import ChatScreen from '../screens/ChatScreen';
 import { Pressable, Animated } from 'react-native';

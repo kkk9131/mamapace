@@ -130,6 +130,55 @@ export class RoomService {
   }
 
   /**
+   * Get channel members with user profiles
+   */
+  static async getChannelMembers(
+    channelId: string
+  ): Promise<ApiResponse<ChannelMemberWithUser[]>> {
+    try {
+      const supabase = getSupabaseClient();
+
+      const { data, error } = await supabase
+        .from('channel_members')
+        .select(
+          `channel_id, user_id, role, last_seen_at, joined_at, is_active,
+           user:user_profiles (id, username, display_name, avatar_emoji)`
+        )
+        .eq('channel_id', channelId);
+
+      if (error) {
+        console.error('[RoomService] Get channel members error:', error.message);
+        return { error: 'Failed to get channel members' };
+      }
+
+      const members: ChannelMemberWithUser[] = (data || []).map((m: any) => ({
+        channel_id: m.channel_id,
+        user_id: m.user_id,
+        role: m.role,
+        last_seen_at: m.last_seen_at,
+        joined_at: m.joined_at,
+        is_active: m.is_active,
+        user: m.user,
+      }));
+
+      // Sort: owner -> moderator -> member, then by display_name/username
+      const roleOrder: Record<string, number> = { owner: 0, moderator: 1, member: 2 };
+      members.sort((a, b) => {
+        const r = (roleOrder[a.role] ?? 99) - (roleOrder[b.role] ?? 99);
+        if (r !== 0) return r;
+        const an = a.user?.display_name || a.user?.username || '';
+        const bn = b.user?.display_name || b.user?.username || '';
+        return an.localeCompare(bn);
+      });
+
+      return { success: true, data: members };
+    } catch (error: any) {
+      console.error('[RoomService] Get channel members exception:', error.message);
+      return { error: 'Failed to get channel members' };
+    }
+  }
+
+  /**
    * Search public spaces using direct table operations
    */
   static async searchPublicSpaces(

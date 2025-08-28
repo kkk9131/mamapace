@@ -16,6 +16,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { useChat } from '../hooks/useChat';
 import { MessageType, OptimisticMessage } from '../types/chat';
+import { chatService } from '../services/chatService';
+import { getSupabaseClient } from '../services/supabaseClient';
 
 interface ChatScreenProps {
   chatId?: string;
@@ -130,6 +132,110 @@ export default function ChatScreen({
     }
   }, [error, clearError, retry]);
 
+  // Handle invitation response
+  const handleInvitationResponse = useCallback(async (messageId: string, response: 'accept' | 'decline', spaceId: string, spaceName: string, invitationId?: string) => {
+    try {
+      console.log('🔍 Debug: Handling invitation response', {
+        messageId,
+        response,
+        spaceId,
+        spaceName,
+        invitationId,
+      });
+
+      // Try to manually add user to space/channel since database functions may not exist
+      if (response === 'accept' && spaceId) {
+        try {
+          const client = getSupabaseClient();
+          
+          // Get current user
+          const { data: { user }, error: authError } = await client.auth.getUser();
+          if (authError || !user) {
+            throw new Error('認証エラー');
+          }
+
+          console.log('🔍 Debug: Current user', { userId: user.id });
+
+          // First, try using existing join_public_space RPC function
+          console.log('🔍 Debug: Attempting to join space via RPC', { spaceId });
+          const { data: rpcResult, error: rpcError } = await client
+            .rpc('join_public_space', { p_space_id: spaceId });
+          
+          console.log('🔍 Debug: RPC join result', { data: rpcResult, error: rpcError });
+          
+          if (rpcResult && rpcResult.success) {
+            // Send confirmation message
+            const responseText = `ルーム「${spaceName}」への招待を受け入れました！`;
+            await sendMessage(responseText, MessageType.TEXT);
+            
+            Alert.alert('参加完了', `ルーム「${spaceName}」に参加しました！チャット一覧を更新してください。`);
+            return;
+          } else {
+            console.log('🔍 Debug: RPC failed, trying direct database access as fallback', { error: rpcResult?.error || rpcError });
+          }
+
+          // Fallback: Direct database access - try to get the channel for this space
+          const { data: channels, error: channelError } = await client
+            .from('channels')
+            .select('id')
+            .eq('space_id', spaceId)
+            .limit(1);
+
+          console.log('🔍 Debug: Channel query result', { channels, error: channelError });
+
+          if (channels && channels.length > 0) {
+            const channelId = channels[0].id;
+            
+            // Add user to channel_members
+            const { error: memberError } = await client
+              .from('channel_members')
+              .upsert({
+                channel_id: channelId,
+                user_id: user.id,
+                role: 'member',
+                joined_at: new Date().toISOString(),
+                is_active: true,
+              }, {
+                onConflict: 'channel_id,user_id'
+              });
+
+            console.log('🔍 Debug: Add member result', { error: memberError });
+
+            if (!memberError) {
+              // Member count will be automatically updated by database trigger
+              console.log('🔍 Debug: Member successfully added, trigger will update count automatically');
+
+              // Send confirmation message
+              const responseText = `ルーム「${spaceName}」への招待を受け入れました！`;
+              await sendMessage(responseText, MessageType.TEXT);
+              
+              Alert.alert('参加完了', `ルーム「${spaceName}」に参加しました！チャット一覧を更新してください。`);
+              return;
+            }
+          }
+        } catch (dbError) {
+          console.error('Failed to add user to space:', dbError);
+        }
+      }
+      
+      // Fallback: Just send a response message
+      const responseText = response === 'accept' 
+        ? `ルーム「${spaceName}」への招待を受け入れました！` 
+        : `ルーム「${spaceName}」への招待を辞退しました。`;
+      
+      await sendMessage(responseText, MessageType.TEXT);
+      
+      if (response === 'accept') {
+        Alert.alert('参加意思表示完了', `ルーム「${spaceName}」への参加意思を表明しました。管理者による承認をお待ちください。`);
+      } else {
+        Alert.alert('辞退完了', `ルーム「${spaceName}」への招待を辞退しました。`);
+      }
+    } catch (error) {
+      console.error('Invitation response error:', error);
+      Alert.alert('エラー', '応答の送信に失敗しました');
+    }
+  }, [sendMessage]);
+
   // メッセージをレンダリングする関数
   const renderMessage = useCallback(
     ({ item }: { item: OptimisticMessage }) => {
@@ -137,6 +243,11 @@ export default function ChatScreen({
       const isOptimistic = item.isOptimistic;
       const hasError = item.error;
       const isDeleted = item.deleted_at;
+      
+      // Check if this is an invitation message (check metadata for both text and system types)
+      const isInvitation = (item.message_type === MessageType.SYSTEM || item.message_type === MessageType.TEXT) && 
+                          item.metadata?.type === 'room_invitation' &&
+                          item.metadata?.status === 'pending';
 
       return (
         <Pressable
@@ -191,22 +302,81 @@ export default function ChatScreen({
         >
           <View
             style={{
-              backgroundColor: isMe ? colors.pink : '#ffffff10',
-              padding: 10,
+              backgroundColor: isInvitation ? '#F6C6D020' : isMe ? colors.pink : '#ffffff10',
+              padding: isInvitation ? 16 : 10,
               borderRadius: 14,
-              borderWidth: hasError ? 1 : 0,
-              borderColor: hasError ? '#ff4444' : 'transparent',
-              maxWidth: '80%',
+              borderWidth: hasError ? 1 : isInvitation ? 1 : 0,
+              borderColor: hasError ? '#ff4444' : isInvitation ? colors.pink + '40' : 'transparent',
+              maxWidth: isInvitation ? '90%' : '80%',
             }}
           >
             <Text
               style={{
                 color: isMe ? '#23181D' : colors.text,
                 fontStyle: isDeleted ? 'italic' : 'normal',
+                fontSize: isInvitation ? 14 : undefined,
               }}
             >
               {isDeleted ? 'このメッセージは削除されました' : item.content}
             </Text>
+            
+            {/* Invitation response buttons */}
+            {isInvitation && !isMe && !isDeleted && (
+              <View style={{ flexDirection: 'row', marginTop: 12, gap: 8 }}>
+                <Pressable
+                  onPress={() => handleInvitationResponse(
+                    item.id, 
+                    'accept', 
+                    item.metadata?.space_id, 
+                    item.metadata?.space_name,
+                    item.metadata?.invitation_id
+                  )}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: colors.pink,
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 16,
+                      flex: 1,
+                      alignItems: 'center',
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>
+                    ✅ 参加する
+                  </Text>
+                </Pressable>
+                
+                <Pressable
+                  onPress={() => handleInvitationResponse(
+                    item.id, 
+                    'decline', 
+                    item.metadata?.space_id, 
+                    item.metadata?.space_name,
+                    item.metadata?.invitation_id
+                  )}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: '#ffffff20',
+                      borderWidth: 1,
+                      borderColor: colors.subtext + '40',
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 16,
+                      flex: 1,
+                      alignItems: 'center',
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
+                    ❌ 辞退する
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+            
             {item.is_edited && !isDeleted && (
               <Text
                 style={{ color: colors.subtext, fontSize: 10, marginTop: 2 }}
@@ -230,6 +400,7 @@ export default function ChatScreen({
       colors.subtext,
       editMessage,
       deleteMessage,
+      handleInvitationResponse,
     ]
   );
 

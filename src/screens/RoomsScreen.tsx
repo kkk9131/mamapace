@@ -22,6 +22,7 @@ import { SpaceWithOwner } from '../types/room';
 import AnonRoomScreen from './AnonRoomScreen';
 import ChannelScreen from './ChannelScreen';
 import CreateSpaceScreen from './CreateSpaceScreen';
+import InviteFollowersScreen from './InviteFollowersScreen';
 
 interface RoomsScreenProps {
   onNavigateToChannel?: (channelId: string, spaceName: string) => void;
@@ -34,7 +35,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
 
   // State management
   const [currentView, setCurrentView] = useState<
-    'list' | 'search' | 'anonymous' | 'channel' | 'create'
+    'list' | 'search' | 'anonymous' | 'channel' | 'create' | 'invite' | 'directChat'
   >('list');
   const [selectedFilter, setSelectedFilter] = useState<string>('すべて');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -43,6 +44,11 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
   );
   const [selectedSpaceName, setSelectedSpaceName] = useState<string>('');
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>('');
+  const [selectedSpace, setSelectedSpace] = useState<any>(null);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [activeChatUserName, setActiveChatUserName] = useState<string | null>(
+    null
+  );
 
   // Hooks
   const {
@@ -154,6 +160,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
         channelId={selectedChannelId}
         spaceName={selectedSpaceName}
         spaceId={selectedSpaceId || undefined}
+        isPrivateSpace={true} // Temporarily always show invite button for testing
         onBack={() => {
           // Ensure immediate display when returning to prevent blank screen
           fade.setValue(1);
@@ -164,6 +171,15 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
           refreshPopular();
           fade.setValue(1);
           setCurrentView('list');
+        }}
+        onInvite={() => {
+          // Navigate to invite screen
+          setCurrentView('invite');
+        }}
+        onNavigateToChat={(chatId: string, userName: string) => {
+          setActiveChatId(chatId);
+          setActiveChatUserName(userName);
+          setCurrentView('directChat');
         }}
       />
     );
@@ -180,6 +196,40 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
         onCancel={() => {
           fade.setValue(1);
           setCurrentView('list');
+        }}
+      />
+    );
+  }
+
+  if (currentView === 'invite') {
+    return (
+      <InviteFollowersScreen
+        spaceName={selectedSpaceName}
+        spaceId={selectedSpaceId || ''}
+        onBack={() => {
+          fade.setValue(1);
+          setCurrentView('channel');
+        }}
+        onInviteSent={(selectedUsers, spaceName) => {
+          // Handle successful invite sending
+          console.log(`Sent invites to ${selectedUsers.length} users for space: ${spaceName}`);
+          fade.setValue(1);
+          setCurrentView('channel');
+        }}
+      />
+    );
+  }
+
+  if (currentView === 'directChat') {
+    const ChatScreen = require('./ChatScreen').default;
+    return (
+      <ChatScreen
+        chatId={activeChatId || undefined}
+        userName={activeChatUserName || 'ユーザー'}
+        onBack={() => {
+          setActiveChatId(null);
+          setActiveChatUserName(null);
+          setCurrentView('channel');
         }}
       />
     );

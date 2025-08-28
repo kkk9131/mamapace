@@ -12,6 +12,7 @@ import { useTheme } from '../theme/theme';
 import { useChatList } from '../hooks/useRooms';
 import AnonRoomScreen from './AnonRoomScreen';
 import ChannelScreen from './ChannelScreen';
+import InviteFollowersScreen from './InviteFollowersScreen';
 
 interface RoomsListScreenProps {
   onNavigateToChannel?: (channelId: string, spaceName: string) => void;
@@ -28,8 +29,16 @@ export default function RoomsListScreen({
 
   // State management
   const [currentView, setCurrentView] = useState<
-    'list' | 'anonymous' | 'channel'
+    'list' | 'anonymous' | 'channel' | 'invite' | 'directChat'
   >('list');
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+  const [selectedSpaceName, setSelectedSpaceName] = useState<string>('');
+  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
+  const [selectedSpace, setSelectedSpace] = useState<any>(null);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [activeChatUserName, setActiveChatUserName] = useState<string | null>(
+    null
+  );
 
   // Animation - smart animation handling to prevent blank screen on back navigation
   React.useEffect(() => {
@@ -49,11 +58,6 @@ export default function RoomsListScreen({
       return () => clearTimeout(timer);
     }
   }, [currentView, fade]);
-  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(
-    null
-  );
-  const [selectedSpaceName, setSelectedSpaceName] = useState<string>('');
-  const [selectedSpaceId, setSelectedSpaceId] = useState<string>('');
 
   // Hooks
   const { chatList, loading, error, refresh } = useChatList();
@@ -62,11 +66,13 @@ export default function RoomsListScreen({
   const handleChannelSelect = (
     channelId: string,
     spaceName: string,
-    spaceId: string
+    spaceId: string,
+    space?: any
   ) => {
     setSelectedChannelId(channelId);
     setSelectedSpaceName(spaceName);
     setSelectedSpaceId(spaceId);
+    setSelectedSpace(space || { id: spaceId, name: spaceName, is_public: false }); // Default to private for testing
     if (onNavigateToChannel) {
       onNavigateToChannel(channelId, spaceName);
     } else {
@@ -101,17 +107,61 @@ export default function RoomsListScreen({
         channelId={selectedChannelId}
         spaceName={selectedSpaceName}
         spaceId={selectedSpaceId}
+        isPrivateSpace={true} // Temporarily always show invite button for testing
         onBack={() => {
           // Ensure immediate display when returning to list view
           fade.setValue(1);
           // Always return to the room list view, not to the parent screen
           setCurrentView('list');
         }}
+        onInvite={() => {
+          // Navigate to invite screen
+          setCurrentView('invite');
+        }}
         onExit={() => {
           // Handle exit - refresh the room list and return to list view
           refresh();
           fade.setValue(1);
           setCurrentView('list');
+        }}
+        onNavigateToChat={(chatId: string, userName: string) => {
+          setActiveChatId(chatId);
+          setActiveChatUserName(userName);
+          setCurrentView('directChat');
+        }}
+      />
+    );
+  }
+
+  if (currentView === 'invite') {
+    return (
+      <InviteFollowersScreen
+        spaceName={selectedSpaceName}
+        spaceId={selectedSpaceId || ''}
+        onBack={() => {
+          fade.setValue(1);
+          setCurrentView('channel');
+        }}
+        onInviteSent={(selectedUsers, spaceName) => {
+          // Handle successful invite sending
+          console.log(`Sent invites to ${selectedUsers.length} users for space: ${spaceName}`);
+          fade.setValue(1);
+          setCurrentView('channel');
+        }}
+      />
+    );
+  }
+
+  if (currentView === 'directChat') {
+    const ChatScreen = require('./ChatScreen').default;
+    return (
+      <ChatScreen
+        chatId={activeChatId || undefined}
+        userName={activeChatUserName || 'ユーザー'}
+        onBack={() => {
+          setActiveChatId(null);
+          setActiveChatUserName(null);
+          setCurrentView('channel');
         }}
       />
     );

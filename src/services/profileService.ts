@@ -214,3 +214,27 @@ export async function isFollowing(targetUserId: string): Promise<boolean> {
 
   return !!data;
 }
+
+// Helper function to get follow list in format compatible with InviteFollowersScreen
+export async function getFollowList(
+  userId: string,
+  type: 'followers' | 'following'
+): Promise<PublicUserProfile[]> {
+  try {
+    const result = type === 'followers' 
+      ? await getFollowers(userId, { limit: 100 }) 
+      : await getFollowing(userId, { limit: 100 });
+
+    // Convert FollowUser[] to PublicUserProfile[]
+    return result.items.map(item => ({
+      id: item.user_id,
+      username: item.username,
+      display_name: item.display_name,
+      avatar_emoji: item.avatar_emoji,
+      bio: null, // Not available in FollowUser type
+    }));
+  } catch (error) {
+    secureLogger.error(`Failed to get ${type}:`, error);
+    throw new Error(`${type === 'followers' ? 'フォロワー' : 'フォロー中'}の取得に失敗しました`);
+  }
+}

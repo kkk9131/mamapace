@@ -1591,6 +1591,197 @@ class ChatService {
   }
 
   /**
+   * Sends invitation message to multiple users
+   */
+  async sendInvitationMessage(request: {
+    userIds: string[];
+    spaceName: string;
+    spaceId: string;
+    inviterName: string;
+  }): Promise<ChatResponse<{ successful: string[]; failed: string[] }>> {
+    try {
+      secureLogger.info('Sending invitation messages', {
+        userCount: request.userIds.length,
+        spaceName: request.spaceName,
+      });
+
+      const client = getSupabaseClient();
+
+      // Get current user from Supabase session
+      const {
+        data: { user },
+        error: authError,
+      } = await client.auth.getUser();
+      if (authError || !user) {
+        return {
+          success: false,
+          error: '認証が必要です。',
+          error_code: ChatErrorCode.AUTHENTICATION_REQUIRED,
+        };
+      }
+
+      const successful: string[] = [];
+      const failed: string[] = [];
+
+      // Send invitation to each user
+      for (const userId of request.userIds) {
+        try {
+          // Create or get conversation with this user
+          console.log('🔍 Creating/getting conversation with user:', userId);
+          
+          // First try to find existing conversation
+          const { data: existingConv, error: findError } = await client
+            .from('conversations')
+            .select('id')
+            .or(`and(participant_1_id.eq.${user.id},participant_2_id.eq.${userId}),and(participant_1_id.eq.${userId},participant_2_id.eq.${user.id})`)
+            .single();
+          
+          let conversationId;
+          
+          if (existingConv) {
+            conversationId = existingConv.id;
+            console.log('🔍 Found existing conversation:', conversationId);
+          } else {
+            // Create new conversation
+            const { data: newConv, error: createError } = await client
+              .from('conversations')
+              .insert({
+                participant_1_id: user.id,
+                participant_2_id: userId,
+              })
+              .select('id')
+              .single();
+            
+            if (createError || !newConv) {
+              secureLogger.error('Failed to create conversation for invitation', {
+                error: createError,
+                userId,
+              });
+              console.log('❌ Failed to create conversation:', createError);
+              failed.push(userId);
+              continue;
+            }
+            
+            conversationId = newConv.id;
+            console.log('🔍 Created new conversation:', conversationId);
+          }
+
+          // Create database invitation record first (skip for development/testing)
+          let invitationId = null;
+          const isDevelopment = __DEV__ || process.env.NODE_ENV === 'development';
+          
+          if (!isDevelopment) {
+            try {
+              const { data: inviteData, error: inviteError } = await client.rpc('create_room_invitation', {
+                p_space_id: request.spaceId,
+                p_invitee_id: userId,
+              });
+
+              if (inviteData?.success) {
+                invitationId = inviteData.invitation_id;
+              } else {
+                secureLogger.warn('Failed to create database invitation record', {
+                  error: inviteError || inviteData?.error,
+                  userId,
+                });
+                // Continue with message sending even if DB record fails
+              }
+            } catch (error) {
+              secureLogger.warn('Exception creating database invitation record', {
+                error,
+                userId,
+              });
+              // Continue with message sending even if DB record fails
+            }
+          }
+
+          // Send invitation message (add unique ID for testing)
+          const timestamp = new Date().toLocaleString('ja-JP');
+          const inviteId = Math.random().toString(36).substr(2, 9);
+          const invitationMessage = `${request.inviterName}さんから非公開ルーム「${request.spaceName}」への招待が届きました。\n\n参加しますか？\n\n✅ 参加する\n❌ 参加しない\n\n送信時刻: ${timestamp}\nID: ${inviteId}`;
+          
+          // Debug log for invitation message sending
+          console.log('🔍 Sending invitation to user:', userId);
+          console.log('🔍 Conversation ID:', conversationId);
+          
+          // Direct database insertion instead of RPC
+          const { data: messageData, error: messageError } = await client
+            .from('messages')
+            .insert({
+              conversation_id: conversationId,
+              sender_id: user.id,
+              content: invitationMessage,
+              message_type: 'text', // Use 'text' instead of 'system' for now
+              metadata: {
+                type: 'room_invitation',
+                space_id: request.spaceId,
+                space_name: request.spaceName,
+                inviter_id: user.id,
+                inviter_name: request.inviterName,
+                status: 'pending',
+                invitation_id: invitationId, // Link to database record
+              },
+            })
+            .select()
+            .single();
+          
+          console.log('🔍 Message sending result:', { data: messageData, error: messageError });
+
+          // Update invitation record with message ID if both succeeded
+          if (!messageError && messageData?.id && invitationId) {
+            try {
+              await client
+                .from('room_invitations')
+                .update({ message_id: messageData.id })
+                .eq('id', invitationId);
+            } catch (error) {
+              secureLogger.warn('Failed to update invitation with message ID', {
+                error,
+                invitationId,
+                messageId: messageData.id,
+              });
+            }
+          }
+
+          if (messageError) {
+            secureLogger.error('Failed to send invitation message', {
+              error: messageError,
+              userId,
+            });
+            failed.push(userId);
+          } else {
+            successful.push(userId);
+          }
+        } catch (error) {
+          secureLogger.error('Exception while sending invitation', {
+            error,
+            userId,
+          });
+          failed.push(userId);
+        }
+      }
+
+      secureLogger.info('Invitation sending completed', {
+        successful: successful.length,
+        failed: failed.length,
+        spaceName: request.spaceName,
+      });
+
+      return {
+        success: true,
+        data: { successful, failed },
+      };
+    } catch (error) {
+      secureLogger.error('Send invitation messages exception', { error });
+      return {
+        success: false,
+        error: '招待メッセージの送信中にエラーが発生しました。',
+        error_code: ChatErrorCode.SYSTEM_ERROR,
+      };
+    }
+  }
+
+  /**
    * Creates a new chat or gets existing direct chat with user
    */
   async createOrGetChat(request: {
