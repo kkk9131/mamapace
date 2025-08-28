@@ -228,6 +228,7 @@ export default function CommentsListScreen({
                 const text = item.body || '';
                 const urlMatch = text.match(/https?:\/\/[^\s]+/g) || [];
                 const imgUrl = urlMatch.find(u => /(post-images|\.png|\.jpg|\.jpeg|\.webp)/i.test(u));
+                const textWithoutUrl = imgUrl ? text.replace(imgUrl, '').trim() : text;
                 return (
                   <>
                     {imgUrl && (
@@ -235,8 +236,8 @@ export default function CommentsListScreen({
                         <Animated.Image source={{ uri: imgUrl }} style={{ width: '100%', height: 180 }} />
                       </View>
                     )}
-                    {text ? (
-                      <ExpandableText text={text} maxLines={3} textStyle={{ color: colors.text }} />
+                    {textWithoutUrl ? (
+                      <ExpandableText text={textWithoutUrl} maxLines={3} textStyle={{ color: colors.text }} />
                     ) : null}
                   </>
                 );

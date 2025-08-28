@@ -61,6 +61,11 @@ export default function PostCard({
     return img || null;
   };
   const imageUrl = extractFirstImageUrl(post.body);
+  const bodyWithoutImageUrl = React.useMemo(() => {
+    if (!post.body) return '';
+    if (!imageUrl) return post.body;
+    return post.body.replace(imageUrl, '').replace(/\n\n+/g, '\n').trim();
+  }, [post.body, imageUrl]);
   const handleLike = async () => {
     if (likeBusy) return;
     setLikeBusy(true);
@@ -152,9 +157,9 @@ export default function PostCard({
             <Animated.Image source={{ uri: imageUrl }} style={{ width: '100%', height: 220 }} />
           </View>
         )}
-        {post.body && (
+        {bodyWithoutImageUrl && (
           <ExpandableText
-            text={post.body || ''}
+            text={bodyWithoutImageUrl}
             maxLines={3}
             containerStyle={{ marginBottom: theme.spacing(2) }}
             textStyle={{ color: colors.text, fontSize: 16, lineHeight: 24 }}

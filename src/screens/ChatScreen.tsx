@@ -323,7 +323,7 @@ export default function ChatScreen({
               maxWidth: isInvitation ? '90%' : '80%',
             }}
           >
-            {item.message_type === MessageType.IMAGE ? (
+            {item.message_type === MessageType.IMAGE || (/^https?:\/\/.+(post-images|chat-images).+/i.test((item.content || '').trim()) && item.message_type === MessageType.TEXT) ? (
               <Image source={{ uri: item.content }} style={{ width: 220, height: 220, borderRadius: 12 }} />
             ) : (
               <Text
