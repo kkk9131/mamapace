@@ -110,3 +110,19 @@ export async function uploadChatImage(userId: string, chatId: string, uri: strin
   if (!data?.publicUrl) throw new Error('画像URLの取得に失敗しました');
   return data.publicUrl;
 }
+
+export async function uploadRoomImage(userId: string, channelId: string, uri: string): Promise<string> {
+  const client = getSupabaseClient();
+  const supaUrl = (Constants as any)?.expoConfig?.extra?.SUPABASE_URL || (Constants as any)?.manifestExtra?.SUPABASE_URL;
+  if (!supaUrl) throw new Error('SupabaseのURLが設定されていません');
+  const { data: { session } } = await client.auth.getSession();
+  if (!session?.access_token) throw new Error('ログインが必要です');
+  const clean = uri.split('?')[0].split('#')[0];
+  const ext = clean.split('.').pop()?.toLowerCase() || 'jpg';
+  const contentType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+  const path = `${channelId}/${userId}/${Date.now()}.${ext}`;
+  await uploadToBucket('room-images', path, uri, contentType, session.access_token, supaUrl);
+  const { data } = client.storage.from('room-images').getPublicUrl(path);
+  if (!data?.publicUrl) throw new Error('画像URLの取得に失敗しました');
+  return data.publicUrl;
+}

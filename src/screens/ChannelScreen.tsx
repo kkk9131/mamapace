@@ -32,6 +32,8 @@ import {
 } from '../hooks/useRooms';
 import { RoomMessageWithSender, ReportMessageRequest } from '../types/room';
 import ExpandableText from '../components/ExpandableText';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadRoomImage } from '../services/storageService';
 import Avatar from '../components/Avatar';
 
 interface ChannelScreenProps {
@@ -187,6 +189,27 @@ export default function ChannelScreen({
     }
   };
 
+  const handlePickAndSendImage = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (perm.status !== 'granted' && (perm as any).status !== 'limited') return;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: (ImagePicker as any).MediaType ? [((ImagePicker as any).MediaType as any).Images] : (ImagePicker as any).MediaTypeOptions?.Images,
+        quality: 0.9,
+      });
+      if (!(result as any).canceled && (result as any).assets?.length) {
+        const uri = (result as any).assets[0].uri;
+        const url = await uploadRoomImage(user?.id || '', channelId, uri);
+        await sendMessage('', 'image', [url]);
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    } catch (e: any) {
+      Alert.alert('エラー', e?.message || '画像の送信に失敗しました');
+    }
+  };
+
   // Handle message report
   const handleReportMessage = async (
     messageId: string,
@@ -324,15 +347,32 @@ export default function ChannelScreen({
               )}
             </View>
 
-            <ExpandableText
-              text={item.content || ''}
-              maxLines={3}
-              textStyle={{
-                color: item.is_masked ? colors.subtext : colors.text,
-                fontSize: 16,
-              }}
-              containerStyle={{ marginBottom: 8 }}
-            />
+            {Array.isArray((item as any).attachments) && (item as any).attachments.length > 0 ? (
+              <View style={{ marginBottom: 8 }}>
+                {((item as any).attachments as any[]).length === 1 ? (
+                  <Animated.Image source={{ uri: (item as any).attachments[0] }} style={{ width: '100%', height: 220, borderRadius: 12 }} />
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {((item as any).attachments as string[]).slice(0, 4).map((url: string) => (
+                      <View key={url} style={{ width: '48%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden' }}>
+                        <Animated.Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} />
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ) : null}
+            {item.content ? (
+              <ExpandableText
+                text={item.content || ''}
+                maxLines={3}
+                textStyle={{
+                  color: item.is_masked ? colors.subtext : colors.text,
+                  fontSize: 16,
+                }}
+                containerStyle={{ marginBottom: 8 }}
+              />
+            ) : null}
 
             <Text style={{ color: colors.subtext, fontSize: 12 }}>
               {new Date(item.created_at).toLocaleString('ja-JP', {
@@ -500,17 +540,26 @@ export default function ChannelScreen({
               overflow: 'hidden',
             }}
           >
-            <BlurView
-              intensity={30}
-              tint="dark"
-              style={{
-                backgroundColor: '#ffffff10',
+              <BlurView
+                intensity={30}
+                tint="dark"
+                style={{
+                  backgroundColor: '#ffffff10',
                 flexDirection: handPreference === 'left' ? 'row-reverse' : 'row',
                 alignItems: 'flex-end',
                 paddingHorizontal: 16,
                 paddingVertical: 12,
               }}
             >
+              <Pressable onPress={handlePickAndSendImage} style={({ pressed }) => [{
+                padding: 8,
+                borderRadius: 8,
+                backgroundColor: colors.surface,
+                opacity: pressed ? 0.7 : 1,
+                ...(handPreference === 'left' ? { marginLeft: 8 } : { marginRight: 8 }),
+              }]}>
+                <Text style={{ color: colors.text }}>🖼️</Text>
+              </Pressable>
               <TextInput
                 style={{
                   flex: 1,
