@@ -180,7 +180,7 @@ export default function CommentComposeScreen({
                   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
                   if (perm.status !== 'granted' && (perm as any).status !== 'limited') return;
                   const result = await ImagePicker.launchImageLibraryAsync({
-                    mediaTypes: (ImagePicker as any).MediaType ? [((ImagePicker as any).MediaType as any).Images] : (ImagePicker as any).MediaTypeOptions?.Images,
+                    mediaTypes: [ImagePicker.MediaType.Images],
                     allowsMultipleSelection: true as any,
                     selectionLimit: 4 as any,
                     quality: 0.9,

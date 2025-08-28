@@ -58,9 +58,7 @@ export default function ProfileEditScreen({ navigation }: any) {
 
   const handlePickImage = async () => {
     try {
-      const mediaTypes = (ImagePicker as any).MediaType
-        ? [((ImagePicker as any).MediaType as any).Images]
-        : (ImagePicker as any).MediaTypeOptions?.Images;
+      const mediaTypes = [ImagePicker.MediaType.Images];
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes,

@@ -194,7 +194,7 @@ export default function ChannelScreen({
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (perm.status !== 'granted' && (perm as any).status !== 'limited') return;
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: (ImagePicker as any).MediaType ? [((ImagePicker as any).MediaType as any).Images] : (ImagePicker as any).MediaTypeOptions?.Images,
+        mediaTypes: [ImagePicker.MediaType.Images],
         quality: 0.9,
       });
       if (!(result as any).canceled && (result as any).assets?.length) {
