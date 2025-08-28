@@ -23,7 +23,7 @@ export async function fetchHomeFeed(
   });
   if (error) throw error;
   const rows = (data ?? []) as any[];
-  const items: PostWithMeta[] = rows.map(row => ({
+  let items: PostWithMeta[] = rows.map(row => ({
     id: row.id,
     user_id: row.user_id,
     body: row.body,
@@ -41,6 +41,27 @@ export async function fetchHomeFeed(
       avatar_url: row.user_avatar_url,
     },
   }));
+  // If avatar_url not provided by RPC, fetch from profiles in one query
+  const missing = Array.from(
+    new Set(
+      items
+        .filter(it => !it.user?.avatar_url)
+        .map(it => it.user?.id)
+        .filter(Boolean) as string[]
+    )
+  );
+  if (missing.length > 0) {
+    const { data: profiles } = await client
+      .from('user_profiles')
+      .select('id, avatar_url')
+      .in('id', missing);
+    const map = new Map((profiles || []).map((p: any) => [p.id, p.avatar_url]));
+    items = items.map(it =>
+      it.user?.id && !it.user.avatar_url && map.get(it.user.id)
+        ? { ...it, user: { ...it.user!, avatar_url: map.get(it.user.id) || null } }
+        : it
+    );
+  }
   return { items, nextCursor: computeNextCursor(items) };
 }
 
@@ -57,7 +78,7 @@ export async function fetchMyPosts(options?: {
   });
   if (error) throw error;
   const rows = (data ?? []) as any[];
-  const items: PostWithMeta[] = rows.map(row => ({
+  let items: PostWithMeta[] = rows.map(row => ({
     id: row.id,
     user_id: row.user_id,
     body: row.body,
@@ -75,6 +96,26 @@ export async function fetchMyPosts(options?: {
       avatar_url: row.user_avatar_url,
     },
   }));
+  const missing = Array.from(
+    new Set(
+      items
+        .filter(it => !it.user?.avatar_url)
+        .map(it => it.user?.id)
+        .filter(Boolean) as string[]
+    )
+  );
+  if (missing.length > 0) {
+    const { data: profiles } = await client
+      .from('user_profiles')
+      .select('id, avatar_url')
+      .in('id', missing);
+    const map = new Map((profiles || []).map((p: any) => [p.id, p.avatar_url]));
+    items = items.map(it =>
+      it.user?.id && !it.user.avatar_url && map.get(it.user.id)
+        ? { ...it, user: { ...it.user!, avatar_url: map.get(it.user.id) || null } }
+        : it
+    );
+  }
   return { items, nextCursor: computeNextCursor(items) };
 }
 
@@ -91,7 +132,7 @@ export async function fetchLikedPosts(options: {
   });
   if (error) throw error;
   const rows = (data ?? []) as any[];
-  const items: PostWithMeta[] = rows.map(row => ({
+  let items: PostWithMeta[] = rows.map(row => ({
     id: row.id,
     user_id: row.user_id,
     body: row.body,
@@ -109,6 +150,26 @@ export async function fetchLikedPosts(options: {
       avatar_url: row.user_avatar_url,
     },
   }));
+  const missing = Array.from(
+    new Set(
+      items
+        .filter(it => !it.user?.avatar_url)
+        .map(it => it.user?.id)
+        .filter(Boolean) as string[]
+    )
+  );
+  if (missing.length > 0) {
+    const { data: profiles } = await client
+      .from('user_profiles')
+      .select('id, avatar_url')
+      .in('id', missing);
+    const map = new Map((profiles || []).map((p: any) => [p.id, p.avatar_url]));
+    items = items.map(it =>
+      it.user?.id && !it.user.avatar_url && map.get(it.user.id)
+        ? { ...it, user: { ...it.user!, avatar_url: map.get(it.user.id) || null } }
+        : it
+    );
+  }
   return { items, nextCursor: computeNextCursor(items) };
 }
 
@@ -158,7 +219,7 @@ export async function fetchComments(
     p_limit: limit,
   });
   if (error) throw error;
-  const items = (data ?? []).map((row: any) => ({
+  let items = (data ?? []).map((row: any) => ({
     id: row.id,
     post_id: row.post_id,
     user_id: row.user_id,
@@ -172,6 +233,26 @@ export async function fetchComments(
       avatar_url: row.user_avatar_url,
     },
   })) as Comment[];
+  const missing = Array.from(
+    new Set(
+      items
+        .filter(it => !it.user?.avatar_url)
+        .map(it => it.user?.id)
+        .filter(Boolean) as string[]
+    )
+  );
+  if (missing.length > 0) {
+    const { data: profiles } = await client
+      .from('user_profiles')
+      .select('id, avatar_url')
+      .in('id', missing);
+    const map = new Map((profiles || []).map((p: any) => [p.id, p.avatar_url]));
+    items = items.map(it =>
+      it.user?.id && !it.user.avatar_url && map.get(it.user.id)
+        ? { ...it, user: { ...it.user!, avatar_url: map.get(it.user.id) || null } }
+        : it
+    );
+  }
   return { items, nextCursor: computeNextCursor(items) };
 }
 
