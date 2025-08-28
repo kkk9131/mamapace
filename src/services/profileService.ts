@@ -97,6 +97,39 @@ export async function updateMyProfile(
   return data as PublicUserProfile;
 }
 
+/**
+ * Update only avatar_url field for current user profile.
+ * Tries RPC `update_my_avatar_url` first, falls back to direct table update.
+ */
+export async function updateMyAvatarUrl(url: string | null): Promise<boolean> {
+  const client = getSupabaseClient();
+  try {
+    const { data, error } = await client.rpc('update_my_avatar_url', {
+      p_avatar_url: url,
+    });
+    if (!error) return !!data || url === null;
+  } catch {}
+
+  // Fallback: direct update to user_profiles
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user) throw new Error('ログインが必要です');
+
+  const { error } = await client
+    .from('user_profiles')
+    .update({ avatar_url: url })
+    .eq('id', user.id)
+    .select('id')
+    .single();
+
+  if (error) {
+    secureLogger.error('Failed to update avatar_url:', error);
+    throw new Error('アイコン画像の保存に失敗しました');
+  }
+  return true;
+}
+
 // Follow management functions
 
 export async function getFollowers(

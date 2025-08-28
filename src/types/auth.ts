@@ -47,6 +47,7 @@ export interface PublicUserProfile {
   display_name: string | null;
   bio: string | null;
   avatar_emoji: string | null;
+  avatar_url?: string | null;
   created_at: string;
   profile_visibility: 'public' | 'friends' | 'private';
   is_active: boolean;

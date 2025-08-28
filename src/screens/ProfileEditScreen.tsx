@@ -12,7 +12,13 @@ import {
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
-import { updateMyProfile } from '../services/profileService';
+import { updateMyProfile, updateMyAvatarUrl } from '../services/profileService';
+// MCP: not used for this task.
+let ImagePicker: any;
+try {
+  ImagePicker = require('expo-image-picker');
+} catch {}
+import { uploadAvatarImage } from '../services/storageService';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { secureLogger } from '../utils/privacyProtection';
 
@@ -38,6 +44,8 @@ export default function ProfileEditScreen({ navigation }: any) {
   const [displayName, setDisplayName] = useState(user?.display_name || '');
   const [bio, setBio] = useState('');
   const [avatarEmoji, setAvatarEmoji] = useState(user?.avatar_emoji || '👩‍🍼');
+  const [avatarImageUri, setAvatarImageUri] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const handleDisplayNameChange = (text: string) => {
@@ -55,6 +63,16 @@ export default function ProfileEditScreen({ navigation }: any) {
   const handleSave = async () => {
     try {
       setSaving(true);
+      // If image selected, upload and update avatar_url first
+      if (avatarImageUri && user?.id) {
+        try {
+          setUploading(true);
+          const url = await uploadAvatarImage(user.id, avatarImageUri);
+          await updateMyAvatarUrl(url);
+        } finally {
+          setUploading(false);
+        }
+      }
 
       const updatedProfile = await updateMyProfile({
         display_name: displayName.trim(),
@@ -116,16 +134,16 @@ export default function ProfileEditScreen({ navigation }: any) {
                 <>
                   <Pressable
                     onPress={handleSave}
-                    disabled={saving}
+                    disabled={saving || uploading}
                     style={{
                       paddingHorizontal: theme.spacing(2),
                       paddingVertical: theme.spacing(1),
                       borderRadius: 999,
                       backgroundColor: colors.pink,
-                      opacity: saving ? 0.5 : 1,
+                      opacity: saving || uploading ? 0.5 : 1,
                     }}
                   >
-                    {saving ? (
+                    {saving || uploading ? (
                       <ActivityIndicator size="small" color="white" />
                     ) : (
                       <Text style={{ color: 'white', fontWeight: '700' }}>
@@ -135,7 +153,7 @@ export default function ProfileEditScreen({ navigation }: any) {
                   </Pressable>
                   <Pressable
                     onPress={() => navigation.goBack()}
-                    disabled={saving}
+                    disabled={saving || uploading}
                     style={{
                       paddingHorizontal: theme.spacing(2),
                       paddingVertical: theme.spacing(1),
@@ -152,7 +170,7 @@ export default function ProfileEditScreen({ navigation }: any) {
                 <>
                   <Pressable
                     onPress={() => navigation.goBack()}
-                    disabled={saving}
+                    disabled={saving || uploading}
                     style={{
                       paddingHorizontal: theme.spacing(2),
                       paddingVertical: theme.spacing(1),
@@ -166,16 +184,16 @@ export default function ProfileEditScreen({ navigation }: any) {
                   </Pressable>
                   <Pressable
                     onPress={handleSave}
-                    disabled={saving}
+                    disabled={saving || uploading}
                     style={{
                       paddingHorizontal: theme.spacing(2),
                       paddingVertical: theme.spacing(1),
                       borderRadius: 999,
                       backgroundColor: colors.pink,
-                      opacity: saving ? 0.5 : 1,
+                      opacity: saving || uploading ? 0.5 : 1,
                     }}
                   >
-                    {saving ? (
+                    {saving || uploading ? (
                       <ActivityIndicator size="small" color="white" />
                     ) : (
                       <Text style={{ color: 'white', fontWeight: '700' }}>
@@ -186,6 +204,111 @@ export default function ProfileEditScreen({ navigation }: any) {
                 </>
               )}
             </View>
+          </View>
+
+          {/* Avatar Image Selector */}
+          <View
+            style={{
+              marginBottom: theme.spacing(2),
+              borderRadius: theme.radius.lg,
+              overflow: 'hidden',
+              ...theme.shadow.card,
+            }}
+          >
+            <BlurView
+              intensity={20}
+              tint="dark"
+              style={{ padding: theme.spacing(2), backgroundColor: '#ffffff10' }}
+            >
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: 16,
+                  fontWeight: '700',
+                  marginBottom: theme.spacing(1.5),
+                }}
+              >
+                アイコン画像（任意）
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 36,
+                    overflow: 'hidden',
+                    backgroundColor: colors.surface,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {avatarImageUri ? (
+                    <Animated.Image
+                      source={{ uri: avatarImageUri }}
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  ) : (
+                    <Text style={{ fontSize: 28 }}>{avatarEmoji || '👩‍🍼'}</Text>
+                  )}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    onPress={async () => {
+                      if (!ImagePicker) {
+                        Alert.alert('設定が必要', '画像選択には expo-image-picker の追加が必要です');
+                        return;
+                      }
+                      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                      if (perm.status !== 'granted') {
+                        Alert.alert('権限が必要', 'フォトライブラリへのアクセスを許可してください');
+                        return;
+                      }
+                      const result = await ImagePicker.launchImageLibraryAsync({
+                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        allowsEditing: true,
+                        aspect: [1, 1],
+                        quality: 0.9,
+                      });
+                      if (!result.canceled && result.assets?.length) {
+                        setAvatarImageUri(result.assets[0].uri);
+                      }
+                    }}
+                    style={({ pressed }) => [{
+                      paddingHorizontal: theme.spacing(2),
+                      paddingVertical: theme.spacing(1),
+                      borderRadius: 999,
+                      backgroundColor: colors.pink,
+                      transform: [{ scale: pressed ? 0.97 : 1 }],
+                    }]}
+                  >
+                    <Text style={{ color: 'white', fontWeight: '700' }}>
+                      画像を選択
+                    </Text>
+                  </Pressable>
+                  {avatarImageUri && (
+                    <Pressable
+                      onPress={() => setAvatarImageUri(null)}
+                      style={({ pressed }) => [{
+                        paddingHorizontal: theme.spacing(2),
+                        paddingVertical: theme.spacing(1),
+                        borderRadius: 999,
+                        backgroundColor: 'transparent',
+                        borderWidth: 1,
+                        borderColor: colors.subtext + '40',
+                        transform: [{ scale: pressed ? 0.97 : 1 }],
+                      }]}
+                    >
+                      <Text style={{ color: colors.text, fontWeight: '700' }}>
+                        画像を削除
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+              <Text style={{ color: colors.subtext, fontSize: 12, marginTop: 8 }}>
+                円形にトリミングされて表示されます。未設定時は絵文字を使用します。
+              </Text>
+            </BlurView>
           </View>
 
           {/* Avatar Emoji Selector */}
