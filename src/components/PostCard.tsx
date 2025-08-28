@@ -52,6 +52,15 @@ export default function PostCard({
   );
 
   const [likeBusy, setLikeBusy] = React.useState(false as boolean);
+
+  const extractFirstImageUrl = (text?: string): string | null => {
+    if (!text) return null;
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const urls = text.match(urlRegex) || [];
+    const img = urls.find(u => /(post-images|\.png|\.jpg|\.jpeg|\.webp)/i.test(u));
+    return img || null;
+  };
+  const imageUrl = extractFirstImageUrl(post.body);
   const handleLike = async () => {
     if (likeBusy) return;
     setLikeBusy(true);
@@ -137,13 +146,20 @@ export default function PostCard({
           </Text>
         </View>
 
-        {/* CONTENT SECTION: Post Body */}
-        <ExpandableText
-          text={post.body || ''}
-          maxLines={3}
-          containerStyle={{ marginBottom: theme.spacing(2) }}
-          textStyle={{ color: colors.text, fontSize: 16, lineHeight: 24 }}
-        />
+        {/* CONTENT SECTION: Post Body + Optional Image */}
+        {imageUrl && (
+          <View style={{ marginBottom: theme.spacing(1.5), borderRadius: 16, overflow: 'hidden', backgroundColor: '#00000020' }}>
+            <Animated.Image source={{ uri: imageUrl }} style={{ width: '100%', height: 220 }} />
+          </View>
+        )}
+        {post.body && (
+          <ExpandableText
+            text={post.body || ''}
+            maxLines={3}
+            containerStyle={{ marginBottom: theme.spacing(2) }}
+            textStyle={{ color: colors.text, fontSize: 16, lineHeight: 24 }}
+          />
+        )}
 
         {/* BOTTOM ACTION BAR: Like, Comment, Delete */}
         <View

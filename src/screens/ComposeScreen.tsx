@@ -16,6 +16,8 @@ import { notifyError } from '../utils/notify';
 
 import { useEffect, useRef, useState } from 'react';
 import { createPost } from '../services/postService';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadPostImage } from '../services/storageService';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function ComposeScreen({
@@ -29,6 +31,7 @@ export default function ComposeScreen({
   const { user } = useAuth();
   const [aiOn, setAiOn] = useState(true);
   const [body, setBody] = useState('');
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const fade = useRef(new Animated.Value(0)).current;
@@ -95,10 +98,34 @@ export default function ComposeScreen({
               <View
                 style={{
                   flexDirection: 'row',
-                  justifyContent: 'flex-end',
+                  justifyContent: 'space-between',
                   marginBottom: 8,
                 }}
               >
+                <Pressable
+                  onPress={async () => {
+                    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    if (perm.status !== 'granted' && (perm as any).status !== 'limited') return;
+                    const result = await ImagePicker.launchImageLibraryAsync({
+                      mediaTypes: (ImagePicker as any).MediaType ? [((ImagePicker as any).MediaType as any).Images] : (ImagePicker as any).MediaTypeOptions?.Images,
+                      allowsEditing: true,
+                      aspect: [1, 1],
+                      quality: 0.9,
+                    });
+                    if (!(result as any).canceled && (result as any).assets?.length) {
+                      setImageUri((result as any).assets[0].uri);
+                    }
+                  }}
+                  style={({ pressed }) => [{
+                    backgroundColor: '#ffffff14',
+                    borderRadius: 999,
+                    paddingVertical: 6,
+                    paddingHorizontal: 10,
+                    transform: [{ scale: pressed ? 0.97 : 1 }],
+                  }]}
+                >
+                  <Text style={{ color: colors.text, fontSize: 12 }}>画像</Text>
+                </Pressable>
                 <Pressable
                   onPress={() => setAiOn(v => !v)}
                   style={({ pressed }) => [
@@ -137,6 +164,11 @@ export default function ComposeScreen({
                 }}
                 scrollEnabled={true}
               />
+              {imageUri && (
+                <View style={{ marginTop: 10, borderRadius: 12, overflow: 'hidden' }}>
+                  <Animated.Image source={{ uri: imageUri }} style={{ width: '100%', height: 240 }} />
+                </View>
+              )}
               <View style={{ alignItems: 'flex-end', marginTop: 4 }}>
                 <Text style={{ color: colors.subtext, fontSize: 12 }}>
                   {body.length}/300
@@ -148,12 +180,17 @@ export default function ComposeScreen({
           <Pressable
             disabled={submitting}
             onPress={async () => {
-              if (!body.trim()) return;
+              if (!body.trim() && !imageUri) return;
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               setSubmitting(true);
               try {
                 if (!user?.id) throw new Error('ログインが必要です');
-                await createPost(body.trim());
+                let content = body.trim();
+                if (imageUri) {
+                  const url = await uploadPostImage(user.id, imageUri);
+                  content = content ? content + "\n" + url : url;
+                }
+                await createPost(content);
                 if (onPosted) onPosted();
                 else onClose && onClose();
               } catch (e: any) {

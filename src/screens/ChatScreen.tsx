@@ -1,22 +1,14 @@
-import {
-  View,
-  Text,
-  Pressable,
-  FlatList,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  RefreshControl,
-  Animated,
-} from 'react-native';
+import { View, Text, Pressable, FlatList, TextInput, KeyboardAvoidingView, Platform, Alert, RefreshControl, Animated, Image } from 'react-native';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '../theme/theme';
+import Avatar from '../components/Avatar';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { useChat } from '../hooks/useChat';
 import { MessageType, OptimisticMessage } from '../types/chat';
 import { chatService } from '../services/chatService';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadChatImage } from '../services/storageService';
 import { getSupabaseClient } from '../services/supabaseClient';
 
 interface ChatScreenProps {
@@ -108,6 +100,27 @@ export default function ChatScreen({
   const handleInputBlur = useCallback(() => {
     updateTypingStatus(false);
   }, [updateTypingStatus]);
+
+  // Pick and send image
+  const handlePickAndSendImage = useCallback(async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (perm.status !== 'granted' && (perm as any).status !== 'limited') return;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: (ImagePicker as any).MediaType ? [((ImagePicker as any).MediaType as any).Images] : (ImagePicker as any).MediaTypeOptions?.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.9,
+      });
+      if (!(result as any).canceled && (result as any).assets?.length && chatId && user?.id) {
+        const uri = (result as any).assets[0].uri;
+        const url = await uploadChatImage(user.id, chatId, uri);
+        await sendMessage(url, MessageType.IMAGE);
+      }
+    } catch (e: any) {
+      Alert.alert('エラー', e?.message || '画像の送信に失敗しました');
+    }
+  }, [chatId, user?.id, sendMessage]);
 
   // Handle refresh (load more messages)
   const handleRefresh = useCallback(() => {
@@ -249,7 +262,7 @@ export default function ChatScreen({
                           item.metadata?.type === 'room_invitation' &&
                           item.metadata?.status === 'pending';
 
-      return (
+      const bubble = (
         <Pressable
           onLongPress={() => {
             if (isMe && !isDeleted && !isOptimistic) {
@@ -310,15 +323,19 @@ export default function ChatScreen({
               maxWidth: isInvitation ? '90%' : '80%',
             }}
           >
-            <Text
-              style={{
-                color: isMe ? '#23181D' : colors.text,
-                fontStyle: isDeleted ? 'italic' : 'normal',
-                fontSize: isInvitation ? 14 : undefined,
-              }}
-            >
-              {isDeleted ? 'このメッセージは削除されました' : item.content}
-            </Text>
+            {item.message_type === MessageType.IMAGE ? (
+              <Image source={{ uri: item.content }} style={{ width: 220, height: 220, borderRadius: 12 }} />
+            ) : (
+              <Text
+                style={{
+                  color: isMe ? '#23181D' : colors.text,
+                  fontStyle: isDeleted ? 'italic' : 'normal',
+                  fontSize: isInvitation ? 14 : undefined,
+                }}
+              >
+                {isDeleted ? 'このメッセージは削除されました' : item.content}
+              </Text>
+            )}
             
             {/* Invitation response buttons */}
             {isInvitation && !isMe && !isDeleted && (
@@ -392,6 +409,22 @@ export default function ChatScreen({
           </View>
         </Pressable>
       );
+
+      if (!isMe) {
+        return (
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
+            <Avatar
+              uri={(item as any).sender?.avatar_url}
+              emoji={(item as any).sender?.avatar_emoji || '👤'}
+              size={28}
+              style={{ marginRight: 8 }}
+            />
+            <View style={{ flexShrink: 1 }}>{bubble}</View>
+          </View>
+        );
+      }
+
+      return bubble;
     },
     [
       user?.id,
@@ -692,6 +725,18 @@ export default function ChatScreen({
               alignItems: 'center',
             }}
           >
+            <Pressable
+              onPress={handlePickAndSendImage}
+              style={({ pressed }) => ({
+                padding: 8,
+                borderRadius: 20,
+                backgroundColor: colors.surface,
+                opacity: pressed ? 0.7 : 1,
+                ...(handPreference === 'left' ? { marginLeft: 8 } : { marginRight: 8 }),
+              })}
+            >
+              <Text style={{ color: colors.text }}>🖼️</Text>
+            </Pressable>
             <TextInput
               placeholder="メッセージを入力"
               placeholderTextColor={colors.subtext}

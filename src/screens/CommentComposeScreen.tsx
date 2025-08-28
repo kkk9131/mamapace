@@ -13,6 +13,8 @@ import {
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import { createComment } from '../services/postService';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadCommentImage } from '../services/storageService';
 import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
@@ -41,6 +43,7 @@ export default function CommentComposeScreen({
     }).start();
   }, [fade]);
   const [body, setBody] = useState('');
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   return (
     <KeyboardAvoidingView
@@ -121,6 +124,11 @@ export default function CommentComposeScreen({
                     }}
                     scrollEnabled={true}
                   />
+                  {imageUri && (
+                    <View style={{ marginTop: 10, borderRadius: 12, overflow: 'hidden' }}>
+                      <Animated.Image source={{ uri: imageUri }} style={{ width: '100%', height: 200 }} />
+                    </View>
+                  )}
                   <View style={{ alignItems: 'flex-end', marginTop: 4 }}>
                     <Text style={{ color: colors.subtext, fontSize: 12 }}>
                       {body.length}/300
@@ -147,19 +155,52 @@ export default function CommentComposeScreen({
             <View
               style={{ flexDirection: 'row', justifyContent: 'space-between' }}
             >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="画像を選択"
+                onPress={async () => {
+                  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                  if (perm.status !== 'granted' && (perm as any).status !== 'limited') return;
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: (ImagePicker as any).MediaType ? [((ImagePicker as any).MediaType as any).Images] : (ImagePicker as any).MediaTypeOptions?.Images,
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                    quality: 0.9,
+                  });
+                  if (!(result as any).canceled && (result as any).assets?.length) {
+                    setImageUri((result as any).assets[0].uri);
+                  }
+                }}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: colors.surface,
+                    borderRadius: theme.radius.md,
+                    paddingVertical: 10,
+                    paddingHorizontal: theme.spacing(2),
+                    transform: [{ scale: pressed ? 0.97 : 1 }],
+                  },
+                ]}
+              >
+                <Text style={{ color: colors.text }}>画像</Text>
+              </Pressable>
               {handPreference === 'left' ? (
                 <>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="コメントを送信"
-                    disabled={submitting || !body.trim()}
+                    disabled={submitting || (!body.trim() && !imageUri)}
                     onPress={async () => {
-                      if (!body.trim()) return;
+                      if (!body.trim() && !imageUri) return;
                       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSubmitting(true);
                       try {
                         if (!user?.id) throw new Error('ログインが必要です');
-                        await createComment(postId, body.trim());
+                        let content = body.trim();
+                        if (imageUri) {
+                          const url = await uploadCommentImage(user.id, imageUri);
+                          content = content ? content + "\n" + url : url;
+                        }
+                        await createComment(postId, content);
                         Keyboard.dismiss();
                         if (onPosted) onPosted();
                         else onClose && onClose();
@@ -231,14 +272,19 @@ export default function CommentComposeScreen({
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="コメントを送信"
-                    disabled={submitting || !body.trim()}
+                    disabled={submitting || (!body.trim() && !imageUri)}
                     onPress={async () => {
-                      if (!body.trim()) return;
+                      if (!body.trim() && !imageUri) return;
                       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSubmitting(true);
                       try {
                         if (!user?.id) throw new Error('ログインが必要です');
-                        await createComment(postId, body.trim());
+                        let content = body.trim();
+                        if (imageUri) {
+                          const url = await uploadCommentImage(user.id, imageUri);
+                          content = content ? content + "\n" + url : url;
+                        }
+                        await createComment(postId, content);
                         Keyboard.dismiss();
                         if (onPosted) onPosted();
                         else onClose && onClose();

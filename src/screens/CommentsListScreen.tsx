@@ -224,11 +224,23 @@ export default function CommentsListScreen({
                   </Pressable>
                 )}
               </View>
-              <ExpandableText
-                text={item.body || ''}
-                maxLines={3}
-                textStyle={{ color: colors.text }}
-              />
+              {(() => {
+                const text = item.body || '';
+                const urlMatch = text.match(/https?:\/\/[^\s]+/g) || [];
+                const imgUrl = urlMatch.find(u => /(post-images|\.png|\.jpg|\.jpeg|\.webp)/i.test(u));
+                return (
+                  <>
+                    {imgUrl && (
+                      <View style={{ marginBottom: 8, borderRadius: 12, overflow: 'hidden' }}>
+                        <Animated.Image source={{ uri: imgUrl }} style={{ width: '100%', height: 180 }} />
+                      </View>
+                    )}
+                    {text ? (
+                      <ExpandableText text={text} maxLines={3} textStyle={{ color: colors.text }} />
+                    ) : null}
+                  </>
+                );
+              })()}
             </BlurView>
           </View>
         )}
