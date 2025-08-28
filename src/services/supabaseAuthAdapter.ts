@@ -5,10 +5,12 @@ type SignInParams = { email: string; password: string };
 
 export async function signUp(params: SignUpParams) {
   const client = getSupabaseClient();
-  const { data, error } = await client.auth.signUp({ 
-    email: params.email, 
+  const { data, error } = await client.auth.signUp({
+    email: params.email,
     password: params.password,
-    options: params.redirectTo ? { emailRedirectTo: params.redirectTo } : undefined
+    options: params.redirectTo
+      ? { emailRedirectTo: params.redirectTo }
+      : undefined,
   });
   if (error) throw error;
   return data;
@@ -16,7 +18,10 @@ export async function signUp(params: SignUpParams) {
 
 export async function signIn(params: SignInParams) {
   const client = getSupabaseClient();
-  const { data, error } = await client.auth.signInWithPassword({ email: params.email, password: params.password });
+  const { data, error } = await client.auth.signInWithPassword({
+    email: params.email,
+    password: params.password,
+  });
   if (error) throw error;
   return data;
 }

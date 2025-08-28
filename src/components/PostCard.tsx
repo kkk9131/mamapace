@@ -3,7 +3,9 @@ import { View, Text, Pressable, Animated } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/theme';
+import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { PostWithMeta } from '../types/post';
+import ExpandableText from './ExpandableText';
 
 export default function PostCard({
   post,
@@ -13,7 +15,7 @@ export default function PostCard({
   commentDelta = 0,
   reactionDelta = 0,
   isOwner = false,
-  onDelete
+  onDelete,
 }: {
   post: PostWithMeta;
   onOpenComments?: (postId: string) => void;
@@ -26,14 +28,27 @@ export default function PostCard({
 }) {
   const theme = useTheme() as any;
   const { colors } = theme;
+  const { handPreference } = useHandPreference();
   const likeScale = useRef(new Animated.Value(1)).current;
   const float = useRef(new Animated.Value(0)).current;
   const commentScale = useRef(new Animated.Value(1)).current;
 
-  const likeCount = Math.max(0, (post.reaction_summary.count || 0) + (reactionDelta || 0));
-  const commentCount = Math.max(0, (post.comment_summary.count || 0) + (commentDelta || 0));
-  const likeText = useMemo(() => (likeCount > 0 ? `${likeCount}` : ''), [likeCount]);
-  const commentText = useMemo(() => (commentCount > 0 ? `${commentCount}` : ''), [commentCount]);
+  const likeCount = Math.max(
+    0,
+    (post.reaction_summary.count || 0) + (reactionDelta || 0)
+  );
+  const commentCount = Math.max(
+    0,
+    (post.comment_summary.count || 0) + (commentDelta || 0)
+  );
+  const likeText = useMemo(
+    () => (likeCount > 0 ? `${likeCount}` : ''),
+    [likeCount]
+  );
+  const commentText = useMemo(
+    () => (commentCount > 0 ? `${commentCount}` : ''),
+    [commentCount]
+  );
 
   const [likeBusy, setLikeBusy] = React.useState(false as boolean);
   const handleLike = async () => {
@@ -41,57 +56,229 @@ export default function PostCard({
     setLikeBusy(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Animated.sequence([
-      Animated.spring(likeScale, { toValue: 0.9, useNativeDriver: true, speed: 16, bounciness: 8 }),
-      Animated.spring(likeScale, { toValue: 1, useNativeDriver: true, speed: 16, bounciness: 8 }),
+      Animated.spring(likeScale, {
+        toValue: 0.9,
+        useNativeDriver: true,
+        speed: 16,
+        bounciness: 8,
+      }),
+      Animated.spring(likeScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 16,
+        bounciness: 8,
+      }),
     ]).start();
     float.setValue(0);
-    Animated.timing(float, { toValue: -14, duration: 450, useNativeDriver: true }).start();
+    Animated.timing(float, {
+      toValue: -14,
+      duration: 450,
+      useNativeDriver: true,
+    }).start();
     onToggleLike && onToggleLike(post.id, post.reaction_summary.reactedByMe);
     setLikeBusy(false);
   };
 
-  const [expanded, setExpanded] = React.useState(false);
-  const MAX_LINES = 4;
-  const isLong = (post.body || '').length > 120; // heuristic
-
   return (
-    <View style={{ borderRadius: 24, overflow: 'hidden', ...theme.shadow.card }}>
-      <BlurView intensity={40} tint="dark" style={{ padding: theme.spacing(2), backgroundColor: '#ffffff0E' }}>
-        <Text style={{ color: colors.text, fontSize: 18, marginBottom: 8 }} numberOfLines={expanded ? undefined : MAX_LINES}>
-          {post.body}
-        </Text>
-        {isLong && (
-          <Pressable accessibilityRole="button" accessibilityLabel={expanded? '本文を閉じる':'本文をもっと見る'} onPress={() => setExpanded(v => !v)} style={({ pressed }) => [{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.surface, transform: [{ scale: pressed ? 0.98 : 1 }] }]}> 
-            <Text style={{ color: colors.pink, fontWeight: '700' }}>{expanded ? '閉じる' : 'もっと見る'}</Text>
+    <View
+      style={{ borderRadius: 24, overflow: 'hidden', ...theme.shadow.card }}
+    >
+      <BlurView
+        intensity={40}
+        tint="dark"
+        style={{ padding: theme.spacing(2), backgroundColor: '#ffffff0E' }}
+      >
+        {/* TOP SECTION: Username and Time */}
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: theme.spacing(1.5),
+          }}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="ユーザープロフィールを開く"
+            onPress={e => {
+              e.stopPropagation();
+              onOpenUser && onOpenUser(post.user_id);
+            }}
+            style={{ flex: 1 }}
+            hitSlop={{ top: 8, bottom: 8, left: 0, right: 0 }}
+          >
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: 16,
+                fontWeight: '600',
+              }}
+              numberOfLines={1}
+            >
+              {post.user?.display_name || post.user?.username || '匿名'}
+            </Text>
           </Pressable>
-        )}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Pressable accessibilityRole="button" accessibilityLabel="ユーザープロフィールを開く" onPress={() => onOpenUser && onOpenUser(post.user_id)}>
-            <Text style={{ color: colors.subtext }}>{post.user?.display_name || post.user?.username || '匿名'} ・ {new Date(post.created_at).toLocaleString()}</Text>
-          </Pressable>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {isOwner && (
-              <Pressable accessibilityRole="button" accessibilityLabel="投稿を削除" onPress={() => onDelete && onDelete(post.id)} style={({ pressed }) => [{ backgroundColor: colors.surface, paddingHorizontal: theme.spacing(1), paddingVertical: 6, borderRadius: 999, transform: [{ scale: pressed ? 0.97 : 1 }] }]}> 
-                <Text style={{ color: colors.pink, fontWeight: '700' }}>🗑</Text>
-              </Pressable>
-            )}
-            <Pressable disabled={likeBusy} onPress={handleLike} accessibilityRole="button" accessibilityLabel="共感" style={({ pressed }) => [{ backgroundColor: colors.surface, paddingHorizontal: theme.spacing(1.25), paddingVertical: 6, borderRadius: 999, overflow: 'visible', opacity: likeBusy?0.6:1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}> 
-              <Animated.Text style={{ transform: [{ scale: likeScale }], color: colors.pink, fontWeight: '700' }}>{post.reaction_summary.reactedByMe ? '💗' : '🤍'}</Animated.Text>
-              {likeText ? <Text style={{ color: colors.pink, marginLeft: 6 }}>{likeText}</Text> : null}
-              <Animated.Text style={{ position: 'absolute', top: -6, right: -6, color: colors.pink, opacity: 0.9, transform: [{ translateY: float }] }}>+1</Animated.Text>
+          <Text
+            style={{
+              color: colors.subtext,
+              fontSize: 14,
+              marginLeft: theme.spacing(1),
+            }}
+          >
+            {new Date(post.created_at).toLocaleString()}
+          </Text>
+        </View>
+
+        {/* CONTENT SECTION: Post Body */}
+        <ExpandableText
+          text={post.body || ''}
+          maxLines={3}
+          containerStyle={{ marginBottom: theme.spacing(2) }}
+          textStyle={{ color: colors.text, fontSize: 16, lineHeight: 24 }}
+        />
+
+        {/* BOTTOM ACTION BAR: Like, Comment, Delete */}
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          {/* Like and Comment buttons - positioned based on hand preference */}
+          <View style={{ 
+            flexDirection: 'row', 
+            gap: theme.spacing(2),
+            ...(handPreference === 'right' && { marginLeft: 'auto', marginRight: isOwner ? theme.spacing(2) : 0 })
+          }}>
+            {/* Like Button */}
+            <Pressable
+              disabled={likeBusy}
+              onPress={e => {
+                e.stopPropagation();
+                handleLike();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="共感"
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.surface,
+                  paddingHorizontal: theme.spacing(1.25),
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  overflow: 'visible',
+                  opacity: likeBusy ? 0.6 : 1,
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                },
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Animated.Text
+                style={{
+                  transform: [{ scale: likeScale }],
+                  color: colors.pink,
+                  fontWeight: '700',
+                }}
+              >
+                {post.reaction_summary.reactedByMe ? '💗' : '🤍'}
+              </Animated.Text>
+              {likeText ? (
+                <Text style={{ color: colors.pink, marginLeft: 6 }}>
+                  {likeText}
+                </Text>
+              ) : null}
+              <Animated.Text
+                style={{
+                  position: 'absolute',
+                  top: -6,
+                  right: -6,
+                  color: colors.pink,
+                  opacity: 0.9,
+                  transform: [{ translateY: float }],
+                }}
+              >
+                +1
+              </Animated.Text>
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="コメント" onPress={async () => {
-              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              Animated.sequence([
-                Animated.spring(commentScale, { toValue: 0.9, useNativeDriver: true, speed: 16, bounciness: 8 }),
-                Animated.spring(commentScale, { toValue: 1, useNativeDriver: true, speed: 16, bounciness: 8 }),
-              ]).start();
-              onOpenComments && onOpenComments(post.id);
-            }} style={({ pressed }) => [{ backgroundColor: colors.surface, paddingHorizontal: theme.spacing(1.25), paddingVertical: 6, borderRadius: 999, transform: [{ scale: pressed ? 0.97 : 1 }] }]}> 
-              <Animated.Text style={{ transform: [{ scale: commentScale }], color: colors.pink, fontWeight: '700' }}>💬</Animated.Text>
-              {commentText ? <Text style={{ color: colors.pink, marginLeft: 6 }}>{commentText}</Text> : null}
+
+            {/* Comment Button */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="コメント"
+              onPress={async e => {
+                e.stopPropagation();
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                Animated.sequence([
+                  Animated.spring(commentScale, {
+                    toValue: 0.9,
+                    useNativeDriver: true,
+                    speed: 16,
+                    bounciness: 8,
+                  }),
+                  Animated.spring(commentScale, {
+                    toValue: 1,
+                    useNativeDriver: true,
+                    speed: 16,
+                    bounciness: 8,
+                  }),
+                ]).start();
+                onOpenComments && onOpenComments(post.id);
+              }}
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.surface,
+                  paddingHorizontal: theme.spacing(1.25),
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                },
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Animated.Text
+                style={{
+                  transform: [{ scale: commentScale }],
+                  color: colors.pink,
+                  fontWeight: '700',
+                }}
+              >
+                💬
+              </Animated.Text>
+              {commentText ? (
+                <Text style={{ color: colors.pink, marginLeft: 6 }}>
+                  {commentText}
+                </Text>
+              ) : null}
             </Pressable>
           </View>
+
+          {/* Right side: Delete button (only for own posts) */}
+          {isOwner && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="投稿を削除"
+              onPress={e => {
+                e.stopPropagation();
+                onDelete && onDelete(post.id);
+              }}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: colors.surface,
+                  paddingHorizontal: theme.spacing(1),
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                },
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={{ color: colors.pink, fontWeight: '700' }}>🗑</Text>
+            </Pressable>
+          )}
         </View>
       </BlurView>
     </View>

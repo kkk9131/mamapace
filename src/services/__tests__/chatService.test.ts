@@ -10,22 +10,22 @@ const mockSupabaseClient = {
   auth: {
     getUser: jest.fn().mockResolvedValue({
       data: { user: { id: 'test-user-123', email: 'test@example.com' } },
-      error: null
-    })
+      error: null,
+    }),
   },
   rpc: jest.fn().mockResolvedValue({ data: 'conv-123', error: null }),
   from: jest.fn(() => ({
     select: jest.fn(() => ({
       eq: jest.fn(() => ({
-        single: jest.fn().mockResolvedValue({ data: null, error: null })
-      }))
-    }))
+        single: jest.fn().mockResolvedValue({ data: null, error: null }),
+      })),
+    })),
   })),
   channel: jest.fn(() => ({
     on: jest.fn().mockReturnThis(),
     subscribe: jest.fn().mockResolvedValue({ error: null }),
-    unsubscribe: jest.fn().mockResolvedValue({ error: null })
-  }))
+    unsubscribe: jest.fn().mockResolvedValue({ error: null }),
+  })),
 };
 
 const mockSecureLogger = {
@@ -34,21 +34,21 @@ const mockSecureLogger = {
   warn: jest.fn(),
   debug: jest.fn(),
   security: jest.fn(),
-  privacy: jest.fn()
+  privacy: jest.fn(),
 };
 
 const mockAuthService = {
   getCurrentUser: jest.fn().mockReturnValue({ id: 'test-user-123' }),
-  isAuthenticated: jest.fn().mockReturnValue(true)
+  isAuthenticated: jest.fn().mockReturnValue(true),
 };
 
 // Apply mocks before any imports
 jest.mock('../supabaseClient', () => ({
-  getSupabaseClient: () => mockSupabaseClient
+  getSupabaseClient: () => mockSupabaseClient,
 }));
 
 jest.mock('../authService', () => ({
-  authService: mockAuthService
+  authService: mockAuthService,
 }));
 
 // No need to re-mock since it's already mocked in setup.ts
@@ -56,14 +56,14 @@ jest.mock('../authService', () => ({
 jest.mock('../encryptionService', () => ({
   encryptionService: {
     encrypt: jest.fn().mockResolvedValue('encrypted-data'),
-    decrypt: jest.fn().mockResolvedValue('decrypted-data')
-  }
+    decrypt: jest.fn().mockResolvedValue('decrypted-data'),
+  },
 }));
 
 jest.mock('../../types/chat', () => ({
   ...jest.requireActual('../../types/chat'),
-  sanitizeChatForLogging: jest.fn((data) => data),
-  sanitizeMessageForLogging: jest.fn((data) => data)
+  sanitizeChatForLogging: jest.fn(data => data),
+  sanitizeMessageForLogging: jest.fn(data => data),
 }));
 
 // Now import the service after mocks are in place
@@ -75,13 +75,13 @@ describe.skip('ChatService - Comprehensive Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Default mock implementations
     mockSupabaseClient.auth.getUser.mockResolvedValue({
       data: { user: mockUser },
-      error: null
+      error: null,
     });
-    
+
     mockAuthService.getCurrentUser.mockReturnValue(mockUser);
     mockAuthService.isAuthenticated.mockReturnValue(true);
   });
@@ -91,34 +91,37 @@ describe.skip('ChatService - Comprehensive Tests', () => {
       const mockConversationId = 'conv-123';
       mockSupabaseClient.rpc.mockResolvedValueOnce({
         data: mockConversationId,
-        error: null
+        error: null,
       });
 
       const request = {
         participant_id: 'user-456',
         chat_type: 'direct' as const,
-        initial_message: 'Hello there!'
+        initial_message: 'Hello there!',
       };
 
       const result = await chatService.createChat(request);
 
       expect(result.success).toBe(true);
       expect(result.data?.id).toBe(mockConversationId);
-      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith('get_or_create_conversation', {
-        p_user1_id: mockUser.id,
-        p_user2_id: request.participant_id
-      });
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'get_or_create_conversation',
+        {
+          p_user1_id: mockUser.id,
+          p_user2_id: request.participant_id,
+        }
+      );
     });
 
     it('should handle unauthenticated user', async () => {
       mockSupabaseClient.auth.getUser.mockResolvedValueOnce({
         data: { user: null },
-        error: new Error('No user')
+        error: new Error('No user'),
       });
 
       const request = {
         participant_id: 'user-456',
-        chat_type: 'direct' as const
+        chat_type: 'direct' as const,
       };
 
       const result = await chatService.createChat(request);
@@ -131,12 +134,12 @@ describe.skip('ChatService - Comprehensive Tests', () => {
     it('should handle database RPC errors', async () => {
       mockSupabaseClient.rpc.mockResolvedValueOnce({
         data: null,
-        error: new Error('Database connection failed')
+        error: new Error('Database connection failed'),
       });
 
       const request = {
         participant_id: 'user-456',
-        chat_type: 'direct' as const
+        chat_type: 'direct' as const,
       };
 
       const result = await chatService.createChat(request);
@@ -154,7 +157,7 @@ describe.skip('ChatService - Comprehensive Tests', () => {
       const request = {
         participant_id: 'user-456',
         chat_type: 'direct' as const,
-        initial_message: 'Hello there!'
+        initial_message: 'Hello there!',
       };
 
       const result = await chatService.createChat(request);
@@ -164,7 +167,7 @@ describe.skip('ChatService - Comprehensive Tests', () => {
         p_sender_id: mockUser.id,
         p_recipient_id: request.participant_id,
         p_content: 'Hello there!',
-        p_message_type: 'text'
+        p_message_type: 'text',
       });
     });
   });
@@ -172,14 +175,14 @@ describe.skip('ChatService - Comprehensive Tests', () => {
   describe('Message Operations', () => {
     it('should validate message content length', () => {
       const constraints = ChatConstraints.message;
-      
+
       expect(constraints.minLength).toBe(1);
       expect(constraints.maxLength).toBe(2000);
-      
+
       const shortMessage = '';
       const validMessage = 'Hello world';
       const longMessage = 'a'.repeat(2001);
-      
+
       expect(shortMessage.length).toBeLessThan(constraints.minLength);
       expect(validMessage.length).toBeGreaterThanOrEqual(constraints.minLength);
       expect(validMessage.length).toBeLessThanOrEqual(constraints.maxLength);
@@ -194,13 +197,13 @@ describe.skip('ChatService - Comprehensive Tests', () => {
     it('should handle message sending errors', async () => {
       mockSupabaseClient.rpc.mockResolvedValueOnce({
         data: null,
-        error: new Error('Failed to send message')
+        error: new Error('Failed to send message'),
       });
 
       const request = {
         chat_id: 'conv-123',
         content: 'Test message',
-        message_type: 'text' as MessageType
+        message_type: 'text' as MessageType,
       };
 
       const result = await chatService.sendMessage(request);
@@ -224,13 +227,13 @@ describe.skip('ChatService - Comprehensive Tests', () => {
           last_message_created_at: new Date().toISOString(),
           unread_count: 1,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
+          updated_at: new Date().toISOString(),
+        },
       ];
 
       mockSupabaseClient.rpc.mockResolvedValueOnce({
         data: mockConversations,
-        error: null
+        error: null,
       });
 
       const result = await chatService.getChats();
@@ -245,7 +248,7 @@ describe.skip('ChatService - Comprehensive Tests', () => {
     it('should handle empty chats list', async () => {
       mockSupabaseClient.rpc.mockResolvedValueOnce({
         data: [],
-        error: null
+        error: null,
       });
 
       const result = await chatService.getChats();
@@ -258,7 +261,7 @@ describe.skip('ChatService - Comprehensive Tests', () => {
     it('should handle database errors when getting chats', async () => {
       mockSupabaseClient.rpc.mockResolvedValueOnce({
         data: null,
-        error: new Error('Database error')
+        error: new Error('Database error'),
       });
 
       const result = await chatService.getChats();
@@ -272,9 +275,9 @@ describe.skip('ChatService - Comprehensive Tests', () => {
     it('should subscribe to chat successfully', async () => {
       const mockChannel = {
         on: jest.fn().mockReturnThis(),
-        subscribe: jest.fn().mockResolvedValue({ error: null })
+        subscribe: jest.fn().mockResolvedValue({ error: null }),
       };
-      
+
       mockSupabaseClient.channel.mockReturnValue(mockChannel);
 
       const callback = jest.fn();
@@ -304,7 +307,7 @@ describe.skip('ChatService - Comprehensive Tests', () => {
 
       const request = {
         participant_id: 'user-456',
-        chat_type: 'direct' as const
+        chat_type: 'direct' as const,
       };
 
       const result = await chatService.createChat(request);
@@ -316,12 +319,12 @@ describe.skip('ChatService - Comprehensive Tests', () => {
     it('should handle null/undefined responses', async () => {
       mockSupabaseClient.rpc.mockResolvedValueOnce({
         data: null,
-        error: null
+        error: null,
       });
 
       const request = {
         participant_id: 'user-456',
-        chat_type: 'direct' as const
+        chat_type: 'direct' as const,
       };
 
       const result = await chatService.createChat(request);
@@ -333,12 +336,12 @@ describe.skip('ChatService - Comprehensive Tests', () => {
     it('should log security events appropriately', async () => {
       mockSupabaseClient.auth.getUser.mockResolvedValueOnce({
         data: { user: null },
-        error: new Error('Unauthorized')
+        error: new Error('Unauthorized'),
       });
 
       const request = {
         participant_id: 'user-456',
-        chat_type: 'direct' as const
+        chat_type: 'direct' as const,
       };
 
       const result = await chatService.createChat(request);
@@ -351,25 +354,27 @@ describe.skip('ChatService - Comprehensive Tests', () => {
   describe('Rate Limiting', () => {
     it('should enforce message rate limits', () => {
       const constraints = ChatConstraints.rateLimit;
-      
+
       expect(constraints.messagesPerMinute).toBe(30);
       expect(constraints.chatsPerHour).toBe(10);
-      
+
       // Test rate limit logic conceptually
       const userId = 'test-user';
       const messageTimes: number[] = [];
       const now = Date.now();
-      
+
       // Simulate 31 messages in a minute
       for (let i = 0; i < 31; i++) {
-        messageTimes.push(now + (i * 1000)); // 1 second apart
+        messageTimes.push(now + i * 1000); // 1 second apart
       }
-      
-      const messagesInLastMinute = messageTimes.filter(time => 
-        time > now - 60000
+
+      const messagesInLastMinute = messageTimes.filter(
+        time => time > now - 60000
       ).length;
-      
-      expect(messagesInLastMinute).toBeGreaterThan(constraints.messagesPerMinute);
+
+      expect(messagesInLastMinute).toBeGreaterThan(
+        constraints.messagesPerMinute
+      );
     });
   });
 });

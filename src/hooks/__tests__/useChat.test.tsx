@@ -9,11 +9,11 @@ import React from 'react';
 import { MessageType, ChatEventType } from '../../types/chat';
 
 // Mock user and chat data
-const mockUser = { 
+const mockUser = {
   id: 'test-user-123',
   username: 'testuser',
   display_name: 'Test User',
-  email: 'test@example.com'
+  email: 'test@example.com',
 };
 
 const mockChat = {
@@ -28,7 +28,7 @@ const mockChat = {
   participant_ids: [mockUser.id],
   unread_count: 0,
   participants_presence: [],
-  typing_users: []
+  typing_users: [],
 };
 
 const mockMessage = {
@@ -47,7 +47,7 @@ const mockMessage = {
   edited_at: null,
   reply_to_message_id: null,
   read_by: [],
-  is_read: false
+  is_read: false,
 };
 
 // Mock chat service with detailed responses
@@ -60,7 +60,7 @@ const mockChatService = {
   editMessage: jest.fn(),
   deleteMessage: jest.fn(),
   markAsRead: jest.fn(),
-  updateTypingStatus: jest.fn()
+  updateTypingStatus: jest.fn(),
 };
 
 // Mock privacy protection
@@ -68,28 +68,28 @@ const mockSecureLogger = {
   info: jest.fn(),
   error: jest.fn(),
   warn: jest.fn(),
-  debug: jest.fn()
+  debug: jest.fn(),
 };
 
 // Apply mocks before imports
 jest.mock('../../services/chatService', () => ({
-  chatService: mockChatService
+  chatService: mockChatService,
 }));
 
 jest.mock('../../contexts/AuthContext', () => ({
-  useAuth: () => ({ 
-    user: mockUser, 
-    isAuthenticated: true 
-  })
+  useAuth: () => ({
+    user: mockUser,
+    isAuthenticated: true,
+  }),
 }));
 
 // Mock already exists in setup.ts, just ensure it's accessible
 
 jest.mock('../../types/chat', () => ({
   ...jest.requireActual('../../types/chat'),
-  sanitizeChatForLogging: jest.fn((data) => data),
-  sanitizeMessageForLogging: jest.fn((data) => data),
-  createSendMessageRequest: jest.fn((data) => data)
+  sanitizeChatForLogging: jest.fn(data => data),
+  sanitizeMessageForLogging: jest.fn(data => data),
+  createSendMessageRequest: jest.fn(data => data),
 }));
 
 // Now import the actual hook
@@ -99,30 +99,30 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
-    
+
     // Default successful responses
     mockChatService.getChat.mockResolvedValue({
       success: true,
-      data: mockChat
+      data: mockChat,
     });
-    
+
     mockChatService.getMessages.mockResolvedValue({
       success: true,
       data: {
         messages: [mockMessage],
         total_count: 1,
-        has_more: false
-      }
+        has_more: false,
+      },
     });
-    
+
     mockChatService.subscribeToChat.mockResolvedValue({
       success: true,
-      data: 'subscription-id'
+      data: 'subscription-id',
     });
-    
+
     mockChatService.sendMessage.mockResolvedValue({
       success: true,
-      data: { ...mockMessage, id: 'real-msg-456' }
+      data: { ...mockMessage, id: 'real-msg-456' },
     });
   });
 
@@ -133,7 +133,7 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
   describe('Hook Interface', () => {
     it('should provide complete interface', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.messages).toBeDefined();
         expect(result.current.isLoading).toBeDefined();
@@ -157,11 +157,11 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
 
     it('should handle loading states properly', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       // Initially loading
       expect(result.current.isLoading).toBe(true);
       expect(result.current.isLoadingMessages).toBe(true);
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
         expect(result.current.isLoadingMessages).toBe(false);
@@ -172,24 +172,24 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
   describe('Optimistic Updates', () => {
     it('should add optimistic message immediately when sending', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
       const initialMessageCount = result.current.messages.length;
-      
+
       act(() => {
         result.current.sendMessage('New optimistic message');
       });
 
       // Should immediately show optimistic message
       expect(result.current.messages.length).toBe(initialMessageCount + 1);
-      
-      const optimisticMessage = result.current.messages.find(m => 
-        'isOptimistic' in m && m.isOptimistic
+
+      const optimisticMessage = result.current.messages.find(
+        m => 'isOptimistic' in m && m.isOptimistic
       );
-      
+
       expect(optimisticMessage).toBeDefined();
       expect(optimisticMessage?.content).toBe('New optimistic message');
       expect(optimisticMessage?.sender_id).toBe(mockUser.id);
@@ -198,20 +198,20 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
 
     it('should replace optimistic message with real message on success', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      const realMessage = { 
-        ...mockMessage, 
-        id: 'real-msg-456', 
-        content: 'New optimistic message' 
+      const realMessage = {
+        ...mockMessage,
+        id: 'real-msg-456',
+        content: 'New optimistic message',
       };
-      
+
       mockChatService.sendMessage.mockResolvedValue({
         success: true,
-        data: realMessage
+        data: realMessage,
       });
 
       act(() => {
@@ -224,14 +224,14 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
       });
 
       // Should no longer have optimistic message
-      const optimisticMessage = result.current.messages.find(m => 
-        'isOptimistic' in m && m.isOptimistic
+      const optimisticMessage = result.current.messages.find(
+        m => 'isOptimistic' in m && m.isOptimistic
       );
       expect(optimisticMessage).toBeUndefined();
 
       // Should have real message
-      const finalMessage = result.current.messages.find(m => 
-        m.id === 'real-msg-456'
+      const finalMessage = result.current.messages.find(
+        m => m.id === 'real-msg-456'
       );
       expect(finalMessage).toBeDefined();
       expect(finalMessage?.content).toBe('New optimistic message');
@@ -239,7 +239,7 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
 
     it('should remove optimistic message on send failure', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
@@ -247,7 +247,7 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
       mockChatService.sendMessage.mockResolvedValue({
         success: false,
         error: 'Send failed',
-        error_code: 'SYSTEM_ERROR'
+        error_code: 'SYSTEM_ERROR',
       });
 
       const initialMessageCount = result.current.messages.length;
@@ -264,22 +264,24 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
 
       // Should remove optimistic message on failure
       expect(result.current.messages.length).toBe(initialMessageCount);
-      
-      const optimisticMessage = result.current.messages.find(m => 
-        'isOptimistic' in m && m.isOptimistic
+
+      const optimisticMessage = result.current.messages.find(
+        m => 'isOptimistic' in m && m.isOptimistic
       );
       expect(optimisticMessage).toBeUndefined();
     });
 
     it('should timeout optimistic messages after 10 seconds', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
       // Mock sendMessage to never resolve
-      mockChatService.sendMessage.mockImplementation(() => new Promise(() => {}));
+      mockChatService.sendMessage.mockImplementation(
+        () => new Promise(() => {})
+      );
 
       const initialMessageCount = result.current.messages.length;
 
@@ -303,7 +305,7 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
   describe('Message Operations', () => {
     it('should validate message content before sending', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
@@ -328,7 +330,7 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
 
     it('should handle different message types', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
@@ -337,16 +339,16 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
         result.current.sendMessage('Image message', MessageType.IMAGE);
       });
 
-      const optimisticMessage = result.current.messages.find(m => 
-        'isOptimistic' in m && m.isOptimistic
+      const optimisticMessage = result.current.messages.find(
+        m => 'isOptimistic' in m && m.isOptimistic
       );
-      
+
       expect(optimisticMessage?.message_type).toBe(MessageType.IMAGE);
     });
 
     it('should handle message editing', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
@@ -354,7 +356,7 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
       const editedMessage = { ...mockMessage, content: 'Edited content' };
       mockChatService.editMessage.mockResolvedValue({
         success: true,
-        data: editedMessage
+        data: editedMessage,
       });
 
       act(() => {
@@ -363,20 +365,20 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
 
       expect(mockChatService.editMessage).toHaveBeenCalledWith({
         message_id: 'msg-123',
-        content: 'Edited content'
+        content: 'Edited content',
       });
     });
 
     it('should handle message deletion', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
       mockChatService.deleteMessage.mockResolvedValue({
         success: true,
-        data: true
+        data: true,
       });
 
       act(() => {
@@ -384,7 +386,7 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
       });
 
       expect(mockChatService.deleteMessage).toHaveBeenCalledWith({
-        message_id: 'msg-123'
+        message_id: 'msg-123',
       });
     });
   });
@@ -394,11 +396,11 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
       mockChatService.getChat.mockResolvedValue({
         success: false,
         error: 'Chat not found',
-        error_code: 'CHAT_NOT_FOUND'
+        error_code: 'CHAT_NOT_FOUND',
       });
 
       const { result } = renderHook(() => useChat('invalid-chat'));
-      
+
       await waitFor(() => {
         expect(result.current.error).toBe('チャットの取得に失敗しました。');
         expect(result.current.isLoading).toBe(false);
@@ -407,7 +409,7 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
 
     it('should provide error clearing functionality', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
@@ -428,17 +430,19 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
     });
 
     it('should handle retry functionality', async () => {
-      mockChatService.getChat.mockResolvedValueOnce({
-        success: false,
-        error: 'Network error',
-        error_code: 'SYSTEM_ERROR'
-      }).mockResolvedValueOnce({
-        success: true,
-        data: mockChat
-      });
+      mockChatService.getChat
+        .mockResolvedValueOnce({
+          success: false,
+          error: 'Network error',
+          error_code: 'SYSTEM_ERROR',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: mockChat,
+        });
 
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.error).toBeTruthy();
       });
@@ -457,14 +461,14 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
   describe('Real-time Updates', () => {
     it('should handle typing status updates', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
       mockChatService.updateTypingStatus.mockResolvedValue({
         success: true,
-        data: true
+        data: true,
       });
 
       act(() => {
@@ -473,20 +477,20 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
 
       expect(mockChatService.updateTypingStatus).toHaveBeenCalledWith({
         chat_id: 'chat-123',
-        is_typing: true
+        is_typing: true,
       });
     });
 
     it('should handle pagination', async () => {
       const { result } = renderHook(() => useChat('chat-123'));
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
       const additionalMessages = [
         { ...mockMessage, id: 'msg-2', content: 'Message 2' },
-        { ...mockMessage, id: 'msg-3', content: 'Message 3' }
+        { ...mockMessage, id: 'msg-3', content: 'Message 3' },
       ];
 
       mockChatService.getMessages.mockResolvedValue({
@@ -494,8 +498,8 @@ describe.skip('useChat Hook - Comprehensive Tests', () => {
         data: {
           messages: additionalMessages,
           total_count: 3,
-          has_more: false
-        }
+          has_more: false,
+        },
       });
 
       act(() => {

@@ -1,6 +1,6 @@
 /**
  * EMOJI PICKER COMPONENT
- * 
+ *
  * Avatar emoji selection with:
  * - Curated maternal health themed emojis
  * - Touch-friendly grid layout
@@ -33,29 +33,113 @@ interface EmojiPickerProps {
  */
 const EMOJI_CATEGORIES = {
   '母親・家族': [
-    '👶', '🤱', '👩‍👶‍👶', '👨‍👩‍👧‍👦', '👪', '💕', '👩‍⚕️', '🤰',
-    '👩', '👨', '👧', '👦', '👵', '👴', '👶🏻', '👶🏽'
+    '👶',
+    '🤱',
+    '👩‍👶‍👶',
+    '👨‍👩‍👧‍👦',
+    '👪',
+    '💕',
+    '👩‍⚕️',
+    '🤰',
+    '👩',
+    '👨',
+    '👧',
+    '👦',
+    '👵',
+    '👴',
+    '👶🏻',
+    '👶🏽',
   ],
-  '動物': [
-    '🐱', '🐶', '🐼', '🐰', '🦄', '🐻', '🐸', '🐧',
-    '🦋', '🐝', '🦊', '🐯', '🐨', '🐹', '🐵', '🦁'
+  動物: [
+    '🐱',
+    '🐶',
+    '🐼',
+    '🐰',
+    '🦄',
+    '🐻',
+    '🐸',
+    '🐧',
+    '🦋',
+    '🐝',
+    '🦊',
+    '🐯',
+    '🐨',
+    '🐹',
+    '🐵',
+    '🦁',
   ],
   '自然・花': [
-    '🌸', '🌺', '🌻', '🌷', '🌹', '💐', '🌿', '🍀',
-    '🌙', '⭐', '☀️', '🌈', '🦋', '🌊', '🌳', '🌼'
+    '🌸',
+    '🌺',
+    '🌻',
+    '🌷',
+    '🌹',
+    '💐',
+    '🌿',
+    '🍀',
+    '🌙',
+    '⭐',
+    '☀️',
+    '🌈',
+    '🦋',
+    '🌊',
+    '🌳',
+    '🌼',
   ],
   'ハート・愛情': [
-    '💖', '💕', '💗', '💓', '💝', '💘', '💞', '💟',
-    '❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '🖤'
+    '💖',
+    '💕',
+    '💗',
+    '💓',
+    '💝',
+    '💘',
+    '💞',
+    '💟',
+    '❤️',
+    '🧡',
+    '💛',
+    '💚',
+    '💙',
+    '💜',
+    '🤍',
+    '🖤',
   ],
-  '食べ物': [
-    '🍎', '🍓', '🥕', '🥛', '🍯', '🥗', '🫐', '🥑',
-    '🍌', '🍊', '🥒', '🥦', '🧀', '🥖', '🍳', '🥪'
+  食べ物: [
+    '🍎',
+    '🍓',
+    '🥕',
+    '🥛',
+    '🍯',
+    '🥗',
+    '🫐',
+    '🥑',
+    '🍌',
+    '🍊',
+    '🥒',
+    '🥦',
+    '🧀',
+    '🥖',
+    '🍳',
+    '🥪',
   ],
   'おもちゃ・遊び': [
-    '🧸', '🎈', '🎀', '🎁', '🎊', '🎉', '🎨', '🎭',
-    '⚽', '🏀', '🧩', '🎯', '🎪', '🎠', '🎡', '🎢'
-  ]
+    '🧸',
+    '🎈',
+    '🎀',
+    '🎁',
+    '🎊',
+    '🎉',
+    '🎨',
+    '🎭',
+    '⚽',
+    '🏀',
+    '🧩',
+    '🎯',
+    '🎪',
+    '🎠',
+    '🎡',
+    '🎢',
+  ],
 } as const;
 
 /**
@@ -65,48 +149,58 @@ export default function EmojiPicker({
   selectedEmoji,
   onEmojiSelect,
   disabled = false,
-  columns = 8
+  columns = 8,
 }: EmojiPickerProps) {
   const theme = useTheme() as any;
   const { colors } = theme;
-  
-  const [activeCategory, setActiveCategory] = useState<string>(Object.keys(EMOJI_CATEGORIES)[0]);
+
+  const [activeCategory, setActiveCategory] = useState<string>(
+    Object.keys(EMOJI_CATEGORIES)[0]
+  );
   const [animation] = useState(new Animated.Value(0));
-  
+
   // =====================================================
   // INTERACTION HANDLERS
   // =====================================================
-  
+
   /**
    * Handles emoji selection with haptic feedback
    */
   const handleEmojiSelect = async (emoji: string) => {
     if (disabled) return;
-    
+
     await Haptics.selectionAsync();
     onEmojiSelect(emoji);
-    
+
     // Brief animation feedback
     Animated.sequence([
-      Animated.timing(animation, { toValue: 1, duration: 100, useNativeDriver: true }),
-      Animated.timing(animation, { toValue: 0, duration: 100, useNativeDriver: true })
+      Animated.timing(animation, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animation, {
+        toValue: 0,
+        duration: 100,
+        useNativeDriver: true,
+      }),
     ]).start();
   };
-  
+
   /**
    * Handles category selection
    */
   const handleCategorySelect = async (category: string) => {
     if (disabled) return;
-    
+
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setActiveCategory(category);
   };
-  
+
   // =====================================================
   // RENDER HELPERS
   // =====================================================
-  
+
   /**
    * Renders category tabs
    */
@@ -116,13 +210,13 @@ export default function EmojiPicker({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{
-          paddingHorizontal: theme.spacing(1)
+          paddingHorizontal: theme.spacing(1),
         }}
         style={{ marginBottom: theme.spacing(1) }}
       >
-        {Object.keys(EMOJI_CATEGORIES).map((category) => {
+        {Object.keys(EMOJI_CATEGORIES).map(category => {
           const isActive = category === activeCategory;
-          
+
           return (
             <Pressable
               key={category}
@@ -133,22 +227,24 @@ export default function EmojiPicker({
                   paddingVertical: theme.spacing(0.5),
                   marginHorizontal: 4,
                   borderRadius: theme.radius.sm,
-                  backgroundColor: isActive 
-                    ? colors.pink + '30' 
-                    : pressed 
-                      ? colors.surface + '80' 
+                  backgroundColor: isActive
+                    ? colors.pink + '30'
+                    : pressed
+                      ? colors.surface + '80'
                       : 'transparent',
-                  transform: [{ scale: pressed ? 0.95 : 1 }]
-                }
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                },
               ]}
               disabled={disabled}
             >
-              <Text style={{
-                color: isActive ? colors.pink : colors.subtext,
-                fontSize: 12,
-                fontWeight: isActive ? '700' : '500',
-                textAlign: 'center'
-              }}>
+              <Text
+                style={{
+                  color: isActive ? colors.pink : colors.subtext,
+                  fontSize: 12,
+                  fontWeight: isActive ? '700' : '500',
+                  textAlign: 'center',
+                }}
+              >
                 {category}
               </Text>
             </Pressable>
@@ -157,24 +253,25 @@ export default function EmojiPicker({
       </ScrollView>
     );
   };
-  
+
   /**
    * Renders emoji grid
    */
   const renderEmojiGrid = () => {
-    const categoryEmojis = EMOJI_CATEGORIES[activeCategory as keyof typeof EMOJI_CATEGORIES];
+    const categoryEmojis =
+      EMOJI_CATEGORIES[activeCategory as keyof typeof EMOJI_CATEGORIES];
     const rows: string[][] = [];
-    
+
     // Split emojis into rows
     for (let i = 0; i < categoryEmojis.length; i += columns) {
       rows.push(categoryEmojis.slice(i, i + columns));
     }
-    
+
     return (
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingHorizontal: theme.spacing(1)
+          paddingHorizontal: theme.spacing(1),
         }}
       >
         {rows.map((row, rowIndex) => (
@@ -183,12 +280,12 @@ export default function EmojiPicker({
             style={{
               flexDirection: 'row',
               justifyContent: 'space-around',
-              marginBottom: theme.spacing(0.5)
+              marginBottom: theme.spacing(0.5),
             }}
           >
-            {row.map((emoji) => {
+            {row.map(emoji => {
               const isSelected = emoji === selectedEmoji;
-              
+
               return (
                 <Pressable
                   key={emoji}
@@ -200,28 +297,30 @@ export default function EmojiPicker({
                       borderRadius: theme.radius.md,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: isSelected 
+                      backgroundColor: isSelected
                         ? colors.pink + '30'
-                        : pressed 
-                          ? colors.surface 
+                        : pressed
+                          ? colors.surface
                           : 'transparent',
                       borderWidth: isSelected ? 2 : 0,
                       borderColor: isSelected ? colors.pink : 'transparent',
-                      transform: [{ scale: pressed ? 0.9 : 1 }]
-                    }
+                      transform: [{ scale: pressed ? 0.9 : 1 }],
+                    },
                   ]}
                   disabled={disabled}
                 >
-                  <Text style={{
-                    fontSize: 24,
-                    opacity: disabled ? 0.5 : 1
-                  }}>
+                  <Text
+                    style={{
+                      fontSize: 24,
+                      opacity: disabled ? 0.5 : 1,
+                    }}
+                  >
                     {emoji}
                   </Text>
                 </Pressable>
               );
             })}
-            
+
             {/* Fill remaining columns with empty spaces */}
             {Array.from({ length: columns - row.length }).map((_, index) => (
               <View key={`empty-${index}`} style={{ width: 44, height: 44 }} />
@@ -231,11 +330,11 @@ export default function EmojiPicker({
       </ScrollView>
     );
   };
-  
+
   // =====================================================
   // MAIN RENDER
   // =====================================================
-  
+
   return (
     <Animated.View
       style={{
@@ -243,61 +342,73 @@ export default function EmojiPicker({
         borderRadius: theme.radius.md,
         paddingVertical: theme.spacing(1),
         maxHeight: 300,
-        transform: [{
-          scale: animation.interpolate({
-            inputRange: [0, 1],
-            outputRange: [1, 1.02]
-          })
-        }]
+        transform: [
+          {
+            scale: animation.interpolate({
+              inputRange: [0, 1],
+              outputRange: [1, 1.02],
+            }),
+          },
+        ],
       }}
     >
       {/* Header */}
-      <View style={{
-        paddingHorizontal: theme.spacing(1),
-        paddingBottom: theme.spacing(0.5),
-        borderBottomWidth: 1,
-        borderBottomColor: colors.surface,
-        marginBottom: theme.spacing(0.5)
-      }}>
-        <Text style={{
-          color: colors.text,
-          fontSize: 14,
-          fontWeight: '600',
-          textAlign: 'center'
-        }}>
+      <View
+        style={{
+          paddingHorizontal: theme.spacing(1),
+          paddingBottom: theme.spacing(0.5),
+          borderBottomWidth: 1,
+          borderBottomColor: colors.surface,
+          marginBottom: theme.spacing(0.5),
+        }}
+      >
+        <Text
+          style={{
+            color: colors.text,
+            fontSize: 14,
+            fontWeight: '600',
+            textAlign: 'center',
+          }}
+        >
           アバターを選択
         </Text>
         {selectedEmoji && (
-          <Text style={{
-            color: colors.subtext,
-            fontSize: 12,
-            textAlign: 'center',
-            marginTop: 2
-          }}>
+          <Text
+            style={{
+              color: colors.subtext,
+              fontSize: 12,
+              textAlign: 'center',
+              marginTop: 2,
+            }}
+          >
             選択中: {selectedEmoji}
           </Text>
         )}
       </View>
-      
+
       {/* Category tabs */}
       {renderCategoryTabs()}
-      
+
       {/* Emoji grid */}
       {renderEmojiGrid()}
-      
+
       {/* Footer hint */}
-      <View style={{
-        paddingHorizontal: theme.spacing(1),
-        paddingTop: theme.spacing(0.5),
-        borderTopWidth: 1,
-        borderTopColor: colors.surface,
-        marginTop: theme.spacing(0.5)
-      }}>
-        <Text style={{
-          color: colors.subtext,
-          fontSize: 10,
-          textAlign: 'center'
-        }}>
+      <View
+        style={{
+          paddingHorizontal: theme.spacing(1),
+          paddingTop: theme.spacing(0.5),
+          borderTopWidth: 1,
+          borderTopColor: colors.surface,
+          marginTop: theme.spacing(0.5),
+        }}
+      >
+        <Text
+          style={{
+            color: colors.subtext,
+            fontSize: 10,
+            textAlign: 'center',
+          }}
+        >
           タップして選択 • 後で変更可能です
         </Text>
       </View>

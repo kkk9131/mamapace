@@ -11,7 +11,7 @@ const mockUser = {
   email: 'test@example.com',
   username: 'testuser',
   display_name: 'Test User',
-  avatar_emoji: '😊'
+  avatar_emoji: '😊',
 };
 
 const mockSession = {
@@ -19,7 +19,7 @@ const mockSession = {
   refresh_token: 'mock-refresh-token',
   expires_in: 3600,
   token_type: 'bearer',
-  user: mockUser
+  user: mockUser,
 };
 
 // Mock Supabase client
@@ -31,32 +31,32 @@ const mockSupabaseClient = {
     getSession: jest.fn(),
     getUser: jest.fn(),
     onAuthStateChange: jest.fn(() => ({
-      data: { subscription: { unsubscribe: jest.fn() } }
+      data: { subscription: { unsubscribe: jest.fn() } },
     })),
-    refreshSession: jest.fn()
+    refreshSession: jest.fn(),
   },
   from: jest.fn(() => ({
     select: jest.fn(() => ({
       eq: jest.fn(() => ({
-        single: jest.fn().mockResolvedValue({ data: null, error: null })
-      }))
+        single: jest.fn().mockResolvedValue({ data: null, error: null }),
+      })),
     })),
     insert: jest.fn(() => ({
-      select: jest.fn().mockResolvedValue({ data: [mockUser], error: null })
+      select: jest.fn().mockResolvedValue({ data: [mockUser], error: null }),
     })),
     update: jest.fn(() => ({
       eq: jest.fn(() => ({
-        select: jest.fn().mockResolvedValue({ data: [mockUser], error: null })
-      }))
-    }))
-  }))
+        select: jest.fn().mockResolvedValue({ data: [mockUser], error: null }),
+      })),
+    })),
+  })),
 };
 
 // Mock secure store
 const mockSecureStore = {
   setItemAsync: jest.fn().mockResolvedValue(undefined),
   getItemAsync: jest.fn().mockResolvedValue(null),
-  deleteItemAsync: jest.fn().mockResolvedValue(undefined)
+  deleteItemAsync: jest.fn().mockResolvedValue(undefined),
 };
 
 // Mock session manager
@@ -64,18 +64,18 @@ const mockSessionManager = {
   saveSession: jest.fn().mockResolvedValue(undefined),
   getSession: jest.fn().mockResolvedValue(null),
   clearSession: jest.fn().mockResolvedValue(undefined),
-  refreshSession: jest.fn().mockResolvedValue(mockSession)
+  refreshSession: jest.fn().mockResolvedValue(mockSession),
 };
 
 // Apply mocks
 jest.mock('../supabaseClient', () => ({
-  getSupabaseClient: () => mockSupabaseClient
+  getSupabaseClient: () => mockSupabaseClient,
 }));
 
 jest.mock('expo-secure-store', () => mockSecureStore);
 
 jest.mock('../sessionManager', () => ({
-  sessionManager: mockSessionManager
+  sessionManager: mockSessionManager,
 }));
 
 // Import the service after mocks
@@ -85,16 +85,16 @@ import { AuthErrorCode } from '../../types/auth';
 describe.skip('AuthService - Comprehensive Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Default successful responses
     mockSupabaseClient.auth.getSession.mockResolvedValue({
       data: { session: mockSession },
-      error: null
+      error: null,
     });
-    
+
     mockSupabaseClient.auth.getUser.mockResolvedValue({
       data: { user: mockUser },
-      error: null
+      error: null,
     });
   });
 
@@ -102,16 +102,19 @@ describe.skip('AuthService - Comprehensive Tests', () => {
     it('should sign in successfully with valid credentials', async () => {
       mockSupabaseClient.auth.signInWithPassword.mockResolvedValue({
         data: { user: mockUser, session: mockSession },
-        error: null
+        error: null,
       });
 
-      const result = await authService.signIn('test@example.com', 'password123');
+      const result = await authService.signIn(
+        'test@example.com',
+        'password123'
+      );
 
       expect(result.success).toBe(true);
       expect(result.data?.user).toEqual(mockUser);
       expect(mockSupabaseClient.auth.signInWithPassword).toHaveBeenCalledWith({
         email: 'test@example.com',
-        password: 'password123'
+        password: 'password123',
       });
       expect(mockSessionManager.saveSession).toHaveBeenCalledWith(mockSession);
     });
@@ -119,10 +122,13 @@ describe.skip('AuthService - Comprehensive Tests', () => {
     it('should handle invalid credentials', async () => {
       mockSupabaseClient.auth.signInWithPassword.mockResolvedValue({
         data: { user: null, session: null },
-        error: { message: 'Invalid credentials' }
+        error: { message: 'Invalid credentials' },
       });
 
-      const result = await authService.signIn('test@example.com', 'wrongpassword');
+      const result = await authService.signIn(
+        'test@example.com',
+        'wrongpassword'
+      );
 
       expect(result.success).toBe(false);
       expect(result.error_code).toBe(AuthErrorCode.INVALID_CREDENTIALS);
@@ -150,14 +156,14 @@ describe.skip('AuthService - Comprehensive Tests', () => {
     it('should register user successfully', async () => {
       mockSupabaseClient.auth.signUp.mockResolvedValue({
         data: { user: mockUser, session: mockSession },
-        error: null
+        error: null,
       });
 
       const userData = {
         email: 'newuser@example.com',
         password: 'password123',
         username: 'newuser',
-        display_name: 'New User'
+        display_name: 'New User',
       };
 
       const result = await authService.signUp(userData);
@@ -170,23 +176,23 @@ describe.skip('AuthService - Comprehensive Tests', () => {
         options: {
           data: {
             username: userData.username,
-            display_name: userData.display_name
-          }
-        }
+            display_name: userData.display_name,
+          },
+        },
       });
     });
 
     it('should handle email already exists error', async () => {
       mockSupabaseClient.auth.signUp.mockResolvedValue({
         data: { user: null, session: null },
-        error: { message: 'User already registered' }
+        error: { message: 'User already registered' },
       });
 
       const userData = {
         email: 'existing@example.com',
         password: 'password123',
         username: 'existing',
-        display_name: 'Existing User'
+        display_name: 'Existing User',
       };
 
       const result = await authService.signUp(userData);
@@ -200,7 +206,7 @@ describe.skip('AuthService - Comprehensive Tests', () => {
         email: '',
         password: 'password123',
         username: 'testuser',
-        display_name: 'Test User'
+        display_name: 'Test User',
       };
 
       const result = await authService.signUp(userData);
@@ -238,7 +244,7 @@ describe.skip('AuthService - Comprehensive Tests', () => {
 
     it('should sign out successfully', async () => {
       mockSupabaseClient.auth.signOut.mockResolvedValue({
-        error: null
+        error: null,
       });
 
       const result = await authService.signOut();
@@ -251,7 +257,7 @@ describe.skip('AuthService - Comprehensive Tests', () => {
     it('should refresh session when needed', async () => {
       mockSupabaseClient.auth.refreshSession.mockResolvedValue({
         data: { session: mockSession },
-        error: null
+        error: null,
       });
 
       const result = await authService.refreshSession();
@@ -265,15 +271,19 @@ describe.skip('AuthService - Comprehensive Tests', () => {
   describe('Profile Management', () => {
     it('should update user profile successfully', async () => {
       const updatedUser = { ...mockUser, display_name: 'Updated Name' };
-      
-      mockSupabaseClient.from().update().eq().select.mockResolvedValue({
-        data: [updatedUser],
-        error: null
-      });
+
+      mockSupabaseClient
+        .from()
+        .update()
+        .eq()
+        .select.mockResolvedValue({
+          data: [updatedUser],
+          error: null,
+        });
 
       const updateData = {
         display_name: 'Updated Name',
-        avatar_emoji: '🎉'
+        avatar_emoji: '🎉',
       };
 
       const result = await authService.updateProfile(updateData);
@@ -283,13 +293,17 @@ describe.skip('AuthService - Comprehensive Tests', () => {
     });
 
     it('should handle profile update errors', async () => {
-      mockSupabaseClient.from().update().eq().select.mockResolvedValue({
-        data: null,
-        error: { message: 'Update failed' }
-      });
+      mockSupabaseClient
+        .from()
+        .update()
+        .eq()
+        .select.mockResolvedValue({
+          data: null,
+          error: { message: 'Update failed' },
+        });
 
       const updateData = {
-        display_name: 'Updated Name'
+        display_name: 'Updated Name',
       };
 
       const result = await authService.updateProfile(updateData);
@@ -305,7 +319,10 @@ describe.skip('AuthService - Comprehensive Tests', () => {
         new Error('Network error')
       );
 
-      const result = await authService.signIn('test@example.com', 'password123');
+      const result = await authService.signIn(
+        'test@example.com',
+        'password123'
+      );
 
       expect(result.success).toBe(false);
       expect(result.error_code).toBe(AuthErrorCode.SYSTEM_ERROR);
@@ -314,14 +331,17 @@ describe.skip('AuthService - Comprehensive Tests', () => {
     it('should handle session storage errors', async () => {
       mockSupabaseClient.auth.signInWithPassword.mockResolvedValue({
         data: { user: mockUser, session: mockSession },
-        error: null
+        error: null,
       });
-      
+
       mockSessionManager.saveSession.mockRejectedValue(
         new Error('Storage error')
       );
 
-      const result = await authService.signIn('test@example.com', 'password123');
+      const result = await authService.signIn(
+        'test@example.com',
+        'password123'
+      );
 
       // Should still succeed even if session storage fails
       expect(result.success).toBe(true);
@@ -333,14 +353,20 @@ describe.skip('AuthService - Comprehensive Tests', () => {
       // Test valid email
       mockSupabaseClient.auth.signInWithPassword.mockResolvedValue({
         data: { user: mockUser, session: mockSession },
-        error: null
+        error: null,
       });
 
-      const validResult = await authService.signIn('test@example.com', 'password123');
+      const validResult = await authService.signIn(
+        'test@example.com',
+        'password123'
+      );
       expect(validResult.success).toBe(true);
 
       // Test invalid email
-      const invalidResult = await authService.signIn('invalid-email', 'password123');
+      const invalidResult = await authService.signIn(
+        'invalid-email',
+        'password123'
+      );
       expect(invalidResult.success).toBe(false);
       expect(invalidResult.error_code).toBe(AuthErrorCode.INVALID_EMAIL);
     });
@@ -350,7 +376,7 @@ describe.skip('AuthService - Comprehensive Tests', () => {
         '',
         '123',
         'short',
-        '1234567' // 7 characters
+        '1234567', // 7 characters
       ];
 
       for (const password of weakPasswords) {

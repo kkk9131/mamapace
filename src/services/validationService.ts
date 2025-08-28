@@ -1,6 +1,6 @@
 /**
  * SERVER-SIDE VALIDATION INTEGRATION SERVICE
- * 
+ *
  * CRITICAL SECURITY RULES:
  * 1. All validation must happen server-side for security
  * 2. Client-side validation is only for UX improvement
@@ -16,10 +16,14 @@ import {
   PasswordValidation,
   RegistrationFormValidation,
   LoginFormValidation,
-  sanitizeForLogging
+  sanitizeForLogging,
 } from '../types/auth';
 import { supabaseClient } from './supabaseClient';
-import { secureLogger, sanitizeObject, validatePrivacyCompliance } from '../utils/privacyProtection';
+import {
+  secureLogger,
+  sanitizeObject,
+  validatePrivacyCompliance,
+} from '../utils/privacyProtection';
 
 // =====================================================
 // TYPES AND INTERFACES
@@ -29,7 +33,12 @@ import { secureLogger, sanitizeObject, validatePrivacyCompliance } from '../util
  * Server validation request
  */
 interface ServerValidationRequest {
-  field: 'username' | 'maternal_health_id' | 'password' | 'display_name' | 'bio';
+  field:
+    | 'username'
+    | 'maternal_health_id'
+    | 'password'
+    | 'display_name'
+    | 'bio';
   value: string;
   context?: {
     userId?: string;
@@ -90,23 +99,24 @@ const VALIDATION_CONFIG = {
   SERVER_TIMEOUT_MS: 10000, // 10 seconds
   MAX_CACHE_SIZE: 100,
   RETRY_ATTEMPTS: 2,
-  RETRY_DELAY_MS: 1000
+  RETRY_DELAY_MS: 1000,
 } as const;
 
 const JAPANESE_ERROR_MESSAGES = {
   username: {
-    invalid_format: 'ユーザー名は3-20文字の英数字、アンダースコア、ハイフンのみ使用できます',
+    invalid_format:
+      'ユーザー名は3-20文字の英数字、アンダースコア、ハイフンのみ使用できます',
     too_short: 'ユーザー名は3文字以上で入力してください',
     too_long: 'ユーザー名は20文字以下で入力してください',
     not_available: 'このユーザー名は既に使用されています',
     contains_profanity: 'ユーザー名に不適切な内容が含まれています',
-    reserved_word: 'このユーザー名は予約語のため使用できません'
+    reserved_word: 'このユーザー名は予約語のため使用できません',
   },
   maternal_health_id: {
     invalid_format: '母子手帳番号は10桁の数字で入力してください',
     not_digits: '母子手帳番号は数字のみで入力してください',
     already_registered: 'この母子手帳番号は既に登録されています',
-    invalid_checksum: '母子手帳番号の形式が正しくありません'
+    invalid_checksum: '母子手帳番号の形式が正しくありません',
   },
   password: {
     too_short: 'パスワードは8文字以上で入力してください',
@@ -115,19 +125,21 @@ const JAPANESE_ERROR_MESSAGES = {
     missing_lowercase: 'パスワードに小文字を含めてください',
     missing_numbers: 'パスワードに数字を含めてください',
     missing_symbols: 'パスワードに記号を含めてください',
-    common_password: 'このパスワードは一般的すぎます。より複雑なパスワードを設定してください',
-    contains_personal_info: 'パスワードにユーザー名や個人情報を含めないでください'
+    common_password:
+      'このパスワードは一般的すぎます。より複雑なパスワードを設定してください',
+    contains_personal_info:
+      'パスワードにユーザー名や個人情報を含めないでください',
   },
   display_name: {
     too_long: '表示名は30文字以下で入力してください',
     contains_profanity: '表示名に不適切な内容が含まれています',
-    invalid_characters: '表示名に使用できない文字が含まれています'
+    invalid_characters: '表示名に使用できない文字が含まれています',
   },
   bio: {
     too_long: '自己紹介は500文字以下で入力してください',
     contains_profanity: '自己紹介に不適切な内容が含まれています',
-    contains_contact_info: '自己紹介に連絡先情報を含めることはできません'
-  }
+    contains_contact_info: '自己紹介に連絡先情報を含めることはできません',
+  },
 } as const;
 
 // =====================================================
@@ -142,7 +154,7 @@ class ValidationService {
     serverValidations: 0,
     cacheHits: 0,
     failures: 0,
-    averageResponseTime: 0
+    averageResponseTime: 0,
   };
   private responseTimes: number[] = [];
 
@@ -168,8 +180,8 @@ class ValidationService {
       isValid: false,
       format: {
         length: id.length === ValidationConstraints.maternal_health_id.length,
-        digitsOnly: ValidationConstraints.maternal_health_id.pattern.test(id)
-      }
+        digitsOnly: ValidationConstraints.maternal_health_id.pattern.test(id),
+      },
     };
 
     if (!result.format.length) {
@@ -182,7 +194,7 @@ class ValidationService {
 
     secureLogger.debug('Client-side maternal health ID validation', {
       isValid: result.isValid,
-      hasError: !!result.error
+      hasError: !!result.error,
     });
 
     return result;
@@ -191,11 +203,17 @@ class ValidationService {
   /**
    * Client-side username validation (UX only)
    */
-  validateUsernameClient(username: string): Omit<UsernameValidation, 'checks'> & { checks: Omit<UsernameValidation['checks'], 'available'> } {
+  validateUsernameClient(username: string): Omit<
+    UsernameValidation,
+    'checks'
+  > & {
+    checks: Omit<UsernameValidation['checks'], 'available'>;
+  } {
     const checks = {
-      length: username.length >= ValidationConstraints.username.minLength && 
-              username.length <= ValidationConstraints.username.maxLength,
-      characters: ValidationConstraints.username.pattern.test(username)
+      length:
+        username.length >= ValidationConstraints.username.minLength &&
+        username.length <= ValidationConstraints.username.maxLength,
+      characters: ValidationConstraints.username.pattern.test(username),
     };
 
     let error: string | undefined;
@@ -216,7 +234,7 @@ class ValidationService {
     return {
       isValid,
       error,
-      checks
+      checks,
     };
   }
 
@@ -229,13 +247,13 @@ class ValidationService {
       uppercase: /[A-Z]/.test(password),
       lowercase: /[a-z]/.test(password),
       numbers: /\d/.test(password),
-      symbols: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+      symbols: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
     };
 
     // Calculate strength
     const passedChecks = Object.values(checks).filter(Boolean).length;
     let strength: 'weak' | 'medium' | 'strong' = 'weak';
-    
+
     if (passedChecks >= 4) {
       strength = 'strong';
     } else if (passedChecks >= 2) {
@@ -266,7 +284,7 @@ class ValidationService {
       isValid,
       error,
       strength,
-      checks
+      checks,
     };
   }
 
@@ -303,31 +321,34 @@ class ValidationService {
       const serverResult = await this.validateOnServer({
         field: 'maternal_health_id',
         value: id,
-        context
+        context,
       });
 
       // Cache result
       this.setCache(cacheKey, serverResult);
 
       const result = this.mapServerResponseToMaternalHealthId(serverResult);
-      
+
       this.updateStats(startTime, true);
       secureLogger.debug('Server maternal health ID validation completed', {
         isValid: result.isValid,
-        hasError: !!result.error
+        hasError: !!result.error,
       });
 
       return result;
-
     } catch (error) {
       this.updateStats(startTime, false);
-      secureLogger.error('Server maternal health ID validation failed', { error });
-      
+      secureLogger.error('Server maternal health ID validation failed', {
+        error,
+      });
+
       // Return client-side result as fallback with warning
       const clientResult = this.validateMaternalHealthIdClient(id);
       return {
         ...clientResult,
-        error: clientResult.error || 'サーバーでの検証に失敗しました。もう一度お試しください。'
+        error:
+          clientResult.error ||
+          'サーバーでの検証に失敗しました。もう一度お試しください。',
       };
     }
   }
@@ -341,7 +362,7 @@ class ValidationService {
   ): Promise<UsernameValidation> {
     const startTime = Date.now();
     this.stats.totalValidations++;
-    
+
     // Client-side validation first
     const clientResult = this.validateUsernameClient(username);
 
@@ -351,8 +372,8 @@ class ValidationService {
           ...clientResult,
           checks: {
             ...clientResult.checks,
-            available: false // Assume not available if format is invalid
-          }
+            available: false, // Assume not available if format is invalid
+          },
         };
       }
 
@@ -368,34 +389,36 @@ class ValidationService {
       const serverResult = await this.validateOnServer({
         field: 'username',
         value: username,
-        context
+        context,
       });
 
       // Cache result (shorter cache time for username availability)
       this.setCache(cacheKey, serverResult, 60000); // 1 minute cache
 
-      const result = this.mapServerResponseToUsername(serverResult, clientResult.checks);
-      
+      const result = this.mapServerResponseToUsername(
+        serverResult,
+        clientResult.checks
+      );
+
       this.updateStats(startTime, true);
       secureLogger.debug('Server username validation completed', {
         username,
         isValid: result.isValid,
-        isAvailable: result.checks.available
+        isAvailable: result.checks.available,
       });
 
       return result;
-
     } catch (error) {
       this.updateStats(startTime, false);
       secureLogger.error('Server username validation failed', { error });
-      
+
       return {
         ...clientResult,
         checks: {
           ...clientResult.checks,
-          available: false
+          available: false,
         },
-        error: 'サーバーでの検証に失敗しました。もう一度お試しください。'
+        error: 'サーバーでの検証に失敗しました。もう一度お試しください。',
       };
     }
   }
@@ -409,7 +432,7 @@ class ValidationService {
   ): Promise<PasswordValidation> {
     const startTime = Date.now();
     this.stats.totalValidations++;
-    
+
     // Client-side validation first
     const clientResult = this.validatePasswordClient(password);
 
@@ -423,27 +446,31 @@ class ValidationService {
       const serverResult = await this.validateOnServer({
         field: 'password',
         value: password,
-        context
+        context,
       });
 
-      const result = this.mapServerResponseToPassword(serverResult, clientResult);
-      
+      const result = this.mapServerResponseToPassword(
+        serverResult,
+        clientResult
+      );
+
       this.updateStats(startTime, true);
       secureLogger.debug('Server password validation completed', {
         isValid: result.isValid,
-        strength: result.strength
+        strength: result.strength,
       });
 
       return result;
-
     } catch (error) {
       this.updateStats(startTime, false);
       secureLogger.error('Server password validation failed', { error });
-      
+
       // Return client-side result as fallback
       return {
         ...clientResult,
-        error: clientResult.error || 'サーバーでの検証に失敗しました。もう一度お試しください。'
+        error:
+          clientResult.error ||
+          'サーバーでの検証に失敗しました。もう一度お試しください。',
       };
     }
   }
@@ -463,7 +490,7 @@ class ValidationService {
     bio?: string;
   }): Promise<RegistrationFormValidation> {
     const startTime = Date.now();
-    
+
     try {
       secureLogger.info('Validating registration form');
 
@@ -471,21 +498,30 @@ class ValidationService {
       const privacyCheck = validatePrivacyCompliance(sanitizeObject(data));
       if (!privacyCheck.isCompliant) {
         secureLogger.security('Privacy compliance violation in registration', {
-          violations: privacyCheck.violations
+          violations: privacyCheck.violations,
         });
       }
 
       // Run all validations in parallel
-      const [username, maternalHealthId, password, displayName, bio] = await Promise.all([
-        this.validateUsernameServer(data.username, { action: 'registration' }),
-        this.validateMaternalHealthIdServer(data.maternal_health_id, { action: 'registration' }),
-        this.validatePasswordServer(data.password, { 
-          username: data.username, 
-          action: 'registration' 
-        }),
-        data.display_name ? this.validateDisplayName(data.display_name) : Promise.resolve({ isValid: true }),
-        data.bio ? this.validateBio(data.bio) : Promise.resolve({ isValid: true })
-      ]);
+      const [username, maternalHealthId, password, displayName, bio] =
+        await Promise.all([
+          this.validateUsernameServer(data.username, {
+            action: 'registration',
+          }),
+          this.validateMaternalHealthIdServer(data.maternal_health_id, {
+            action: 'registration',
+          }),
+          this.validatePasswordServer(data.password, {
+            username: data.username,
+            action: 'registration',
+          }),
+          data.display_name
+            ? this.validateDisplayName(data.display_name)
+            : Promise.resolve({ isValid: true }),
+          data.bio
+            ? this.validateBio(data.bio)
+            : Promise.resolve({ isValid: true }),
+        ]);
 
       const result: RegistrationFormValidation = {
         username,
@@ -493,20 +529,24 @@ class ValidationService {
         password,
         display_name: displayName,
         bio,
-        isFormValid: username.isValid && maternalHealthId.isValid && 
-                     password.isValid && displayName.isValid && bio.isValid
+        isFormValid:
+          username.isValid &&
+          maternalHealthId.isValid &&
+          password.isValid &&
+          displayName.isValid &&
+          bio.isValid,
       };
 
       this.updateStats(startTime, true);
       secureLogger.info('Registration form validation completed', {
         isFormValid: result.isFormValid,
-        validFields: Object.entries(result).filter(([key, value]) => 
-          key !== 'isFormValid' && typeof value === 'object' && value.isValid
-        ).length
+        validFields: Object.entries(result).filter(
+          ([key, value]) =>
+            key !== 'isFormValid' && typeof value === 'object' && value.isValid
+        ).length,
       });
 
       return result;
-
     } catch (error) {
       this.updateStats(startTime, false);
       secureLogger.error('Registration form validation failed', { error });
@@ -523,7 +563,7 @@ class ValidationService {
     password: string;
   }): Promise<LoginFormValidation> {
     const startTime = Date.now();
-    
+
     try {
       secureLogger.info('Validating login form');
 
@@ -531,29 +571,35 @@ class ValidationService {
       const [username, maternalHealthId, password] = await Promise.all([
         Promise.resolve({
           isValid: data.username.length > 0,
-          error: data.username.length === 0 ? 'ユーザー名を入力してください' : undefined
+          error:
+            data.username.length === 0
+              ? 'ユーザー名を入力してください'
+              : undefined,
         }),
         this.validateMaternalHealthIdClient(data.maternal_health_id),
         Promise.resolve({
           isValid: data.password.length > 0,
-          error: data.password.length === 0 ? 'パスワードを入力してください' : undefined
-        })
+          error:
+            data.password.length === 0
+              ? 'パスワードを入力してください'
+              : undefined,
+        }),
       ]);
 
       const result: LoginFormValidation = {
         username,
         maternal_health_id: maternalHealthId,
         password,
-        isFormValid: username.isValid && maternalHealthId.isValid && password.isValid
+        isFormValid:
+          username.isValid && maternalHealthId.isValid && password.isValid,
       };
 
       this.updateStats(startTime, true);
       secureLogger.info('Login form validation completed', {
-        isFormValid: result.isFormValid
+        isFormValid: result.isFormValid,
       });
 
       return result;
-
     } catch (error) {
       this.updateStats(startTime, false);
       secureLogger.error('Login form validation failed', { error });
@@ -568,7 +614,9 @@ class ValidationService {
   /**
    * Validates display name
    */
-  private async validateDisplayName(displayName: string): Promise<{ isValid: boolean; error?: string }> {
+  private async validateDisplayName(
+    displayName: string
+  ): Promise<{ isValid: boolean; error?: string }> {
     if (!displayName) {
       return { isValid: true };
     }
@@ -576,7 +624,7 @@ class ValidationService {
     if (displayName.length > ValidationConstraints.display_name.maxLength) {
       return {
         isValid: false,
-        error: JAPANESE_ERROR_MESSAGES.display_name.too_long
+        error: JAPANESE_ERROR_MESSAGES.display_name.too_long,
       };
     }
 
@@ -587,7 +635,9 @@ class ValidationService {
   /**
    * Validates bio
    */
-  private async validateBio(bio: string): Promise<{ isValid: boolean; error?: string }> {
+  private async validateBio(
+    bio: string
+  ): Promise<{ isValid: boolean; error?: string }> {
     if (!bio) {
       return { isValid: true };
     }
@@ -595,7 +645,7 @@ class ValidationService {
     if (bio.length > ValidationConstraints.bio.maxLength) {
       return {
         isValid: false,
-        error: JAPANESE_ERROR_MESSAGES.bio.too_long
+        error: JAPANESE_ERROR_MESSAGES.bio.too_long,
       };
     }
 
@@ -606,16 +656,18 @@ class ValidationService {
   /**
    * Performs actual server validation via Supabase RPC
    */
-  private async validateOnServer(request: ServerValidationRequest): Promise<ServerValidationResponse> {
+  private async validateOnServer(
+    request: ServerValidationRequest
+  ): Promise<ServerValidationResponse> {
     const client = supabaseClient.getClient();
-    
+
     try {
       this.stats.serverValidations++;
-      
+
       const { data, error } = await client.rpc('validate_field', {
         field_name: request.field,
         field_value: request.value,
-        validation_context: request.context || {}
+        validation_context: request.context || {},
       });
 
       if (error) {
@@ -623,17 +675,16 @@ class ValidationService {
       }
 
       return data as ServerValidationResponse;
-
     } catch (error) {
-      secureLogger.error('Server validation RPC failed', { 
+      secureLogger.error('Server validation RPC failed', {
         field: request.field,
-        error 
+        error,
       });
-      
+
       // Return fallback validation result
       return {
         isValid: false,
-        error: 'サーバー検証エラーが発生しました'
+        error: 'サーバー検証エラーが発生しました',
       };
     }
   }
@@ -641,14 +692,16 @@ class ValidationService {
   /**
    * Maps server response to maternal health ID validation
    */
-  private mapServerResponseToMaternalHealthId(response: ServerValidationResponse): MaternalHealthIdValidation {
+  private mapServerResponseToMaternalHealthId(
+    response: ServerValidationResponse
+  ): MaternalHealthIdValidation {
     return {
       isValid: response.isValid,
       error: response.error,
       format: {
         length: response.serverChecks?.format !== false,
-        digitsOnly: response.serverChecks?.format !== false
-      }
+        digitsOnly: response.serverChecks?.format !== false,
+      },
     };
   }
 
@@ -664,8 +717,8 @@ class ValidationService {
       error: response.error,
       checks: {
         ...clientChecks,
-        available: response.serverChecks?.uniqueness !== false
-      }
+        available: response.serverChecks?.uniqueness !== false,
+      },
     };
   }
 
@@ -679,7 +732,7 @@ class ValidationService {
     return {
       ...clientResult,
       isValid: response.isValid && clientResult.isValid,
-      error: response.error || clientResult.error
+      error: response.error || clientResult.error,
     };
   }
 
@@ -708,8 +761,8 @@ class ValidationService {
    * Sets validation result in cache
    */
   private setCache(
-    key: string, 
-    result: ServerValidationResponse, 
+    key: string,
+    result: ServerValidationResponse,
     expiryMs: number = VALIDATION_CONFIG.CACHE_EXPIRY_MS
   ): void {
     // Implement LRU cache behavior
@@ -721,7 +774,7 @@ class ValidationService {
     this.validationCache.set(key, {
       result,
       timestamp: Date.now(),
-      expiryMs
+      expiryMs,
     });
   }
 
@@ -733,7 +786,10 @@ class ValidationService {
     const data = encoder.encode(value);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+    return hashArray
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+      .substring(0, 16);
   }
 
   /**
@@ -742,14 +798,15 @@ class ValidationService {
   private updateStats(startTime: number, success: boolean): void {
     const responseTime = Date.now() - startTime;
     this.responseTimes.push(responseTime);
-    
+
     // Keep only last 100 response times
     if (this.responseTimes.length > 100) {
       this.responseTimes = this.responseTimes.slice(-100);
     }
-    
-    this.stats.averageResponseTime = this.responseTimes.reduce((a, b) => a + b, 0) / this.responseTimes.length;
-    
+
+    this.stats.averageResponseTime =
+      this.responseTimes.reduce((a, b) => a + b, 0) / this.responseTimes.length;
+
     if (!success) {
       this.stats.failures++;
     }
@@ -781,8 +838,10 @@ class ValidationService {
     return {
       size: this.validationCache.size,
       maxSize: VALIDATION_CONFIG.MAX_CACHE_SIZE,
-      hitRate: this.stats.totalValidations > 0 ? 
-        (this.stats.cacheHits / this.stats.totalValidations) * 100 : 0
+      hitRate:
+        this.stats.totalValidations > 0
+          ? (this.stats.cacheHits / this.stats.totalValidations) * 100
+          : 0,
     };
   }
 }

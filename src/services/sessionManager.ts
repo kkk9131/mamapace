@@ -1,6 +1,6 @@
 /**
  * SECURE SESSION MANAGER
- * 
+ *
  * CRITICAL SECURITY RULES:
  * 1. All session data must be encrypted before storage
  * 2. Implement automatic session expiry and cleanup
@@ -71,7 +71,7 @@ const STORAGE_KEYS = {
   ENCRYPTED_SESSION: 'mamapace_encrypted_session',
   SESSION_METADATA: 'mamapace_session_metadata',
   SESSION_CHECKSUM: 'mamapace_session_checksum',
-  DEVICE_FINGERPRINT: 'mamapace_device_fingerprint'
+  DEVICE_FINGERPRINT: 'mamapace_device_fingerprint',
 } as const;
 
 const SESSION_CONFIG = {
@@ -80,7 +80,7 @@ const SESSION_CONFIG = {
   REFRESH_THRESHOLD_HOURS: 23, // Refresh 1 hour before expiry
   CLEANUP_INTERVAL_MS: 60 * 60 * 1000, // 1 hour
   MAX_FAILED_ATTEMPTS: 3,
-  INTEGRITY_CHECK_INTERVAL_MS: 10 * 60 * 1000 // 10 minutes
+  INTEGRITY_CHECK_INTERVAL_MS: 10 * 60 * 1000, // 10 minutes
 } as const;
 
 // =====================================================
@@ -96,7 +96,7 @@ class SessionManager {
     sessionsRestored: 0,
     sessionsFailed: 0,
     lastSessionTime: null,
-    currentSessionAge: null
+    currentSessionAge: null,
   };
   private cleanupInterval: NodeJS.Timeout | null = null;
   private integrityCheckInterval: NodeJS.Timeout | null = null;
@@ -140,7 +140,6 @@ class SessionManager {
 
       this.isInitialized = true;
       secureLogger.info('Session manager initialized successfully');
-
     } catch (error) {
       secureLogger.error('Failed to initialize session manager', { error });
       throw new Error('Session manager initialization failed');
@@ -152,15 +151,22 @@ class SessionManager {
    */
   private async initializeDeviceFingerprint(): Promise<void> {
     try {
-      let fingerprint = await AsyncStorage.getItem(STORAGE_KEYS.DEVICE_FINGERPRINT);
-      
+      let fingerprint = await AsyncStorage.getItem(
+        STORAGE_KEYS.DEVICE_FINGERPRINT
+      );
+
       if (!fingerprint) {
         // Generate new device fingerprint
         const timestamp = Date.now();
         const random = Math.random().toString(36).substring(2);
-        fingerprint = await encryptionService.generateHash(`${timestamp}-${random}`);
-        
-        await AsyncStorage.setItem(STORAGE_KEYS.DEVICE_FINGERPRINT, fingerprint);
+        fingerprint = await encryptionService.generateHash(
+          `${timestamp}-${random}`
+        );
+
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.DEVICE_FINGERPRINT,
+          fingerprint
+        );
         secureLogger.info('Generated new device fingerprint');
       } else {
         secureLogger.debug('Loaded existing device fingerprint');
@@ -193,7 +199,7 @@ class SessionManager {
           const validation = await this.validateSession(this.currentSession);
           if (!validation.isValid) {
             secureLogger.security('Session integrity check failed', {
-              reason: validation.reason
+              reason: validation.reason,
             });
             await this.clearSession();
           }
@@ -228,11 +234,11 @@ class SessionManager {
       secureLogger.info('Creating new session', {
         userId: user.id,
         expiresAt,
-        deviceType: deviceInfo.device_type
+        deviceType: deviceInfo.device_type,
       });
 
       const now = new Date().toISOString();
-      
+
       // Create session data
       const sessionData: StoredSessionData = {
         user,
@@ -245,14 +251,14 @@ class SessionManager {
           last_used_at: now,
           device_info: deviceInfo,
           ip_address: null, // Would be set by server in real implementation
-          is_active: true
+          is_active: true,
         },
         sessionToken,
         refreshToken,
         deviceInfo,
         createdAt: now,
         expiresAt,
-        lastUsedAt: now
+        lastUsedAt: now,
       };
 
       // Encrypt and store session
@@ -267,9 +273,8 @@ class SessionManager {
       secureLogger.security('Session created successfully', {
         sessionId: sessionData.session.id,
         userId: user.id,
-        expiresAt
+        expiresAt,
       });
-
     } catch (error) {
       this.stats.sessionsFailed++;
       secureLogger.error('Failed to create session', { error });
@@ -280,7 +285,9 @@ class SessionManager {
   /**
    * Encrypts and stores session data
    */
-  private async storeEncryptedSession(sessionData: StoredSessionData): Promise<void> {
+  private async storeEncryptedSession(
+    sessionData: StoredSessionData
+  ): Promise<void> {
     try {
       if (!this.deviceFingerprint) {
         throw new Error('Device fingerprint not initialized');
@@ -303,7 +310,7 @@ class SessionManager {
         encryptedData,
         checksum,
         version: SESSION_CONFIG.VERSION,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
 
       // Store encrypted session
@@ -313,7 +320,6 @@ class SessionManager {
       );
 
       secureLogger.debug('Session encrypted and stored successfully');
-
     } catch (error) {
       secureLogger.error('Failed to store encrypted session', { error });
       throw error;
@@ -352,7 +358,7 @@ class SessionManager {
       const validation = await this.validateSession(sessionData);
       if (!validation.isValid) {
         secureLogger.warn('Stored session is invalid', {
-          reason: validation.reason
+          reason: validation.reason,
         });
         await this.clearSession();
         return null;
@@ -366,16 +372,16 @@ class SessionManager {
       this.currentSession = sessionData;
       this.stats.sessionsRestored++;
       this.stats.lastSessionTime = Date.now();
-      this.stats.currentSessionAge = Date.now() - new Date(sessionData.createdAt).getTime();
+      this.stats.currentSessionAge =
+        Date.now() - new Date(sessionData.createdAt).getTime();
 
       secureLogger.security('Session restored successfully', {
         sessionId: sessionData.session.id,
         userId: sessionData.user.id,
-        age: this.stats.currentSessionAge
+        age: this.stats.currentSessionAge,
       });
 
       return sessionData;
-
     } catch (error) {
       this.stats.sessionsFailed++;
       secureLogger.error('Failed to restore session', { error });
@@ -389,18 +395,20 @@ class SessionManager {
    */
   private async loadEncryptedSession(): Promise<EncryptedSession | null> {
     try {
-      const storedData = await AsyncStorage.getItem(STORAGE_KEYS.ENCRYPTED_SESSION);
+      const storedData = await AsyncStorage.getItem(
+        STORAGE_KEYS.ENCRYPTED_SESSION
+      );
       if (!storedData) {
         return null;
       }
 
       const encryptedSession = JSON.parse(storedData) as EncryptedSession;
-      
+
       // Validate version compatibility
       if (encryptedSession.version !== SESSION_CONFIG.VERSION) {
         secureLogger.warn('Incompatible session version', {
           stored: encryptedSession.version,
-          current: SESSION_CONFIG.VERSION
+          current: SESSION_CONFIG.VERSION,
         });
         return null;
       }
@@ -442,10 +450,9 @@ class SessionManager {
 
       // Parse session data
       const sessionData = JSON.parse(decryptedData) as StoredSessionData;
-      
+
       secureLogger.debug('Session decrypted successfully');
       return sessionData;
-
     } catch (error) {
       secureLogger.error('Failed to decrypt session', { error });
       return null;
@@ -455,7 +462,9 @@ class SessionManager {
   /**
    * Validates session data and expiry
    */
-  private async validateSession(sessionData: StoredSessionData): Promise<SessionValidation> {
+  private async validateSession(
+    sessionData: StoredSessionData
+  ): Promise<SessionValidation> {
     try {
       const now = Date.now();
       const expiryTime = new Date(sessionData.expiresAt).getTime();
@@ -466,45 +475,49 @@ class SessionManager {
         return {
           isValid: false,
           reason: 'Session expired',
-          timeToExpiry: 0
+          timeToExpiry: 0,
         };
       }
 
       // Check if session needs refresh
-      const refreshThreshold = SESSION_CONFIG.REFRESH_THRESHOLD_HOURS * 60 * 60 * 1000;
+      const refreshThreshold =
+        SESSION_CONFIG.REFRESH_THRESHOLD_HOURS * 60 * 60 * 1000;
       const shouldRefresh = timeToExpiry < refreshThreshold;
 
       // Validate session structure
-      if (!sessionData.user || !sessionData.session || !sessionData.sessionToken) {
+      if (
+        !sessionData.user ||
+        !sessionData.session ||
+        !sessionData.sessionToken
+      ) {
         return {
           isValid: false,
-          reason: 'Invalid session structure'
+          reason: 'Invalid session structure',
         };
       }
 
       // Check session age
       const sessionAge = now - new Date(sessionData.createdAt).getTime();
       const maxAge = SESSION_CONFIG.MAX_SESSION_AGE_HOURS * 60 * 60 * 1000;
-      
+
       if (sessionAge > maxAge) {
         return {
           isValid: false,
           reason: 'Session too old',
-          timeToExpiry
+          timeToExpiry,
         };
       }
 
       return {
         isValid: true,
         shouldRefresh,
-        timeToExpiry
+        timeToExpiry,
       };
-
     } catch (error) {
       secureLogger.error('Session validation error', { error });
       return {
         isValid: false,
-        reason: 'Validation error'
+        reason: 'Validation error',
       };
     }
   }
@@ -610,9 +623,8 @@ class SessionManager {
 
       secureLogger.security('Session tokens updated successfully', {
         sessionId: this.currentSession.session.id,
-        newExpiresAt
+        newExpiresAt,
       });
-
     } catch (error) {
       secureLogger.error('Failed to update session tokens', { error });
       throw new Error('Session token update failed');
@@ -629,7 +641,7 @@ class SessionManager {
 
     try {
       secureLogger.info('Updating user profile in session', {
-        userId: updatedUser.id
+        userId: updatedUser.id,
       });
 
       // Update user data
@@ -640,7 +652,6 @@ class SessionManager {
       await this.storeEncryptedSession(this.currentSession);
 
       secureLogger.debug('User profile updated in session');
-
     } catch (error) {
       secureLogger.error('Failed to update user profile', { error });
       throw error;
@@ -661,7 +672,7 @@ class SessionManager {
       if (this.currentSession) {
         secureLogger.security('Session cleared', {
           sessionId: this.currentSession.session.id,
-          userId: this.currentSession.user.id
+          userId: this.currentSession.user.id,
         });
       }
 
@@ -669,7 +680,7 @@ class SessionManager {
       await Promise.all([
         AsyncStorage.removeItem(STORAGE_KEYS.ENCRYPTED_SESSION),
         AsyncStorage.removeItem(STORAGE_KEYS.SESSION_METADATA),
-        AsyncStorage.removeItem(STORAGE_KEYS.SESSION_CHECKSUM)
+        AsyncStorage.removeItem(STORAGE_KEYS.SESSION_CHECKSUM),
       ]);
 
       // Clear from memory
@@ -677,7 +688,6 @@ class SessionManager {
       this.stats.currentSessionAge = null;
 
       secureLogger.info('Session cleared successfully');
-
     } catch (error) {
       secureLogger.error('Failed to clear session', { error });
       throw error;
@@ -696,17 +706,17 @@ class SessionManager {
         const validation = await this.validateSession(this.currentSession);
         if (!validation.isValid) {
           secureLogger.info('Expired session detected during maintenance', {
-            reason: validation.reason
+            reason: validation.reason,
           });
           await this.clearSession();
         } else {
           // Update session age
-          this.stats.currentSessionAge = Date.now() - new Date(this.currentSession.createdAt).getTime();
+          this.stats.currentSessionAge =
+            Date.now() - new Date(this.currentSession.createdAt).getTime();
         }
       }
 
       secureLogger.debug('Session maintenance completed');
-
     } catch (error) {
       secureLogger.error('Session maintenance failed', { error });
     }
@@ -739,7 +749,6 @@ class SessionManager {
       this.isInitialized = false;
 
       secureLogger.info('Session manager shutdown completed');
-
     } catch (error) {
       secureLogger.error('Failed to shutdown session manager', { error });
     }
@@ -760,7 +769,7 @@ class SessionManager {
       version: SESSION_CONFIG.VERSION,
       maxSessionAgeHours: SESSION_CONFIG.MAX_SESSION_AGE_HOURS,
       refreshThresholdHours: SESSION_CONFIG.REFRESH_THRESHOLD_HOURS,
-      isInitialized: this.isInitialized
+      isInitialized: this.isInitialized,
     };
   }
 }

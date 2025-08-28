@@ -1,9 +1,9 @@
 /**
  * SERVICE INITIALIZATION UTILITIES
- * 
+ *
  * Centralized service initialization and startup management
  * Ensures proper service order and dependency management
- * 
+ *
  * SECURITY FEATURES:
  * - Service health monitoring
  * - Initialization failure handling
@@ -11,8 +11,14 @@
  */
 
 import { initializeSupabase, supabaseClient } from '../services/supabaseClient';
-import { initializeEncryption, encryptionService } from '../services/encryptionService';
-import { initializeSessionManager, sessionManager } from '../services/sessionManager';
+import {
+  initializeEncryption,
+  encryptionService,
+} from '../services/encryptionService';
+import {
+  initializeSessionManager,
+  sessionManager,
+} from '../services/sessionManager';
 import { initializeAuthService, authService } from '../services/authService';
 import { secureLogger } from '../utils/privacyProtection';
 import { appConfig } from '../config/appConfig';
@@ -63,7 +69,7 @@ const INITIALIZATION_CONFIG = {
   SERVICE_TIMEOUT_MS: 10000, // 10 seconds per service
   HEALTH_CHECK_INTERVAL_MS: 60000, // 1 minute
   RETRY_ATTEMPTS: 2,
-  RETRY_DELAY_MS: 1000
+  RETRY_DELAY_MS: 1000,
 } as const;
 
 // Service initialization order (dependencies first)
@@ -71,10 +77,10 @@ const SERVICES = [
   'supabase',
   'encryption',
   'sessionManager',
-  'authService'
+  'authService',
 ] as const;
 
-type ServiceName = typeof SERVICES[number];
+type ServiceName = (typeof SERVICES)[number];
 
 // =====================================================
 // SERVICE INITIALIZER CLASS
@@ -122,9 +128,13 @@ class ServiceInitializer {
 
         if (!serviceStatus.initialized) {
           if (this.isCriticalService(serviceName)) {
-            criticalErrors.push(`Critical service ${serviceName} failed: ${serviceStatus.error}`);
+            criticalErrors.push(
+              `Critical service ${serviceName} failed: ${serviceStatus.error}`
+            );
           } else {
-            warnings.push(`Service ${serviceName} failed: ${serviceStatus.error}`);
+            warnings.push(
+              `Service ${serviceName} failed: ${serviceStatus.error}`
+            );
           }
         }
       }
@@ -141,34 +151,33 @@ class ServiceInitializer {
         totalTime,
         services: serviceStatuses,
         criticalErrors,
-        warnings
+        warnings,
       };
 
       if (criticalServicesOk) {
         this.isInitialized = true;
         this.startHealthChecks();
-        
+
         secureLogger.info('Service initialization completed', {
           success: true,
           totalTime,
-          services: serviceStatuses.length
+          services: serviceStatuses.length,
         });
       } else {
         secureLogger.error('Critical service initialization failed', {
           criticalErrors,
-          totalTime
+          totalTime,
         });
       }
 
       return this.initializationResult;
-
     } catch (error) {
       const totalTime = Date.now() - startTime;
-      
+
       secureLogger.error('Service initialization exception', {
         error,
         totalTime,
-        completedServices: serviceStatuses.length
+        completedServices: serviceStatuses.length,
       });
 
       this.initializationResult = {
@@ -176,7 +185,7 @@ class ServiceInitializer {
         totalTime,
         services: serviceStatuses,
         criticalErrors: [`Initialization failed: ${error}`],
-        warnings
+        warnings,
       };
 
       return this.initializationResult;
@@ -186,9 +195,11 @@ class ServiceInitializer {
   /**
    * Initializes a single service with timeout and retry
    */
-  private async initializeService(serviceName: ServiceName): Promise<ServiceStatus> {
+  private async initializeService(
+    serviceName: ServiceName
+  ): Promise<ServiceStatus> {
     const startTime = Date.now();
-    
+
     secureLogger.debug(`Initializing ${serviceName} service`);
 
     const serviceStatus: ServiceStatus = {
@@ -196,23 +207,33 @@ class ServiceInitializer {
       initialized: false,
       initTime: null,
       error: null,
-      healthStatus: 'unknown'
+      healthStatus: 'unknown',
     };
 
     // Skip client encryption/session manager when disabled (Phase 2)
-    if ((serviceName === 'encryption' || serviceName === 'sessionManager') && (appConfig.useServerHashing === true || (appConfig as any).disableClientEncryption)) {
+    if (
+      (serviceName === 'encryption' || serviceName === 'sessionManager') &&
+      (appConfig.useServerHashing === true ||
+        (appConfig as any).disableClientEncryption)
+    ) {
       serviceStatus.initialized = true;
       serviceStatus.initTime = Date.now() - startTime;
       serviceStatus.healthStatus = 'healthy';
-      secureLogger.info(`Skipping ${serviceName} initialization (client-side disabled)`);
+      secureLogger.info(
+        `Skipping ${serviceName} initialization (client-side disabled)`
+      );
       return serviceStatus;
     }
 
-    for (let attempt = 1; attempt <= INITIALIZATION_CONFIG.RETRY_ATTEMPTS; attempt++) {
+    for (
+      let attempt = 1;
+      attempt <= INITIALIZATION_CONFIG.RETRY_ATTEMPTS;
+      attempt++
+    ) {
       try {
         await Promise.race([
           this.callServiceInitializer(serviceName),
-          this.createTimeoutPromise(INITIALIZATION_CONFIG.SERVICE_TIMEOUT_MS)
+          this.createTimeoutPromise(INITIALIZATION_CONFIG.SERVICE_TIMEOUT_MS),
         ]);
 
         const initTime = Date.now() - startTime;
@@ -222,29 +243,32 @@ class ServiceInitializer {
 
         secureLogger.debug(`${serviceName} service initialized`, {
           initTime,
-          attempt
+          attempt,
         });
 
         return serviceStatus;
-
       } catch (error) {
         const isLastAttempt = attempt === INITIALIZATION_CONFIG.RETRY_ATTEMPTS;
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
 
         if (isLastAttempt) {
           serviceStatus.error = errorMessage;
           serviceStatus.healthStatus = 'critical';
-          
+
           secureLogger.error(`${serviceName} service initialization failed`, {
             error: errorMessage,
             attempts: attempt,
-            initTime: Date.now() - startTime
+            initTime: Date.now() - startTime,
           });
         } else {
-          secureLogger.warn(`${serviceName} service initialization attempt ${attempt} failed`, {
-            error: errorMessage,
-            retryDelay: INITIALIZATION_CONFIG.RETRY_DELAY_MS
-          });
+          secureLogger.warn(
+            `${serviceName} service initialization attempt ${attempt} failed`,
+            {
+              error: errorMessage,
+              retryDelay: INITIALIZATION_CONFIG.RETRY_DELAY_MS,
+            }
+          );
 
           await this.delay(INITIALIZATION_CONFIG.RETRY_DELAY_MS);
         }
@@ -257,7 +281,9 @@ class ServiceInitializer {
   /**
    * Calls the appropriate service initializer
    */
-  private async callServiceInitializer(serviceName: ServiceName): Promise<void> {
+  private async callServiceInitializer(
+    serviceName: ServiceName
+  ): Promise<void> {
     switch (serviceName) {
       case 'supabase':
         await initializeSupabase();
@@ -305,9 +331,12 @@ class ServiceInitializer {
   async performHealthChecks(): Promise<HealthCheckResult[]> {
     const results: HealthCheckResult[] = [];
 
-    const servicesToCheck = (appConfig.useServerHashing || (appConfig as any).disableClientEncryption)
-      ? [...SERVICES].filter(s => s !== 'encryption' && s !== 'sessionManager')
-      : [...SERVICES];
+    const servicesToCheck =
+      appConfig.useServerHashing || (appConfig as any).disableClientEncryption
+        ? [...SERVICES].filter(
+            s => s !== 'encryption' && s !== 'sessionManager'
+          )
+        : [...SERVICES];
 
     for (const serviceName of servicesToCheck) {
       const result = await this.checkServiceHealth(serviceName);
@@ -317,7 +346,9 @@ class ServiceInitializer {
     // Update service statuses
     if (this.initializationResult) {
       for (const result of results) {
-        const serviceStatus = this.initializationResult.services.find(s => s.name === result.service);
+        const serviceStatus = this.initializationResult.services.find(
+          s => s.name === result.service
+        );
         if (serviceStatus) {
           serviceStatus.healthStatus = result.healthy ? 'healthy' : 'critical';
         }
@@ -329,7 +360,7 @@ class ServiceInitializer {
     if (unhealthyServices.length > 0) {
       secureLogger.warn('Unhealthy services detected', {
         services: unhealthyServices.map(r => r.service),
-        count: unhealthyServices.length
+        count: unhealthyServices.length,
       });
     }
 
@@ -339,7 +370,9 @@ class ServiceInitializer {
   /**
    * Checks health of a single service
    */
-  private async checkServiceHealth(serviceName: ServiceName): Promise<HealthCheckResult> {
+  private async checkServiceHealth(
+    serviceName: ServiceName
+  ): Promise<HealthCheckResult> {
     const startTime = Date.now();
 
     try {
@@ -381,18 +414,17 @@ class ServiceInitializer {
         healthy,
         responseTime: Date.now() - startTime,
         details,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-
     } catch (error) {
       secureLogger.error(`Health check failed for ${serviceName}`, { error });
-      
+
       return {
         service: serviceName,
         healthy: false,
         responseTime: Date.now() - startTime,
         details: { error: String(error) },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     }
   }
@@ -405,7 +437,13 @@ class ServiceInitializer {
    * Determines if a service is critical for app functionality
    */
   private isCriticalService(serviceName: ServiceName): boolean {
-    const criticalServices: ServiceName[] = ['supabase', ...((appConfig.useServerHashing || (appConfig as any).disableClientEncryption) ? [] : ['sessionManager' as ServiceName,'encryption' as ServiceName])];
+    const criticalServices: ServiceName[] = [
+      'supabase',
+      ...(appConfig.useServerHashing ||
+      (appConfig as any).disableClientEncryption
+        ? []
+        : ['sessionManager' as ServiceName, 'encryption' as ServiceName]),
+    ];
     return criticalServices.includes(serviceName);
   }
 
@@ -456,13 +494,19 @@ class ServiceInitializer {
   /**
    * Gets current service health status
    */
-  getServiceHealthStatus(): Record<string, 'healthy' | 'degraded' | 'critical' | 'unknown'> {
+  getServiceHealthStatus(): Record<
+    string,
+    'healthy' | 'degraded' | 'critical' | 'unknown'
+  > {
     if (!this.initializationResult) {
       return {};
     }
 
-    const status: Record<string, 'healthy' | 'degraded' | 'critical' | 'unknown'> = {};
-    
+    const status: Record<
+      string,
+      'healthy' | 'degraded' | 'critical' | 'unknown'
+    > = {};
+
     for (const service of this.initializationResult.services) {
       status[service.name] = service.healthStatus;
     }
@@ -482,8 +526,8 @@ class ServiceInitializer {
         supabase: supabaseClient.getStats(),
         encryption: encryptionService.getStats(),
         sessionManager: sessionManager.getStats(),
-        authService: authService.getServiceStats()
-      }
+        authService: authService.getServiceStats(),
+      },
     };
   }
 }
@@ -498,9 +542,10 @@ export const serviceInitializer = ServiceInitializer.getInstance();
  * Initialize all authentication services
  * Should be called at app startup
  */
-export const initializeAllServices = async (): Promise<InitializationResult> => {
-  return await serviceInitializer.initializeAllServices();
-};
+export const initializeAllServices =
+  async (): Promise<InitializationResult> => {
+    return await serviceInitializer.initializeAllServices();
+  };
 
 /**
  * Check if services are ready
@@ -512,7 +557,10 @@ export const areServicesReady = (): boolean => {
 /**
  * Get current service health status
  */
-export const getServiceHealth = (): Record<string, 'healthy' | 'degraded' | 'critical' | 'unknown'> => {
+export const getServiceHealth = (): Record<
+  string,
+  'healthy' | 'degraded' | 'critical' | 'unknown'
+> => {
   return serviceInitializer.getServiceHealthStatus();
 };
 

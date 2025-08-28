@@ -1,6 +1,6 @@
 /**
  * SECURE AUTHENTICATION TYPES
- * 
+ *
  * CRITICAL SECURITY RULES:
  * 1. NEVER include maternal_health_id in client-side types
  * 2. NEVER log maternal_health_id values
@@ -151,7 +151,7 @@ export enum AuthErrorCode {
   INVALID_FORMAT = 'INVALID_FORMAT',
   SYSTEM_ERROR = 'SYSTEM_ERROR',
   SESSION_EXPIRED = 'SESSION_EXPIRED',
-  INVALID_TOKEN = 'INVALID_TOKEN'
+  INVALID_TOKEN = 'INVALID_TOKEN',
 }
 
 // =====================================================
@@ -287,7 +287,7 @@ export enum SecurityActionType {
   ACCOUNT_UNLOCK = 'account_unlock',
   SESSION_REFRESH = 'session_refresh',
   SESSION_INVALIDATE = 'session_invalidate',
-  SECURITY_VIOLATION = 'security_violation'
+  SECURITY_VIOLATION = 'security_violation',
 }
 
 // =====================================================
@@ -301,7 +301,7 @@ export function createSecureMaternalHealthId(value: string): SecureString {
   return {
     value,
     isSecure: true,
-    toString: () => '[REDACTED]'
+    toString: () => '[REDACTED]',
   };
 }
 
@@ -319,26 +319,26 @@ export const ValidationConstraints = {
   username: {
     minLength: 3,
     maxLength: 20,
-    pattern: /^[a-zA-Z0-9_-]+$/
+    pattern: /^[a-zA-Z0-9_-]+$/,
   },
   maternal_health_id: {
     length: 10,
-    pattern: /^\d{10}$/
+    pattern: /^\d{10}$/,
   },
   password: {
     minLength: 8,
     maxLength: 128,
     requireUppercase: true,
     requireLowercase: true,
-    requireNumbers: true
+    requireNumbers: true,
   },
   display_name: {
     minLength: 1,
-    maxLength: 30
+    maxLength: 30,
   },
   bio: {
-    maxLength: 500
-  }
+    maxLength: 500,
+  },
 } as const;
 
 // =====================================================
@@ -355,7 +355,7 @@ export function sanitizeForLogging(obj: any): any {
   }
 
   const sanitized = { ...obj };
-  
+
   // Remove sensitive fields
   const sensitiveFields = [
     'maternal_health_id',
@@ -363,7 +363,7 @@ export function sanitizeForLogging(obj: any): any {
     'password',
     'password_hash',
     'session_token',
-    'refresh_token'
+    'refresh_token',
   ];
 
   sensitiveFields.forEach(field => {
@@ -392,7 +392,7 @@ export function createRegistrationRequest(data: {
     password: data.password as SensitiveData,
     display_name: data.display_name,
     bio: data.bio,
-    avatar_emoji: data.avatar_emoji
+    avatar_emoji: data.avatar_emoji,
   };
 }
 
@@ -409,7 +409,7 @@ export function createLoginRequest(data: {
     username: data.username,
     maternal_health_id: data.maternal_health_id as SensitiveData,
     password: data.password as SensitiveData,
-    device_info: data.device_info
+    device_info: data.device_info,
   };
 }
 
@@ -421,5 +421,5 @@ export type {
   SensitiveData,
   EncryptedData,
   SecureString,
-  InternalUserProfile // Only for internal use, never export to client
+  InternalUserProfile, // Only for internal use, never export to client
 };

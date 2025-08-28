@@ -10,8 +10,8 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     getAllKeys: jest.fn(() => Promise.resolve([])),
     multiGet: jest.fn(() => Promise.resolve([])),
     multiSet: jest.fn(() => Promise.resolve()),
-    multiRemove: jest.fn(() => Promise.resolve())
-  }
+    multiRemove: jest.fn(() => Promise.resolve()),
+  },
 }));
 
 // Mock Expo modules
@@ -20,10 +20,10 @@ jest.mock('expo-constants', () => ({
     expoConfig: {
       extra: {
         supabaseUrl: 'mock-supabase-url',
-        supabaseAnonKey: 'mock-supabase-key'
-      }
-    }
-  }
+        supabaseAnonKey: 'mock-supabase-key',
+      },
+    },
+  },
 }));
 
 // Mock Expo Haptics
@@ -34,13 +34,13 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: {
     Light: 'light',
     Medium: 'medium',
-    Heavy: 'heavy'
+    Heavy: 'heavy',
   },
   NotificationFeedbackType: {
     Success: 'success',
     Warning: 'warning',
-    Error: 'error'
-  }
+    Error: 'error',
+  },
 }));
 
 jest.mock('@supabase/supabase-js', () => ({
@@ -50,7 +50,9 @@ jest.mock('@supabase/supabase-js', () => ({
       signUp: jest.fn(),
       signOut: jest.fn(),
       getSession: jest.fn(),
-      onAuthStateChange: jest.fn(() => ({ data: { subscription: { unsubscribe: jest.fn() } } }))
+      onAuthStateChange: jest.fn(() => ({
+        data: { subscription: { unsubscribe: jest.fn() } },
+      })),
     },
     from: jest.fn(() => ({
       select: jest.fn().mockReturnThis(),
@@ -58,10 +60,10 @@ jest.mock('@supabase/supabase-js', () => ({
       update: jest.fn().mockReturnThis(),
       delete: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      single: jest.fn()
+      single: jest.fn(),
     })),
-    rpc: jest.fn()
-  }))
+    rpc: jest.fn(),
+  })),
 }));
 
 // Mock React Navigation
@@ -69,24 +71,28 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     navigate: jest.fn(),
     goBack: jest.fn(),
-    setOptions: jest.fn()
+    setOptions: jest.fn(),
   }),
   useRoute: () => ({
-    params: {}
+    params: {},
   }),
   NavigationContainer: ({ children }: any) => children,
-  useFocusEffect: jest.fn()
+  useFocusEffect: jest.fn(),
 }));
 
 // Mock React Native components
 jest.mock('react-native', () => ({
-  Platform: { OS: 'ios', select: jest.fn((options) => options.ios) },
+  Platform: { OS: 'ios', select: jest.fn(options => options.ios) },
   StyleSheet: { create: (styles: any) => styles, absoluteFill: {} },
   Dimensions: { get: jest.fn(() => ({ width: 375, height: 812 })) },
   Alert: { alert: jest.fn(), prompt: jest.fn() },
   Vibration: { vibrate: jest.fn() },
   Linking: { openURL: jest.fn() },
-  AppState: { currentState: 'active', addEventListener: jest.fn(), removeEventListener: jest.fn() },
+  AppState: {
+    currentState: 'active',
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  },
   View: 'View',
   Text: 'Text',
   TextInput: 'TextInput',
@@ -109,7 +115,7 @@ jest.mock('react-native', () => ({
     sequence: jest.fn(() => ({ start: jest.fn() })),
     parallel: jest.fn(() => ({ start: jest.fn() })),
     loop: jest.fn(() => ({ start: jest.fn() })),
-  }
+  },
 }));
 
 // Mock secure logger
@@ -118,11 +124,16 @@ jest.mock('../utils/privacyProtection', () => ({
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
-    debug: jest.fn()
+    debug: jest.fn(),
   },
-  sanitizeLogData: jest.fn((data) => data)
+  sanitizeLogData: jest.fn(data => data),
 }));
 
 // Global test setup
 global.fetch = jest.fn();
-global.console = { ...console, warn: jest.fn(), error: jest.fn(), log: jest.fn() };
+global.console = {
+  ...console,
+  warn: jest.fn(),
+  error: jest.fn(),
+  log: jest.fn(),
+};

@@ -1,62 +1,444 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
-import { colors } from '../theme/colors';
-import { theme } from '../theme/theme';
+/**
+ * ANONYMOUS ROOM SCREEN
+ *
+ * Screen for anonymous room with ephemeral messages and rate limiting
+ * Implements the anonymous room requirements from room-feature-requirements-v1.md
+ */
 
-const initial = [
-  { id: 'a1', body: '今日は本当に疲れた…でも頑張った自分えらい', timeLeft: '58分', ai: 'よくここまで頑張りましたね。少しでも休める時間がありますように。' },
-  { id: 'a2', body: '授乳の間隔がバラバラで眠い…', timeLeft: '43分', ai: '眠れないのは本当に大変。短い仮眠でもOK、あなたの体も大切に。' },
-];
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Alert,
+  Animated,
+  RefreshControl,
+} from 'react-native';
+import { useTheme } from '../theme/theme';
+import { useHandPreference } from '../contexts/HandPreferenceContext';
+import { BlurView } from 'expo-blur';
+import { useAnonymousRoom, useModeration } from '../hooks/useRooms';
+import { AnonymousMessage } from '../types/room';
+import ExpandableText from '../components/ExpandableText';
 
-export default function AnonRoomScreen({ onOpenPost }: { onOpenPost?: () => void }) {
-  const [items, setItems] = useState(initial);
-  const [text, setText] = useState('');
+interface AnonRoomScreenProps {
+  onBack?: () => void;
+}
+
+export default function AnonRoomScreen({ onBack }: AnonRoomScreenProps) {
+  const theme = useTheme() as any;
+  const { colors } = theme;
+  const { handPreference } = useHandPreference();
+
+  // State
+  const [messageText, setMessageText] = useState('');
+  const [timeLeft, setTimeLeft] = useState<string>('');
+
+  // Refs
+  const flatListRef = useRef<FlatList>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Hooks
+  const {
+    room,
+    messages,
+    loading,
+    error,
+    rateLimitError,
+    enterRoom,
+    sendMessage,
+  } = useAnonymousRoom();
+
+  const { reportMessage } = useModeration();
+
+  // Animation - smart animation handling to prevent blank screen on back navigation
+  useEffect(() => {
+    // Ensure immediate display for smooth navigation experience
+    const timer = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [fadeAnim]);
+
+  // Enter room on mount
+  useEffect(() => {
+    enterRoom();
+  }, [enterRoom]);
+
+  // Update time left countdown
+  useEffect(() => {
+    if (!room) return;
+
+    const updateTimeLeft = () => {
+      const now = new Date();
+      const expiryTime = new Date(room.expires_at);
+      const diffMs = expiryTime.getTime() - now.getTime();
+
+      if (diffMs <= 0) {
+        setTimeLeft('期限切れ');
+        // Room expired, try to get new room
+        enterRoom();
+        return;
+      }
+
+      const minutes = Math.floor(diffMs / (1000 * 60));
+      const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+      setTimeLeft(`${minutes}分${seconds}秒`);
+    };
+
+    updateTimeLeft();
+    const interval = setInterval(updateTimeLeft, 1000);
+
+    return () => clearInterval(interval);
+  }, [room, enterRoom]);
+
+  // Handle send message
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !room) return;
+
+    const content = messageText.trim();
+    setMessageText('');
+
+    const result = await sendMessage(content);
+    if (result) {
+      // Scroll to bottom after sending
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  };
+
+  // Handle message report
+  const handleReportMessage = async (messageId: string) => {
+    const success = await reportMessage({
+      message_id: messageId,
+      reason: 'inappropriate',
+    });
+
+    if (success) {
+      Alert.alert('報告完了', 'メッセージを報告しました');
+    }
+  };
+
+  // Render message item
+  const renderMessage = ({ item }: { item: AnonymousMessage }) => (
+    <Pressable
+      onLongPress={() => {
+        Alert.alert('メッセージ操作', 'このメッセージを報告しますか？', [
+          { text: 'キャンセル', style: 'cancel' },
+          {
+            text: '報告',
+            style: 'destructive',
+            onPress: () => handleReportMessage(item.id),
+          },
+        ]);
+      }}
+      style={({ pressed }) => [
+        {
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+          marginHorizontal: theme.spacing(2),
+          marginVertical: theme.spacing(1),
+        },
+      ]}
+    >
+      <View style={{ borderRadius: theme.radius.lg, overflow: 'hidden' }}>
+        <BlurView
+          intensity={30}
+          tint="dark"
+          style={{
+            backgroundColor: '#F6C6D020',
+            padding: theme.spacing(1.75),
+          }}
+        >
+          <View
+            style={{
+              marginBottom: 8,
+            }}
+          >
+            <Text
+              style={{ color: colors.pink, fontSize: 14, fontWeight: 'bold' }}
+            >
+              {item.display_name}
+            </Text>
+          </View>
+
+          <ExpandableText
+            text={item.content || ''}
+            maxLines={3}
+            textStyle={{
+              color: item.is_masked ? colors.subtext : colors.text,
+              fontSize: 16,
+            }}
+            containerStyle={{ marginBottom: 8 }}
+          />
+
+          <Text style={{ color: colors.subtext, fontSize: 12 }}>
+            {new Date(item.created_at).toLocaleString('ja-JP', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </Text>
+
+          {item.report_count > 0 && (
+            <Text style={{ color: colors.subtext, fontSize: 11, marginTop: 4 }}>
+              報告数: {item.report_count}
+            </Text>
+          )}
+        </BlurView>
+      </View>
+    </Pressable>
+  );
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={80}>
-      <View style={{ flex: 1 }}>
-        <FlatList
-          data={items}
-          keyExtractor={(i) => i.id}
-          contentContainerStyle={{ padding: theme.spacing(2), paddingBottom: theme.spacing(10) }}
-          ItemSeparatorComponent={() => <View style={{ height: theme.spacing(1.5) }} />}
-          renderItem={({ item }) => (
-            <View>
-              <Pressable onPress={() => onOpenPost && onOpenPost()} style={({ pressed }) => [{ backgroundColor: colors.card, borderRadius: theme.radius.lg, padding: theme.spacing(1.75), transform: [{ scale: pressed ? 0.98 : 1 }], ...theme.shadow.card }]}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text style={{ color: colors.subtext, fontSize: 12 }}>匿名</Text>
-                  <View style={{ backgroundColor: colors.pinkSoft, borderRadius: theme.radius.sm, paddingHorizontal: theme.spacing(1), paddingVertical: 2 }}>
-                    <Text style={{ color: '#302126', fontSize: 12 }}>消滅まで {item.timeLeft}</Text>
-                  </View>
-                </View>
-                <Text style={{ color: colors.text, fontSize: 16, marginBottom: 10 }}>{item.body}</Text>
-                <View style={{ marginTop: 8, gap: 6 }}>
-                  <Text style={{ color: colors.subtext, fontSize: 12 }}>コメント</Text>
-                  <View style={{ backgroundColor: colors.surface, borderRadius: theme.radius.md, padding: theme.spacing(1.25) }}>
-                    <Text style={{ color: colors.pink, fontWeight: '700', marginBottom: 4 }}>ママの味方</Text>
-                    <Text style={{ color: colors.text }}>{item.ai}</Text>
-                  </View>
-                </View>
+    <Animated.View
+      style={{
+        flex: 1,
+        backgroundColor: colors.bg || '#000000',
+        opacity: fadeAnim,
+      }}
+    >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
+      >
+        {/* Header */}
+        <View
+          style={{
+            paddingTop: 48,
+            paddingBottom: 16,
+            paddingHorizontal: theme.spacing(2),
+            borderBottomWidth: 1,
+            borderBottomColor: colors.subtext + '20',
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            {onBack && (
+              <Pressable onPress={onBack}>
+                <Text style={{ color: colors.text, fontSize: 16 }}>←</Text>
               </Pressable>
+            )}
+
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                }}
+              >
+                愚痴もたまには、、、
+              </Text>
+              <Text style={{ color: colors.subtext, fontSize: 14 }}>
+                完全匿名・1時間で消えます
+              </Text>
+            </View>
+
+            <View style={{ width: 50 }} />
+          </View>
+
+          {room && (
+            <View style={{ alignItems: 'center', marginTop: 8 }}>
+              <View
+                style={{
+                  backgroundColor: colors.pinkSoft,
+                  borderRadius: theme.radius.md,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                }}
+              >
+                <Text
+                  style={{ color: '#302126', fontSize: 12, fontWeight: 'bold' }}
+                >
+                  あなたの名前: {room.ephemeral_name}
+                </Text>
+              </View>
+              <Text
+                style={{ color: colors.subtext, fontSize: 12, marginTop: 4 }}
+              >
+                ルーム期限: {timeLeft}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Messages */}
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={item => item.id}
+          renderItem={renderMessage}
+          contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={enterRoom}
+              tintColor={colors.text}
+            />
+          }
+          ListEmptyComponent={() => (
+            <View
+              style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 40,
+              }}
+            >
+              <Text
+                style={{ color: colors.subtext, fontSize: 16, marginBottom: 8 }}
+              >
+                {loading
+                  ? 'メッセージを読み込み中...'
+                  : 'まだメッセージがありません'}
+              </Text>
+              {!loading && (
+                <Text
+                  style={{
+                    color: colors.subtext,
+                    fontSize: 14,
+                    textAlign: 'center',
+                    paddingHorizontal: 40,
+                  }}
+                >
+                  匿名でメッセージを送信してみましょう{'\n'}
+                  すべてのメッセージは1時間後に自動削除されます
+                </Text>
+              )}
             </View>
           )}
         />
-      </View>
-      <View style={{ padding: theme.spacing(1.5), backgroundColor: colors.card, borderTopColor: '#22252B', borderTopWidth: 1 }}>
-        <View style={{ backgroundColor: colors.surface, borderRadius: theme.radius.md, padding: theme.spacing(1) }}>
-          <TextInput
-            placeholder="ここでは完全匿名。気持ちを吐き出してね"
-            placeholderTextColor={colors.subtext}
-            value={text}
-            onChangeText={setText}
-            multiline
-            style={{ maxHeight: 120, color: colors.text, fontSize: 16 }}
-          />
+
+        {/* Message Input */}
+        <View
+          style={{
+            padding: theme.spacing(1.5),
+            paddingBottom: Platform.OS === 'ios' ? 100 : 80,
+          }}
+        >
+          {/* Rate limit error */}
+          {rateLimitError && (
+            <View
+              style={{
+                backgroundColor: colors.pink + '20',
+                borderRadius: theme.radius.md,
+                padding: 12,
+                marginBottom: 12,
+                borderWidth: 1,
+                borderColor: colors.pink,
+              }}
+            >
+              <Text style={{ color: colors.pink, fontSize: 14 }}>
+                {rateLimitError}
+              </Text>
+            </View>
+          )}
+
+          <View style={{ borderRadius: theme.radius.lg, overflow: 'hidden' }}>
+            <BlurView
+              intensity={30}
+              tint="dark"
+              style={{
+                backgroundColor: '#F6C6D020',
+                padding: theme.spacing(1.5),
+              }}
+            >
+              <TextInput
+                placeholder="ここでは完全匿名。気持ちを吐き出してね"
+                placeholderTextColor={colors.subtext}
+                value={messageText}
+                onChangeText={setMessageText}
+                multiline
+                maxLength={2000}
+                style={{
+                  maxHeight: 120,
+                  color: colors.text,
+                  fontSize: 16,
+                  textAlignVertical: 'top',
+                }}
+                returnKeyType="send"
+                onSubmitEditing={handleSendMessage}
+                blurOnSubmit={false}
+              />
+
+              <View
+                style={{
+                  flexDirection: handPreference === 'left' ? 'row-reverse' : 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: 8,
+                }}
+              >
+                <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                  {messageText.length}/2000文字
+                </Text>
+
+                <Pressable
+                  onPress={handleSendMessage}
+                  disabled={!messageText.trim() || !room}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor:
+                        messageText.trim() && room
+                          ? colors.pink
+                          : colors.subtext + '40',
+                      borderRadius: theme.radius.md,
+                      paddingVertical: 10,
+                      paddingHorizontal: theme.spacing(2),
+                      transform: [{ scale: pressed ? 0.97 : 1 }],
+                      opacity: !messageText.trim() || !room ? 0.6 : 1,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color:
+                        messageText.trim() && room ? 'white' : colors.subtext,
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    匿名で投稿
+                  </Text>
+                </Pressable>
+              </View>
+            </BlurView>
+          </View>
         </View>
-        <Pressable style={({ pressed }) => [{ marginTop: theme.spacing(1), alignSelf: 'flex-end', backgroundColor: colors.pink, borderRadius: theme.radius.md, paddingVertical: 10, paddingHorizontal: theme.spacing(2), transform: [{ scale: pressed ? 0.97 : 1 }], ...theme.shadow.card }]}>
-          <Text style={{ color: '#23181D', fontWeight: '700' }}>匿名で投稿</Text>
-        </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+
+        {/* Error display */}
+        {error && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 120,
+              left: theme.spacing(2),
+              right: theme.spacing(2),
+              backgroundColor: colors.pink + '20',
+              borderRadius: theme.radius.md,
+              padding: 12,
+              borderWidth: 1,
+              borderColor: colors.pink,
+            }}
+          >
+            <Text style={{ color: colors.pink, fontSize: 14 }}>{error}</Text>
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </Animated.View>
   );
 }
