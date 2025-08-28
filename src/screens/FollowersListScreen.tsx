@@ -11,12 +11,8 @@ import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useEffect, useState, useCallback } from 'react';
-import {
-  getFollowers,
-  followUser,
-  unfollowUser,
-  isFollowing,
-} from '../services/profileService';
+import { getFollowers, followUser, unfollowUser, isFollowing } from '../services/profileService';
+import Avatar from '../components/Avatar';
 import { FollowUser } from '../services/profileService';
 import { secureLogger } from '../utils/privacyProtection';
 
@@ -128,19 +124,7 @@ export default function FollowersListScreen() {
             alignItems: 'center',
           }}
         >
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: colors.surface,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 10,
-            }}
-          >
-            <Text>{item.avatar_emoji || '👩‍🍼'}</Text>
-          </View>
+          <Avatar uri={(item as any).avatar_url} emoji={item.avatar_emoji || '👩‍🍼'} size={44} style={{ marginRight: 10 }} />
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontWeight: '700' }}>
               {item.display_name || item.username}

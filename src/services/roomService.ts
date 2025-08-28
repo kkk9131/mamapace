@@ -593,7 +593,7 @@ export class RoomService {
       // Fetch sender profiles separately
       const { data: senderProfiles, error: profileError } = await supabase
         .from('user_profiles')
-        .select('id, username, display_name, avatar_emoji')
+        .select('id, username, display_name, avatar_emoji, avatar_url')
         .in('id', senderIds);
 
       if (profileError) {

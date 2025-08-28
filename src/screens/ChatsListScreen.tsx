@@ -11,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/theme';
 import { useChatList } from '../hooks/useChatList';
+import Avatar from '../components/Avatar';
 import { useAuth } from '../contexts/AuthContext';
 import { ChatWithParticipants } from '../types/chat';
 import { chatService } from '../services/chatService';
@@ -237,21 +238,22 @@ export default function ChatsListScreen({
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {/* アバター */}
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: isNew ? colors.pink + '20' : colors.surface,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12,
-                borderWidth: isNew ? 2 : 0,
-                borderColor: isNew ? colors.pink + '40' : 'transparent',
-              }}
-            >
-              <Text style={{ fontSize: isNew ? 18 : 16 }}>💬</Text>
-            </View>
+            {(() => {
+              const other = item.participants?.find(p => p.id !== user?.id);
+              return (
+                <Avatar
+                  uri={(other as any)?.avatar_url}
+                  emoji={other?.avatar_emoji || '👤'}
+                  size={44}
+                  style={{
+                    marginRight: 12,
+                    borderWidth: isNew ? 2 : 0,
+                    borderColor: isNew ? colors.pink + '40' : 'transparent',
+                    backgroundColor: isNew ? colors.pink + '20' : colors.surface,
+                  }}
+                />
+              );
+            })()}
 
             {/* メイン情報エリア */}
             <View style={{ flex: 1 }}>

@@ -32,6 +32,7 @@ import {
 } from '../hooks/useRooms';
 import { RoomMessageWithSender, ReportMessageRequest } from '../types/room';
 import ExpandableText from '../components/ExpandableText';
+import Avatar from '../components/Avatar';
 
 interface ChannelScreenProps {
   channelId: string;
@@ -289,27 +290,24 @@ export default function ChannelScreen({
                 marginBottom: 8,
               }}
             >
-              <View style={{ 
-            flexDirection: handPreference === 'left' ? 'row' : 'row-reverse', 
-            alignItems: 'center' 
-          }}>
+              <View style={{ flexDirection: handPreference === 'left' ? 'row' : 'row-reverse', alignItems: 'center' }}>
+                <Avatar
+                  uri={(item as any).sender?.avatar_url}
+                  emoji={item.sender_avatar_emoji || '👤'}
+                  size={20}
+                  backgroundColor={colors.surface}
+                  style={{ marginRight: handPreference === 'left' ? 8 : 0, marginLeft: handPreference === 'left' ? 0 : 8 }}
+                />
                 <Text
                   style={{
                     color: colors.text,
                     fontSize: 14,
                     fontWeight: 'bold',
-                    marginRight: 8,
+                    marginRight: handPreference === 'left' ? 8 : 0,
+                    marginLeft: handPreference === 'left' ? 0 : 8,
                   }}
                 >
                   {item.sender_display_name || item.sender_username}
-                </Text>
-                <Text
-                  style={{
-                    color: colors.subtext,
-                    fontSize: 12,
-                  }}
-                >
-                  {item.sender_avatar_emoji || '👤'}
                 </Text>
               </View>
 
@@ -807,9 +805,7 @@ export default function ChannelScreen({
                       backgroundColor: '#ffffff10',
                     }}
                   >
-                    <Text style={{ fontSize: 18, marginRight: 10 }}>
-                      {item.user?.avatar_emoji || '👤'}
-                    </Text>
+                    <Avatar uri={(item as any).user?.avatar_url} emoji={item.user?.avatar_emoji || '👤'} size={24} style={{ marginRight: 10 }} />
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
                         {item.user?.display_name || item.user?.username || 'ユーザー'}

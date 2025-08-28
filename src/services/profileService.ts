@@ -8,6 +8,7 @@ export interface FollowUser {
   username: string;
   display_name: string | null;
   avatar_emoji: string | null;
+  avatar_url?: string | null;
   followed_at: string;
 }
 
@@ -264,6 +265,7 @@ export async function getFollowList(
       username: item.username,
       display_name: item.display_name,
       avatar_emoji: item.avatar_emoji,
+      avatar_url: (item as any).avatar_url || null,
       bio: null, // Not available in FollowUser type
     }));
   } catch (error) {

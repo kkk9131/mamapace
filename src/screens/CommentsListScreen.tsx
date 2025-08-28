@@ -21,6 +21,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { getSupabaseClient } from '../services/supabaseClient';
 import ExpandableText from '../components/ExpandableText';
+import Avatar from '../components/Avatar';
 
 export default function CommentsListScreen({
   postId,
@@ -180,12 +181,21 @@ export default function CommentsListScreen({
                   flexDirection: 'row',
                   justifyContent: 'space-between',
                   marginBottom: 6,
+                  alignItems: 'center',
                 }}
               >
-                <Text style={{ color: colors.subtext, fontSize: 12 }}>
-                  {item.user?.display_name || item.user?.username || '匿名'} ・{' '}
-                  {new Date(item.created_at).toLocaleString()}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Avatar
+                    uri={(item as any).user?.avatar_url}
+                    emoji={item.user?.avatar_emoji || '👤'}
+                    size={20}
+                    backgroundColor={colors.surface}
+                  />
+                  <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                    {item.user?.display_name || item.user?.username || '匿名'} ・{' '}
+                    {new Date(item.created_at).toLocaleString()}
+                  </Text>
+                </View>
                 {item.user_id === user?.id && (
                   <Pressable
                     accessibilityRole="button"

@@ -6,6 +6,7 @@ import { useTheme } from '../theme/theme';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { PostWithMeta } from '../types/post';
 import ExpandableText from './ExpandableText';
+import Avatar from './Avatar';
 
 export default function PostCard({
   post,
@@ -104,14 +105,21 @@ export default function PostCard({
               e.stopPropagation();
               onOpenUser && onOpenUser(post.user_id);
             }}
-            style={{ flex: 1 }}
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
             hitSlop={{ top: 8, bottom: 8, left: 0, right: 0 }}
           >
+            <Avatar
+              uri={(post as any).user?.avatar_url}
+              emoji={post.user?.avatar_emoji || '👤'}
+              size={28}
+              backgroundColor={colors.surface}
+            />
             <Text
               style={{
                 color: colors.text,
                 fontSize: 16,
                 fontWeight: '600',
+                flex: 1,
               }}
               numberOfLines={1}
             >

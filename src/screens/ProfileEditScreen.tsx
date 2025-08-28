@@ -56,6 +56,27 @@ export default function ProfileEditScreen({ navigation }: any) {
     setAvatarEmoji(emoji);
   };
 
+  const handlePickImage = async () => {
+    try {
+      const mediaTypes = (ImagePicker as any).MediaType
+        ? [((ImagePicker as any).MediaType as any).Images]
+        : (ImagePicker as any).MediaTypeOptions?.Images;
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.9,
+      });
+
+      if (!(result as any).canceled && (result as any).assets?.length) {
+        setAvatarImageUri((result as any).assets[0].uri);
+      }
+    } catch (e: any) {
+      Alert.alert('エラー', e?.message || '画像の選択に失敗しました');
+    }
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -249,22 +270,7 @@ export default function ProfileEditScreen({ navigation }: any) {
                 </View>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable
-                    onPress={async () => {
-                      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                      if (perm.status !== 'granted') {
-                        Alert.alert('権限が必要', 'フォトライブラリへのアクセスを許可してください');
-                        return;
-                      }
-                      const result = await ImagePicker.launchImageLibraryAsync({
-                        mediaTypes: [ImagePicker.MediaType.Images],
-                        allowsEditing: true,
-                        aspect: [1, 1],
-                        quality: 0.9,
-                      });
-                      if (!result.canceled && result.assets?.length) {
-                        setAvatarImageUri(result.assets[0].uri);
-                      }
-                    }}
+                    onPress={handlePickImage}
                     style={({ pressed }) => [{
                       paddingHorizontal: theme.spacing(2),
                       paddingVertical: theme.spacing(1),

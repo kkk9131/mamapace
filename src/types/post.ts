@@ -22,6 +22,7 @@ export interface PostWithMeta extends Post {
     username: string;
     display_name: string | null;
     avatar_emoji: string | null;
+    avatar_url?: string | null;
   } | null;
 }
 
@@ -36,6 +37,7 @@ export interface Comment {
     username: string;
     display_name: string | null;
     avatar_emoji: string | null;
+    avatar_url?: string | null;
   } | null;
 }
 

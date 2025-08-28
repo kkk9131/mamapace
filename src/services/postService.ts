@@ -38,6 +38,7 @@ export async function fetchHomeFeed(
       username: row.user_username,
       display_name: row.user_display_name,
       avatar_emoji: row.user_avatar_emoji,
+      avatar_url: row.user_avatar_url,
     },
   }));
   return { items, nextCursor: computeNextCursor(items) };
@@ -71,6 +72,7 @@ export async function fetchMyPosts(options?: {
       username: row.user_username,
       display_name: row.user_display_name,
       avatar_emoji: row.user_avatar_emoji,
+      avatar_url: row.user_avatar_url,
     },
   }));
   return { items, nextCursor: computeNextCursor(items) };
@@ -104,6 +106,7 @@ export async function fetchLikedPosts(options: {
       username: row.user_username,
       display_name: row.user_display_name,
       avatar_emoji: row.user_avatar_emoji,
+      avatar_url: row.user_avatar_url,
     },
   }));
   return { items, nextCursor: computeNextCursor(items) };
@@ -166,6 +169,7 @@ export async function fetchComments(
       username: row.user_username,
       display_name: row.user_display_name,
       avatar_emoji: row.user_avatar_emoji,
+      avatar_url: row.user_avatar_url,
     },
   })) as Comment[];
   return { items, nextCursor: computeNextCursor(items) };

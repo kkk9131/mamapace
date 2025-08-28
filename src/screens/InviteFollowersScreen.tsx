@@ -22,6 +22,7 @@ import { PublicUserProfile } from '../types/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { secureLogger } from '../utils/privacyProtection';
 import { chatService } from '../services/chatService';
+import Avatar from '../components/Avatar';
 
 interface InviteFollowersScreenProps {
   spaceName: string;
@@ -210,21 +211,7 @@ export default function InviteFollowersScreen({
               </View>
 
               {/* Avatar */}
-              <View
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: colors.surface,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 12,
-                }}
-              >
-                <Text style={{ fontSize: 20 }}>
-                  {item.avatar_emoji || '👤'}
-                </Text>
-              </View>
+              <Avatar uri={(item as any).avatar_url} emoji={item.avatar_emoji || '👤'} size={48} style={{ marginRight: 12 }} />
 
               {/* User info */}
               <View style={{ flex: 1 }}>
