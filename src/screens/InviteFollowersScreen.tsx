@@ -64,8 +64,12 @@ export default function InviteFollowersScreen({
     try {
       setLoading(true);
       const followerList = await getFollowList(user.id, 'followers');
+      // Deduplicate by id to avoid duplicate keys in FlatList
+      const unique = Array.from(
+        new Map(followerList.map(f => [f.id, f])).values()
+      );
       setFollowers(
-        followerList.map(follower => ({
+        unique.map(follower => ({
           ...follower,
           selected: false,
         }))
@@ -327,7 +331,7 @@ export default function InviteFollowersScreen({
       {/* Followers List */}
       <FlatList
         data={followers}
-        keyExtractor={item => item.id}
+        keyExtractor={item => `invite-${item.id}`}
         renderItem={renderFollowerItem}
         contentContainerStyle={{ paddingTop: 8, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}

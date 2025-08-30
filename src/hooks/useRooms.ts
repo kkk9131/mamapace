@@ -280,14 +280,23 @@ export function useChannelMessages(channelId: string | null) {
   const sendMessage = useCallback(
     async (
       content: string,
-      messageType: 'text' | 'image' | 'file' = 'text'
+      messageType: 'text' | 'image' | 'file' = 'text',
+      attachments: any[] = []
     ) => {
       if (!channelId) return null;
 
-      const validation = roomService.validateMessageContent(content);
-      if (!validation.isValid) {
-        setError(validation.error || 'Invalid message');
-        return null;
+      // Validate only when no attachments
+      if (!content?.trim()) {
+        if (!attachments || attachments.length === 0) {
+          setError('Invalid message');
+          return null;
+        }
+      } else {
+        const validation = roomService.validateMessageContent(content);
+        if (!validation.isValid) {
+          setError(validation.error || 'Invalid message');
+          return null;
+        }
       }
 
       // Add optimistic message
@@ -301,7 +310,7 @@ export function useChannelMessages(channelId: string | null) {
         display_name: null,
         message_type: messageType,
         content,
-        attachments: [],
+        attachments: attachments || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         deleted_at: null,
@@ -322,6 +331,7 @@ export function useChannelMessages(channelId: string | null) {
         channel_id: channelId,
         content,
         message_type: messageType,
+        attachments: attachments || [],
       });
 
       if (response.success) {

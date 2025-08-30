@@ -5,6 +5,8 @@ import {
   Pressable,
   Animated,
   RefreshControl,
+  Image,
+  Modal,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { SkeletonLine } from '../components/Skeleton';
@@ -43,6 +45,7 @@ export default function CommentsListScreen({
     }).start();
   }, [fade]);
   const [items, setItems] = useState<Comment[]>([]);
+  const [viewer, setViewer] = useState<{ visible: boolean; url?: string }>({ visible: false });
   const { user } = useAuth();
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -147,7 +150,7 @@ export default function CommentsListScreen({
         </View>
       </View>
       <FlatList
-        data={items}
+        data={[...items].reverse()}
         keyExtractor={i => i.id}
         contentContainerStyle={{
           padding: theme.spacing(2),
@@ -178,14 +181,27 @@ export default function CommentsListScreen({
               <View
                 style={{
                   flexDirection: 'row',
+                  alignItems: 'center',
                   justifyContent: 'space-between',
                   marginBottom: 6,
                 }}
               >
-                <Text style={{ color: colors.subtext, fontSize: 12 }}>
-                  {item.user?.display_name || item.user?.username || '匿名'} ・{' '}
-                  {new Date(item.created_at).toLocaleString()}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {item.user?.avatar_url ? (
+                    <Image
+                      source={{ uri: item.user.avatar_url }}
+                      style={{ width: 20, height: 20, borderRadius: 10, marginRight: 6 }}
+                    />
+                  ) : (
+                    <Text style={{ fontSize: 14, marginRight: 6 }}>
+                      {item.user?.avatar_emoji || '👤'}
+                    </Text>
+                  )}
+                  <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                    {item.user?.display_name || item.user?.username || '匿名'} ・{' '}
+                    {new Date(item.created_at).toLocaleString()}
+                  </Text>
+                </View>
                 {item.user_id === user?.id && (
                   <Pressable
                     accessibilityRole="button"
@@ -219,6 +235,18 @@ export default function CommentsListScreen({
                 maxLines={3}
                 textStyle={{ color: colors.text }}
               />
+              {/* Attachments */}
+              {Array.isArray(item.attachments) && item.attachments.length > 0 && (
+                <View style={{ marginTop: 8 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {item.attachments.slice(0, 4).map((att: any, idx: number) => (
+                      <Pressable key={idx} onPress={() => setViewer({ visible: true, url: att.url })} style={{ width: '23%', aspectRatio: 1, borderRadius: 8, overflow: 'hidden', backgroundColor: '#ffffff12' }}>
+                        <Image source={{ uri: att.url }} style={{ width: '100%', height: '100%' }} />
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              )}
             </BlurView>
           </View>
         )}
@@ -303,6 +331,14 @@ export default function CommentsListScreen({
           </Text>
         </Pressable>
       )}
+      {/* Viewer */}
+      <Modal visible={viewer.visible} transparent animationType="fade" onRequestClose={() => setViewer({ visible: false })}>
+        <Pressable style={{ flex: 1, backgroundColor: '#000000CC', alignItems: 'center', justifyContent: 'center' }} onPress={() => setViewer({ visible: false })}>
+          {viewer.url ? (
+            <Image source={{ uri: viewer.url }} style={{ width: '90%', height: '70%', resizeMode: 'contain' }} />
+          ) : null}
+        </Pressable>
+      </Modal>
     </Animated.View>
   );
 }

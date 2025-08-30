@@ -9,7 +9,12 @@ import {
   Alert,
   RefreshControl,
   Animated,
+  Image,
+  Keyboard,
+  Modal,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadChatImages } from '../services/storageService';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
@@ -40,6 +45,8 @@ export default function ChatScreen({
   const { user } = useAuth();
   const { handPreference } = useHandPreference();
   const [inputMessage, setInputMessage] = useState('');
+  const [images, setImages] = useState<{ uri: string }[]>([]);
+  const [viewer, setViewer] = useState<{ visible: boolean; index: number; urls: string[] }>({ visible: false, index: 0, urls: [] });
   const flatListRef = useRef<FlatList>(null);
 
   // Get chatId from props or route params
@@ -65,7 +72,7 @@ export default function ChatScreen({
 
   // Handle send message
   const handleSendMessage = useCallback(async () => {
-    if (!inputMessage.trim() || isSending) {
+    if ((!inputMessage.trim() && images.length === 0) || isSending) {
       return;
     }
 
@@ -73,12 +80,25 @@ export default function ChatScreen({
     setInputMessage('');
 
     try {
-      await sendMessage(messageToSend, MessageType.TEXT);
+      // Upload selected images (if any) and bundle as attachments
+      let attachments: { url: string; width?: number; height?: number; mime?: string }[] = [];
+      if (images.length > 0) {
+        const client = getSupabaseClient();
+        const { data: { user } } = await client.auth.getUser();
+        if (!user) throw new Error('ログインが必要です');
+        attachments = await uploadChatImages(user.id, images.map(i => i.uri));
+        setImages([]);
+      }
+
+      const type = (!messageToSend && attachments.length > 0) ? MessageType.IMAGE : MessageType.TEXT;
+      const metadata = attachments.length > 0 ? { attachments } : undefined;
+      await sendMessage(messageToSend, type, undefined, metadata);
+      Keyboard.dismiss();
     } catch (error) {
       // Error is handled by the error state
       setInputMessage(messageToSend); // Restore message on error
     }
-  }, [inputMessage, isSending, sendMessage]);
+  }, [inputMessage, images, isSending, sendMessage]);
 
   // Auto-scroll to bottom on new messages (LINE style)
   useEffect(() => {
@@ -243,6 +263,7 @@ export default function ChatScreen({
       const isOptimistic = item.isOptimistic;
       const hasError = item.error;
       const isDeleted = item.deleted_at;
+      const senderName = item.sender?.display_name || item.sender?.username || '匿名';
       
       // Check if this is an invitation message (check metadata for both text and system types)
       const isInvitation = (item.message_type === MessageType.SYSTEM || item.message_type === MessageType.TEXT) && 
@@ -253,44 +274,14 @@ export default function ChatScreen({
         <Pressable
           onLongPress={() => {
             if (isMe && !isDeleted && !isOptimistic) {
-              Alert.alert('メッセージオプション', '', [
-                {
-                  text: '編集',
-                  onPress: () => {
-                    Alert.prompt(
-                      'メッセージを編集',
-                      '',
-                      [
-                        { text: 'キャンセル', style: 'cancel' },
-                        {
-                          text: '更新',
-                          onPress: newText => {
-                            if (newText && newText.trim()) {
-                              editMessage(item.id, newText.trim());
-                            }
-                          },
-                        },
-                      ],
-                      'plain-text',
-                      item.content
-                    );
-                  },
-                },
+              // Unified simple delete dialog (same style as room)
+              Alert.alert('メッセージ削除', 'このメッセージを削除しますか？', [
+                { text: 'キャンセル', style: 'cancel' },
                 {
                   text: '削除',
                   style: 'destructive',
-                  onPress: () => {
-                    Alert.alert('確認', 'このメッセージを削除しますか？', [
-                      { text: 'キャンセル', style: 'cancel' },
-                      {
-                        text: '削除',
-                        style: 'destructive',
-                        onPress: () => deleteMessage(item.id),
-                      },
-                    ]);
-                  },
+                  onPress: () => deleteMessage(item.id),
                 },
-                { text: 'キャンセル', style: 'cancel' },
               ]);
             }
           }}
@@ -300,25 +291,76 @@ export default function ChatScreen({
             opacity: isOptimistic ? 0.7 : isDeleted ? 0.5 : 1,
           }}
         >
-          <View
-            style={{
-              backgroundColor: isInvitation ? '#F6C6D020' : isMe ? colors.pink : '#ffffff10',
-              padding: isInvitation ? 16 : 10,
-              borderRadius: 14,
-              borderWidth: hasError ? 1 : isInvitation ? 1 : 0,
-              borderColor: hasError ? '#ff4444' : isInvitation ? colors.pink + '40' : 'transparent',
-              maxWidth: isInvitation ? '90%' : '80%',
-            }}
-          >
-            <Text
+          <View style={{ alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
+            <View
               style={{
-                color: isMe ? '#23181D' : colors.text,
-                fontStyle: isDeleted ? 'italic' : 'normal',
-                fontSize: isInvitation ? 14 : undefined,
+                backgroundColor: isInvitation ? '#F6C6D020' : isMe ? colors.pink : '#ffffff10',
+                padding: isInvitation ? 16 : 10,
+                borderRadius: 14,
+                borderWidth: hasError ? 1 : isInvitation ? 1 : 0,
+                borderColor: hasError ? '#ff4444' : isInvitation ? colors.pink + '40' : 'transparent',
+                maxWidth: isInvitation ? '90%' : '80%',
               }}
             >
-              {isDeleted ? 'このメッセージは削除されました' : item.content}
-            </Text>
+              {/* アイコン + ユーザー名（左にアイコン、右にユーザー名） */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                {item.sender?.avatar_url ? (
+                  <Image
+                    source={{ uri: item.sender.avatar_url }}
+                    style={{ width: 20, height: 20, borderRadius: 10, marginRight: 6 }}
+                  />
+                ) : (
+                  <Text style={{ fontSize: 14, marginRight: 6 }}>
+                    {item.sender?.avatar_emoji || '👤'}
+                  </Text>
+                )}
+                <Text style={{ color: isMe ? '#23181D' : colors.subtext, fontSize: 11 }}>
+                  {senderName}
+                </Text>
+              </View>
+              {/* Attachments (images) */}
+              {Array.isArray(item.metadata?.attachments) && item.metadata!.attachments!.length > 0 && (
+                <View style={{ marginBottom: 8, gap: 6, flexDirection: 'row', flexWrap: 'wrap' }}>
+                  {item.metadata!.attachments!.map((att: any, idx: number) => (
+                    <Pressable
+                      key={idx}
+                      onPress={() => setViewer({ visible: true, index: idx, urls: item.metadata!.attachments!.map((a: any) => a.url || a) })}
+                      style={{ width: 220, height: 220, borderRadius: 8, overflow: 'hidden', backgroundColor: '#00000020', marginRight: 6 }}
+                    >
+                      <Image source={{ uri: att.url || att }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
+              {/* Text content or legacy image-only content */}
+              {(() => {
+                if (!isDeleted && item.message_type === MessageType.IMAGE && (!item.content || item.content.startsWith('http'))) {
+                  // Legacy single-image message: show image if no attachments
+                  if (!item.metadata?.attachments || item.metadata.attachments.length === 0) {
+                    return (
+                      <Pressable onPress={() => setViewer({ visible: true, index: 0, urls: [item.content] })}>
+                        <Image source={{ uri: item.content }} style={{ width: 220, height: 220, borderRadius: 8, resizeMode: 'cover' }} />
+                      </Pressable>
+                    );
+                }
+                }
+                // Otherwise show text if exists
+                if (item.content && item.content.length) {
+                  return (
+                    <Text
+                      style={{
+                        color: isMe ? '#23181D' : colors.text,
+                        fontStyle: isDeleted ? 'italic' : 'normal',
+                        fontSize: isInvitation ? 14 : undefined,
+                      }}
+                    >
+                      {isDeleted ? 'このメッセージは削除されました' : item.content}
+                    </Text>
+                  );
+                }
+                return null;
+              })()}
             
             {/* Invitation response buttons */}
             {isInvitation && !isMe && !isDeleted && (
@@ -389,6 +431,7 @@ export default function ChatScreen({
                 送信に失敗しました
               </Text>
             )}
+            </View>
           </View>
         </Pressable>
       );
@@ -461,7 +504,7 @@ export default function ChatScreen({
           <Text style={{ color: colors.subtext, fontSize: 12, marginRight: 4 }}>
             入力中
           </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: handPreference === 'left' ? 'row' : 'row-reverse', alignItems: 'center' }}>
             <Animated.View
               style={{
                 width: 4,
@@ -520,17 +563,19 @@ export default function ChatScreen({
               padding: 12,
               borderRadius: 8,
               backgroundColor: colors.surface,
-              ...(handPreference === 'left' ? { alignSelf: 'flex-start' } : { alignSelf: 'flex-end' }),
+              alignSelf: 'flex-start',
             }}
           >
             <Text style={{ color: colors.text, fontSize: 16 }}>
-              {handPreference === 'left' ? '←' : '→'}
+              ←
             </Text>
           </Pressable>
         )}
       </View>
     );
   }
+
+  
 
   // Show loading state while chat is being loaded
   if (isLoading && messages.length === 0) {
@@ -548,15 +593,12 @@ export default function ChatScreen({
             borderBottomColor: '#ffffff10',
           }}
         >
-          <View style={{ 
-            flexDirection: handPreference === 'left' ? 'row' : 'row-reverse', 
-            alignItems: 'center' 
-          }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {onBack && (
               <Pressable
                 onPress={onBack}
                 style={({ pressed }) => ({
-                  ...(handPreference === 'left' ? { marginRight: 12 } : { marginLeft: 12 }),
+                  marginRight: 12,
                   padding: 6,
                   borderRadius: 6,
                   backgroundColor: pressed ? colors.surface : 'transparent',
@@ -607,15 +649,12 @@ export default function ChatScreen({
             borderBottomColor: '#ffffff10',
           }}
         >
-          <View style={{ 
-            flexDirection: handPreference === 'left' ? 'row' : 'row-reverse', 
-            alignItems: 'center' 
-          }}>
+          <View style={{ flexDirection: handPreference === 'left' ? 'row' : 'row-reverse', alignItems: 'center' }}>
             {onBack && (
               <Pressable
                 onPress={onBack}
                 style={{
-                  ...(handPreference === 'left' ? { marginRight: 12 } : { marginLeft: 12 }),
+                  marginRight: 12,
                   padding: 8,
                   backgroundColor: colors.surface,
                   borderRadius: 8,
@@ -638,7 +677,7 @@ export default function ChatScreen({
         <FlatList
           ref={flatListRef}
           data={[
-            ...messages,
+            ...messages.filter((m: any) => !m.deleted_at),
             ...(typingUsers.length > 0
               ? [{ id: 'typing', isTyping: true }]
               : []),
@@ -692,6 +731,39 @@ export default function ChatScreen({
               alignItems: 'center',
             }}
           >
+            {/* 添付ボタン群 */}
+            <Pressable
+              disabled={images.length >= 4}
+              onPress={async () => {
+                try {
+                  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                  if (!perm.granted) { Alert.alert('権限', '写真ライブラリへのアクセスが必要です'); return; }
+                  const res = await ImagePicker.launchImageLibraryAsync({ allowsMultipleSelection: true, mediaTypes: ImagePicker.MediaTypeOptions.Images, selectionLimit: 4, quality: 1 });
+                  if (res.canceled) return;
+                  const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
+                  setImages(prev => [...prev, ...picked].slice(0, 4));
+                } catch {}
+              }}
+              style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: pressed ? '#ffffff20' : '#ffffff14' })}
+            >
+              <Text style={{ color: colors.text, fontSize: 14 }}>🖼️</Text>
+            </Pressable>
+            <Pressable
+              disabled={images.length >= 4}
+              onPress={async () => {
+                try {
+                  const perm = await ImagePicker.requestCameraPermissionsAsync();
+                  if (!perm.granted) { Alert.alert('権限', 'カメラへのアクセスが必要です'); return; }
+                  const res = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 1 });
+                  if (res.canceled) return;
+                  const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
+                  setImages(prev => [...prev, ...picked].slice(0, 4));
+                } catch {}
+              }}
+              style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: pressed ? '#ffffff20' : '#ffffff14' })}
+            >
+              <Text style={{ color: colors.text, fontSize: 14 }}>📷</Text>
+            </Pressable>
             <TextInput
               placeholder="メッセージを入力"
               placeholderTextColor={colors.subtext}
@@ -707,13 +779,13 @@ export default function ChatScreen({
             />
             <Pressable
               onPress={handleSendMessage}
-              disabled={!inputMessage.trim() || isSending}
+              disabled={(!inputMessage.trim() && images.length === 0) || isSending}
               style={({ pressed }) => ({
                 ...(handPreference === 'left' ? { marginRight: 8 } : { marginLeft: 8 }),
                 padding: 8,
                 borderRadius: 20,
                 backgroundColor:
-                  inputMessage.trim() && !isSending
+                  (inputMessage.trim() || images.length > 0) && !isSending
                     ? colors.pink
                     : colors.surface,
                 opacity: pressed ? 0.7 : 1,
@@ -723,7 +795,7 @@ export default function ChatScreen({
               <Text
                 style={{
                   color:
-                    inputMessage.trim() && !isSending
+                    (inputMessage.trim() || images.length > 0) && !isSending
                       ? '#23181D'
                       : colors.subtext,
                   fontSize: 16,
@@ -735,7 +807,32 @@ export default function ChatScreen({
             </Pressable>
           </View>
         </View>
+        {images.length > 0 && (
+          <View style={{ marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+            {images.map((img, idx) => (
+              <Pressable key={idx} onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))} style={{ width: 48, height: 48, borderRadius: 8, overflow: 'hidden', backgroundColor: '#ffffff12' }}>
+                <Image source={{ uri: img.uri }} style={{ width: '100%', height: '100%' }} />
+              </Pressable>
+            ))}
+          </View>
+        )}
       </View>
+      {/* Simple image viewer modal */}
+      <Modal
+        visible={viewer.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewer({ visible: false, index: 0, urls: [] })}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: '#000000CC', alignItems: 'center', justifyContent: 'center' }}
+          onPress={() => setViewer({ visible: false, index: 0, urls: [] })}
+        >
+          {viewer.urls[viewer.index] ? (
+            <Image source={{ uri: viewer.urls[viewer.index] }} style={{ width: '90%', height: '70%', resizeMode: 'contain' }} />
+          ) : null}
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

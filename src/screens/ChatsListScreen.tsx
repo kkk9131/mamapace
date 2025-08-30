@@ -13,6 +13,8 @@ import { useTheme } from '../theme/theme';
 import { useChatList } from '../hooks/useChatList';
 import { useAuth } from '../contexts/AuthContext';
 import { ChatWithParticipants } from '../types/chat';
+import { getSupabaseClient } from '../services/supabaseClient';
+import { Image } from 'react-native';
 import { chatService } from '../services/chatService';
 
 interface ChatsListScreenProps {
@@ -117,6 +119,31 @@ export default function ChatsListScreen({
   // Use chat list hook
   const { chats, isLoading, error, refreshChats, clearError, retry, isEmpty } =
     useChatList(filters);
+
+  // 補完: 参加者のavatar_urlを一括取得
+  const [avatarMap, setAvatarMap] = useState<Record<string, string | null>>({});
+  useEffect(() => {
+    (async () => {
+      try {
+        const ids = Array.from(
+          new Set(
+            (chats || [])
+              .map(c => c.participants?.find(p => p.id !== user?.id)?.id)
+              .filter(Boolean) as string[]
+          )
+        );
+        if (ids.length) {
+          const { data: profiles } = await getSupabaseClient()
+            .from('user_profiles')
+            .select('id, avatar_url')
+            .in('id', ids);
+          const map: Record<string, string | null> = {};
+          (profiles || []).forEach((p: any) => (map[p.id] = p.avatar_url));
+          setAvatarMap(map);
+        }
+      } catch {}
+    })();
+  }, [chats, user?.id]);
 
   // シンプル版：新規メッセージ検出は無効化し、チャットを開いた時のみNEW表示を消去
 
@@ -237,21 +264,37 @@ export default function ChatsListScreen({
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {/* アバター */}
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: isNew ? colors.pink + '20' : colors.surface,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12,
-                borderWidth: isNew ? 2 : 0,
-                borderColor: isNew ? colors.pink + '40' : 'transparent',
-              }}
-            >
-              <Text style={{ fontSize: isNew ? 18 : 16 }}>💬</Text>
-            </View>
+            {otherParticipant?.id && avatarMap[otherParticipant.id] ? (
+              <Image
+                source={{ uri: avatarMap[otherParticipant.id]! }}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  marginRight: 12,
+                  borderWidth: isNew ? 2 : 0,
+                  borderColor: isNew ? colors.pink + '40' : 'transparent',
+                }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: isNew ? colors.pink + '20' : colors.surface,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                  borderWidth: isNew ? 2 : 0,
+                  borderColor: isNew ? colors.pink + '40' : 'transparent',
+                }}
+              >
+                <Text style={{ fontSize: isNew ? 18 : 16 }}>
+                  {otherParticipant?.avatar_emoji || '👤'}
+                </Text>
+              </View>
+            )}
 
             {/* メイン情報エリア */}
             <View style={{ flex: 1 }}>

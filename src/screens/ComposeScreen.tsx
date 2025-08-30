@@ -8,6 +8,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
@@ -16,6 +17,8 @@ import { notifyError } from '../utils/notify';
 
 import { useEffect, useRef, useState } from 'react';
 import { createPost } from '../services/postService';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadPostImages } from '../services/storageService';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function ComposeScreen({
@@ -31,6 +34,7 @@ export default function ComposeScreen({
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [images, setImages] = useState<{ uri: string }[]>([]);
   const fade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(fade, {
@@ -92,6 +96,102 @@ export default function ComposeScreen({
               tint="dark"
               style={{ padding: 12, backgroundColor: '#ffffff10' }}
             >
+              {/* 添付ツールバー */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <Pressable
+                  disabled={images.length >= 4}
+                  onPress={async () => {
+                    try {
+                      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                      if (!perm.granted) {
+                        notifyError('写真ライブラリへのアクセスが必要です');
+                        return;
+                      }
+                      const res = await ImagePicker.launchImageLibraryAsync({
+                        allowsMultipleSelection: true,
+                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        selectionLimit: 4,
+                        quality: 1,
+                      });
+                      if (res.canceled) return;
+                      const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
+                      setImages(prev => {
+                        const combined = [...prev, ...picked];
+                        return combined.slice(0, 4);
+                      });
+                    } catch (e: any) {
+                      notifyError(e?.message || '画像の選択に失敗しました');
+                    }
+                  }}
+                  style={({ pressed }) => ({
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 8,
+                    backgroundColor: images.length >= 4 ? '#ffffff08' : pressed ? '#ffffff20' : '#ffffff14',
+                    borderWidth: 1,
+                    borderColor: '#ffffff22',
+                    transform: [{ scale: pressed && images.length < 4 ? 0.96 : 1 }],
+                    opacity: images.length >= 4 ? 0.6 : 1,
+                  })}
+                >
+                  <Text style={{ color: colors.text, fontSize: 16 }}>🖼️</Text>
+                </Pressable>
+                {/* カメラボタン */}
+                <Pressable
+                  disabled={images.length >= 4}
+                  onPress={async () => {
+                    try {
+                      const perm = await ImagePicker.requestCameraPermissionsAsync();
+                      if (!perm.granted) {
+                        notifyError('カメラへのアクセスが必要です');
+                        return;
+                      }
+                      const res = await ImagePicker.launchCameraAsync({
+                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        quality: 1,
+                      });
+                      if (res.canceled) return;
+                      const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
+                      setImages(prev => {
+                        const combined = [...prev, ...picked];
+                        return combined.slice(0, 4);
+                      });
+                    } catch (e: any) {
+                      notifyError(e?.message || '撮影に失敗しました');
+                    }
+                  }}
+                  style={({ pressed }) => ({
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 8,
+                    backgroundColor: images.length >= 4 ? '#ffffff08' : pressed ? '#ffffff20' : '#ffffff14',
+                    borderWidth: 1,
+                    borderColor: '#ffffff22',
+                    transform: [{ scale: pressed && images.length < 4 ? 0.96 : 1 }],
+                    opacity: images.length >= 4 ? 0.6 : 1,
+                  })}
+                >
+                  <Text style={{ color: colors.text, fontSize: 16 }}>📷</Text>
+                </Pressable>
+                <View style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 999,
+                  backgroundColor: '#ffffff10',
+                  borderWidth: 1,
+                  borderColor: '#ffffff18',
+                }}>
+                  <Text style={{ color: colors.subtext, fontSize: 11 }}>
+                    {images.length}/4
+                  </Text>
+                </View>
+              </View>
               <View
                 style={{
                   flexDirection: 'row',
@@ -137,6 +237,24 @@ export default function ComposeScreen({
                 }}
                 scrollEnabled={true}
               />
+              {/* サムネイルプレビュー */}
+              {images.length > 0 && (
+                <View style={{ marginTop: 12, gap: 8 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {images.map((img, idx) => (
+                      <View key={idx} style={{ width: '23%', aspectRatio: 1, borderRadius: 8, overflow: 'hidden', backgroundColor: '#ffffff12' }}>
+                        <Pressable
+                          onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))}
+                          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <Image source={{ uri: img.uri }} style={{ width: '100%', height: '100%' }} />
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                  <Text style={{ color: colors.subtext, fontSize: 11 }}>タップで削除</Text>
+                </View>
+              )}
               <View style={{ alignItems: 'flex-end', marginTop: 4 }}>
                 <Text style={{ color: colors.subtext, fontSize: 12 }}>
                   {body.length}/300
@@ -148,12 +266,16 @@ export default function ComposeScreen({
           <Pressable
             disabled={submitting}
             onPress={async () => {
-              if (!body.trim()) return;
+              if (!body.trim() && images.length === 0) return;
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               setSubmitting(true);
               try {
                 if (!user?.id) throw new Error('ログインが必要です');
-                await createPost(body.trim());
+                let attachments: { url: string; width?: number; height?: number; mime?: string }[] = [];
+                if (images.length > 0) {
+                  attachments = await uploadPostImages(user.id, images.map(i => i.uri));
+                }
+                await createPost(body.trim(), attachments);
                 if (onPosted) onPosted();
                 else onClose && onClose();
               } catch (e: any) {

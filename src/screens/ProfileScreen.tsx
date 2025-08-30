@@ -101,11 +101,19 @@ export default function ProfileScreen({
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginRight: 12,
+                overflow: 'hidden',
               }}
             >
-              <Text style={{ fontSize: 30 }}>
-                {profile?.avatar_emoji || user?.avatar_emoji || '👩‍🍼'}
-              </Text>
+              {profile?.avatar_url ? (
+                <Animated.Image
+                  source={{ uri: profile.avatar_url }}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              ) : (
+                <Text style={{ fontSize: 30 }}>
+                  {profile?.avatar_emoji || user?.avatar_emoji || '👩‍🍼'}
+                </Text>
+              )}
             </View>
             <View style={{ flex: 1 }}>
               <Text

@@ -3,6 +3,7 @@ export interface Post {
   user_id: string;
   body: string;
   created_at: string;
+  attachments?: Attachment[];
 }
 
 export interface ReactionSummary {
@@ -22,6 +23,7 @@ export interface PostWithMeta extends Post {
     username: string;
     display_name: string | null;
     avatar_emoji: string | null;
+    avatar_url?: string | null;
   } | null;
 }
 
@@ -36,10 +38,19 @@ export interface Comment {
     username: string;
     display_name: string | null;
     avatar_emoji: string | null;
+    avatar_url?: string | null;
   } | null;
+  attachments?: Attachment[];
 }
 
 export interface PaginatedResult<T> {
   items: T[];
   nextCursor: string | null; // ISO timestamp or null
+}
+
+export interface Attachment {
+  url: string;
+  width?: number;
+  height?: number;
+  mime?: string;
 }

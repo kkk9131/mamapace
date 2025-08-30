@@ -464,15 +464,19 @@ export function useChat(chatId: string) {
     async (
       content: string,
       messageType: MessageType = MessageType.TEXT,
-      replyToMessageId?: string
+      replyToMessageId?: string,
+      metadata?: Partial<MessageMetadata>
     ) => {
       if (!user || !state.chat || state.isSending) {
         return;
       }
 
       if (!content.trim()) {
-        setError('メッセージを入力してください。');
-        return;
+        // allow empty content if metadata (e.g., attachments) exists
+        if (!metadata || !('attachments' in metadata) || !(metadata as any).attachments?.length) {
+          setError('メッセージを入力してください。');
+          return;
+        }
       }
 
       try {
@@ -491,7 +495,7 @@ export function useChat(chatId: string) {
           edited_at: null,
           deleted_at: null,
           reply_to_message_id: replyToMessageId || null,
-          metadata: null,
+          metadata: metadata || null,
           read_by: [],
           is_read: false, // Initially not read by anyone
           isOptimistic: true,
@@ -505,6 +509,7 @@ export function useChat(chatId: string) {
           content: content.trim(),
           message_type: messageType,
           reply_to_message_id: replyToMessageId,
+          metadata,
         });
 
         const response = await chatService.sendMessage(request);
@@ -612,7 +617,8 @@ export function useChat(chatId: string) {
         const response = await chatService.deleteMessage(request);
 
         if (response.success) {
-          // Message will be updated/removed via real-time event
+          // Remove immediately from UI
+          removeMessage(messageId);
           secureLogger.info('Message deleted successfully', {
             messageId,
             chatId,
@@ -629,7 +635,7 @@ export function useChat(chatId: string) {
         setError('メッセージの削除中にエラーが発生しました。');
       }
     },
-    [chatId, setError]
+    [chatId, setError, removeMessage]
   );
 
   /**

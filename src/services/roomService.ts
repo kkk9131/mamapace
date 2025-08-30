@@ -142,7 +142,7 @@ export class RoomService {
         .from('channel_members')
         .select(
           `channel_id, user_id, role, last_seen_at, joined_at, is_active,
-           user:user_profiles (id, username, display_name, avatar_emoji)`
+           user:user_profiles (id, username, display_name, avatar_emoji, avatar_url)`
         )
         .eq('channel_id', channelId);
 
@@ -493,10 +493,16 @@ export class RoomService {
         return { error: 'Not authenticated' };
       }
 
-      // Validate message content
-      const validation = this.validateMessageContent(request.content);
-      if (!validation.isValid) {
-        return { error: validation.error || 'Invalid message content' };
+      // Validate message content or attachments
+      if (!request.content || request.content.trim().length === 0) {
+        if (!request.attachments || request.attachments.length === 0) {
+          return { error: 'Invalid message content' };
+        }
+      } else {
+        const validation = this.validateMessageContent(request.content);
+        if (!validation.isValid) {
+          return { error: validation.error || 'Invalid message content' };
+        }
       }
 
       // Insert the message with sender_id
@@ -532,6 +538,48 @@ export class RoomService {
         error.message
       );
       return { error: 'Failed to send message' };
+    }
+  }
+
+  /**
+   * Soft delete a channel message (own message only)
+   */
+  static async deleteChannelMessage(messageId: string): Promise<ApiResponse<boolean>> {
+    try {
+      const supabase = getSupabaseClient();
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return { error: 'Not authenticated' };
+      // Try hard delete first (preferred if RLS allows deleting own rows)
+      let del = await supabase
+        .from('room_messages')
+        .delete()
+        .eq('id', messageId)
+        .eq('sender_id', user.user.id)
+        .select('id');
+
+      if (del.error) {
+        // Fallback to soft delete with placeholder content to satisfy constraints
+        const upd = await supabase
+          .from('room_messages')
+          .update({
+            deleted_at: new Date().toISOString(),
+            content: 'このメッセージは削除されました',
+            attachments: [],
+          })
+          .eq('id', messageId)
+          .eq('sender_id', user.user.id)
+          .is('deleted_at', null);
+
+        if (upd.error) {
+          console.error('[RoomService] Delete message error:', upd.error.message);
+          return { error: 'Failed to delete message' };
+        }
+      }
+
+      return { success: true, data: true };
+    } catch (error: any) {
+      console.error('[RoomService] Delete message exception:', error.message);
+      return { error: 'Failed to delete message' };
     }
   }
 
@@ -593,7 +641,7 @@ export class RoomService {
       // Fetch sender profiles separately
       const { data: senderProfiles, error: profileError } = await supabase
         .from('user_profiles')
-        .select('id, username, display_name, avatar_emoji')
+        .select('id, username, display_name, avatar_emoji, avatar_url')
         .in('id', senderIds);
 
       if (profileError) {

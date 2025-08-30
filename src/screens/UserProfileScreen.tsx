@@ -264,9 +264,29 @@ export default function UserProfileScreen({
             <View
               style={{ flexDirection: 'row', alignItems: 'center' }}
             >
-              <Text style={{ fontSize: 24, marginRight: 8 }}>
-                {userData?.avatar_emoji || '👤'}
-              </Text>
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  overflow: 'hidden',
+                  backgroundColor: colors.surface,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 8,
+                }}
+              >
+                {userData?.avatar_url ? (
+                  <Animated.Image
+                    source={{ uri: userData.avatar_url }}
+                    style={{ width: '100%', height: '100%' }}
+                  />
+                ) : (
+                  <Text style={{ fontSize: 24 }}>
+                    {userData?.avatar_emoji || '👤'}
+                  </Text>
+                )}
+              </View>
               <Text
                 style={{
                   color: colors.text,
