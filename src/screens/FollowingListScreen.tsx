@@ -6,15 +6,16 @@ import {
   Animated,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useEffect, useState, useCallback } from 'react';
 import { getFollowing, unfollowUser } from '../services/profileService';
-import Avatar from '../components/Avatar';
 import { FollowUser } from '../services/profileService';
 import { secureLogger } from '../utils/privacyProtection';
+import { getSupabaseClient } from '../services/supabaseClient';
 
 export default function FollowingListScreen() {
   const theme = useTheme() as any;
@@ -28,6 +29,7 @@ export default function FollowingListScreen() {
   }).start();
 
   const [following, setFollowing] = useState<FollowUser[]>([]);
+  const [avatarMap, setAvatarMap] = useState<Record<string, string | null>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -57,6 +59,18 @@ export default function FollowingListScreen() {
         }
 
         setNextCursor(result.nextCursor);
+
+        // 補完: avatar_url をまとめて取得
+        const ids = Array.from(new Set(result.items.map(i => i.user_id)));
+        if (ids.length) {
+          const { data: profiles } = await getSupabaseClient()
+            .from('user_profiles')
+            .select('id, avatar_url')
+            .in('id', ids);
+          const map: Record<string, string | null> = {};
+          (profiles || []).forEach((p: any) => (map[p.id] = p.avatar_url));
+          setAvatarMap(prev => ({ ...prev, ...map }));
+        }
       } catch (error) {
         secureLogger.error('Failed to load following:', error);
         Alert.alert('エラー', 'フォロー中の取得に失敗しました');
@@ -114,7 +128,26 @@ export default function FollowingListScreen() {
             alignItems: 'center',
           }}
         >
-          <Avatar uri={(item as any).avatar_url} emoji={item.avatar_emoji || '👩‍🍼'} size={44} style={{ marginRight: 10 }} />
+          {avatarMap[item.user_id] ? (
+            <Image
+              source={{ uri: avatarMap[item.user_id]! }}
+              style={{ width: 44, height: 44, borderRadius: 22, marginRight: 10 }}
+            />
+          ) : (
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: colors.surface,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 10,
+              }}
+            >
+              <Text>{item.avatar_emoji || '👩‍🍼'}</Text>
+            </View>
+          )}
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontWeight: '700' }}>
               {item.display_name || item.username}

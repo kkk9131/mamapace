@@ -22,7 +22,6 @@ import { PublicUserProfile } from '../types/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { secureLogger } from '../utils/privacyProtection';
 import { chatService } from '../services/chatService';
-import Avatar from '../components/Avatar';
 
 interface InviteFollowersScreenProps {
   spaceName: string;
@@ -65,8 +64,12 @@ export default function InviteFollowersScreen({
     try {
       setLoading(true);
       const followerList = await getFollowList(user.id, 'followers');
+      // Deduplicate by id to avoid duplicate keys in FlatList
+      const unique = Array.from(
+        new Map(followerList.map(f => [f.id, f])).values()
+      );
       setFollowers(
-        followerList.map(follower => ({
+        unique.map(follower => ({
           ...follower,
           selected: false,
         }))
@@ -211,7 +214,21 @@ export default function InviteFollowersScreen({
               </View>
 
               {/* Avatar */}
-              <Avatar uri={(item as any).avatar_url} emoji={item.avatar_emoji || '👤'} size={48} style={{ marginRight: 12 }} />
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: colors.surface,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                }}
+              >
+                <Text style={{ fontSize: 20 }}>
+                  {item.avatar_emoji || '👤'}
+                </Text>
+              </View>
 
               {/* User info */}
               <View style={{ flex: 1 }}>
@@ -314,7 +331,7 @@ export default function InviteFollowersScreen({
       {/* Followers List */}
       <FlatList
         data={followers}
-        keyExtractor={item => item.id}
+        keyExtractor={item => `invite-${item.id}`}
         renderItem={renderFollowerItem}
         contentContainerStyle={{ paddingTop: 8, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}

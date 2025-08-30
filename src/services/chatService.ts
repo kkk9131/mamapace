@@ -769,6 +769,17 @@ class ChatService {
         };
       }
 
+      // Fetch sender profile for accurate display_name/username (avoid showing email)
+      let senderProfile: any = null;
+      try {
+        const { data: profile } = await client
+          .from('user_profiles')
+          .select('id, username, display_name, avatar_emoji, avatar_url, profile_visibility, is_active, created_at, updated_at')
+          .eq('id', user.id)
+          .single();
+        senderProfile = profile;
+      } catch (_) {}
+
       // Transform message to MessageWithSender format
       const messageWithSender: MessageWithSender = {
         id: data.id,
@@ -782,17 +793,30 @@ class ChatService {
         deleted_at: data.deleted_at,
         reply_to_message_id: null,
         metadata: data.metadata,
-        sender: {
-          id: user.id,
-          username: user.user_metadata?.username || user.email || '',
-          display_name: user.user_metadata?.display_name || user.email || '',
-          avatar_emoji: user.user_metadata?.avatar_emoji || '👤',
-          bio: '',
-          created_at: '',
-          updated_at: '',
-          profile_visibility: 'public',
-          is_active: true,
-        },
+        sender: senderProfile
+          ? {
+              id: senderProfile.id,
+              username: senderProfile.username || '',
+              display_name: senderProfile.display_name || '',
+              avatar_emoji: senderProfile.avatar_emoji || '👤',
+              avatar_url: senderProfile.avatar_url || null,
+              bio: '',
+              created_at: senderProfile.created_at || '',
+              updated_at: senderProfile.updated_at || '',
+              profile_visibility: senderProfile.profile_visibility || 'public',
+              is_active: senderProfile.is_active ?? true,
+            }
+          : {
+              id: user.id,
+              username: user.user_metadata?.username || '',
+              display_name: user.user_metadata?.display_name || '',
+              avatar_emoji: user.user_metadata?.avatar_emoji || '👤',
+              bio: '',
+              created_at: '',
+              updated_at: '',
+              profile_visibility: 'public',
+              is_active: true,
+            },
         read_by: [],
         is_read: true,
         is_edited: data.is_edited || false,
@@ -888,7 +912,7 @@ class ChatService {
       }
 
       // Transform messages to MessageWithSender format
-      const messages: MessageWithSender[] = (data || []).map((msg: any) => ({
+      let messages: MessageWithSender[] = (data || []).map((msg: any) => ({
         id: msg.id,
         chat_id: msg.conversation_id,
         sender_id: msg.sender_id,
@@ -905,6 +929,7 @@ class ChatService {
           username: msg.sender_username,
           display_name: msg.sender_display_name,
           avatar_emoji: msg.sender_avatar_emoji,
+          avatar_url: (msg as any).sender_avatar_url ?? null,
           bio: '',
           created_at: '',
           updated_at: '',
@@ -917,6 +942,27 @@ class ChatService {
         delivery_status: [],
         read_receipt_status: 'unread' as any,
       }));
+
+      // 補完: avatar_url が欠けている送信者のプロフィールをまとめて取得
+      {
+        const missing = Array.from(
+          new Set(messages.filter(m => !m.sender?.avatar_url).map(m => m.sender_id))
+        );
+        if (missing.length > 0) {
+          const { data: profiles } = await client
+            .from('user_profiles')
+            .select('id, avatar_url')
+            .in('id', missing);
+          const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
+          messages = messages.map(m => ({
+            ...m,
+            sender: {
+              ...m.sender,
+              avatar_url: m.sender.avatar_url ?? map.get(m.sender_id) ?? null,
+            },
+          }));
+        }
+      }
 
       const result = {
         messages,

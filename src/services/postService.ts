@@ -1,5 +1,5 @@
 import { getSupabaseClient } from './supabaseClient';
-import { Post, PostWithMeta, PaginatedResult, Comment } from '../types/post';
+import { Post, PostWithMeta, PaginatedResult, Comment, Attachment } from '../types/post';
 
 const PAGE_SIZE_DEFAULT = 20;
 
@@ -18,7 +18,7 @@ export async function fetchHomeFeed(
   const before = options.before ?? null;
   const limit = options.limit ?? PAGE_SIZE_DEFAULT;
   const { data, error } = await client.rpc('get_home_feed_v2', {
-    p_before: before,
+    p_offset_time: before,
     p_limit: limit,
   });
   if (error) throw error;
@@ -28,6 +28,7 @@ export async function fetchHomeFeed(
     user_id: row.user_id,
     body: row.body,
     created_at: row.created_at,
+    attachments: row.attachments || [],
     reaction_summary: {
       count: Number(row.reaction_count ?? 0),
       reactedByMe: false,
@@ -35,30 +36,27 @@ export async function fetchHomeFeed(
     comment_summary: { count: Number(row.comment_count ?? 0) },
     user: {
       id: row.user_id,
-      username: row.user_username,
-      display_name: row.user_display_name,
-      avatar_emoji: row.user_avatar_emoji,
-      avatar_url: row.user_avatar_url,
+      // DBの関数によりカラム名が異なるケースに両対応
+      username: row.user_username ?? row.username ?? '',
+      display_name: row.user_display_name ?? row.display_name ?? null,
+      avatar_emoji: row.user_avatar_emoji ?? row.avatar_emoji ?? null,
+      avatar_url: row.user_avatar_url ?? row.avatar_url ?? null,
     },
   }));
-  // If avatar_url not provided by RPC, fetch from profiles in one query
-  const missing = Array.from(
-    new Set(
-      items
-        .filter(it => !it.user?.avatar_url)
-        .map(it => it.user?.id)
-        .filter(Boolean) as string[]
-    )
+
+  // avatar_url が欠けている場合は一括で取得して補完
+  const missingAvatarUsers = Array.from(
+    new Set(items.filter(it => !it.user?.avatar_url).map(it => it.user_id))
   );
-  if (missing.length > 0) {
+  if (missingAvatarUsers.length > 0) {
     const { data: profiles } = await client
       .from('user_profiles')
       .select('id, avatar_url')
-      .in('id', missing);
-    const map = new Map((profiles || []).map((p: any) => [p.id, p.avatar_url]));
+      .in('id', missingAvatarUsers);
+    const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
     items = items.map(it =>
-      it.user?.id && !it.user.avatar_url && map.get(it.user.id)
-        ? { ...it, user: { ...it.user!, avatar_url: map.get(it.user.id) || null } }
+      it.user
+        ? { ...it, user: { ...it.user, avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null } }
         : it
     );
   }
@@ -73,7 +71,7 @@ export async function fetchMyPosts(options?: {
   const before = options?.before ?? null;
   const limit = options?.limit ?? PAGE_SIZE_DEFAULT;
   const { data, error } = await client.rpc('get_user_posts_v2', {
-    p_before: before,
+    p_offset_time: before,
     p_limit: limit,
   });
   if (error) throw error;
@@ -83,6 +81,7 @@ export async function fetchMyPosts(options?: {
     user_id: row.user_id,
     body: row.body,
     created_at: row.created_at,
+    attachments: row.attachments || [],
     reaction_summary: {
       count: Number(row.reaction_count ?? 0),
       reactedByMe: false,
@@ -90,31 +89,28 @@ export async function fetchMyPosts(options?: {
     comment_summary: { count: Number(row.comment_count ?? 0) },
     user: {
       id: row.user_id,
-      username: row.user_username,
-      display_name: row.user_display_name,
-      avatar_emoji: row.user_avatar_emoji,
-      avatar_url: row.user_avatar_url,
+      username: row.user_username ?? row.username ?? '',
+      display_name: row.user_display_name ?? row.display_name ?? null,
+      avatar_emoji: row.user_avatar_emoji ?? row.avatar_emoji ?? null,
+      avatar_url: row.user_avatar_url ?? row.avatar_url ?? null,
     },
   }));
-  const missing = Array.from(
-    new Set(
-      items
-        .filter(it => !it.user?.avatar_url)
-        .map(it => it.user?.id)
-        .filter(Boolean) as string[]
-    )
-  );
-  if (missing.length > 0) {
-    const { data: profiles } = await client
-      .from('user_profiles')
-      .select('id, avatar_url')
-      .in('id', missing);
-    const map = new Map((profiles || []).map((p: any) => [p.id, p.avatar_url]));
-    items = items.map(it =>
-      it.user?.id && !it.user.avatar_url && map.get(it.user.id)
-        ? { ...it, user: { ...it.user!, avatar_url: map.get(it.user.id) || null } }
-        : it
+  {
+    const missing = Array.from(
+      new Set(items.filter(it => !it.user?.avatar_url).map(it => it.user_id))
     );
+    if (missing.length > 0) {
+      const { data: profiles } = await client
+        .from('user_profiles')
+        .select('id, avatar_url')
+        .in('id', missing);
+      const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
+      items = items.map(it =>
+        it.user
+          ? { ...it, user: { ...it.user, avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null } }
+          : it
+      );
+    }
   }
   return { items, nextCursor: computeNextCursor(items) };
 }
@@ -127,7 +123,7 @@ export async function fetchLikedPosts(options: {
   const before = options.before ?? null;
   const limit = options.limit ?? PAGE_SIZE_DEFAULT;
   const { data, error } = await client.rpc('get_liked_posts_v2', {
-    p_before: before,
+    p_offset_time: before,
     p_limit: limit,
   });
   if (error) throw error;
@@ -137,6 +133,7 @@ export async function fetchLikedPosts(options: {
     user_id: row.user_id,
     body: row.body,
     created_at: row.created_at,
+    attachments: row.attachments || [],
     reaction_summary: {
       count: Number(row.reaction_count ?? 0),
       reactedByMe: true,
@@ -144,40 +141,42 @@ export async function fetchLikedPosts(options: {
     comment_summary: { count: Number(row.comment_count ?? 0) },
     user: {
       id: row.user_id,
-      username: row.user_username,
-      display_name: row.user_display_name,
-      avatar_emoji: row.user_avatar_emoji,
-      avatar_url: row.user_avatar_url,
+      username: row.user_username ?? row.username ?? '',
+      display_name: row.user_display_name ?? row.display_name ?? null,
+      avatar_emoji: row.user_avatar_emoji ?? row.avatar_emoji ?? null,
+      avatar_url: row.user_avatar_url ?? row.avatar_url ?? null,
     },
   }));
-  const missing = Array.from(
-    new Set(
-      items
-        .filter(it => !it.user?.avatar_url)
-        .map(it => it.user?.id)
-        .filter(Boolean) as string[]
-    )
-  );
-  if (missing.length > 0) {
-    const { data: profiles } = await client
-      .from('user_profiles')
-      .select('id, avatar_url')
-      .in('id', missing);
-    const map = new Map((profiles || []).map((p: any) => [p.id, p.avatar_url]));
-    items = items.map(it =>
-      it.user?.id && !it.user.avatar_url && map.get(it.user.id)
-        ? { ...it, user: { ...it.user!, avatar_url: map.get(it.user.id) || null } }
-        : it
+  {
+    const missing = Array.from(
+      new Set(items.filter(it => !it.user?.avatar_url).map(it => it.user_id))
     );
+    if (missing.length > 0) {
+      const { data: profiles } = await client
+        .from('user_profiles')
+        .select('id, avatar_url')
+        .in('id', missing);
+      const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
+      items = items.map(it =>
+        it.user
+          ? { ...it, user: { ...it.user, avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null } }
+          : it
+      );
+    }
   }
   return { items, nextCursor: computeNextCursor(items) };
 }
 
-export async function createPost(body: string, attachments: string[] = []): Promise<Post> {
-  if (!body && attachments.length === 0) throw new Error('投稿内容がありません');
-  if (body.length > 300) throw new Error('投稿は300文字以内にしてください');
+export async function createPost(body: string, attachments?: Attachment[]): Promise<Post> {
+  if ((!body || body.trim().length === 0) && (!attachments || attachments.length === 0)) {
+    throw new Error('投稿内容または画像を追加してください');
+  }
+  if (body && body.length > 300) throw new Error('投稿は300文字以内にしてください');
   const client = getSupabaseClient();
-  const { data, error } = await client.rpc('create_post_v2', { p_body: body || '', p_attachments: attachments });
+  const { data, error } = await client.rpc('create_post_v2', {
+    p_body: body || '',
+    p_attachments: attachments && attachments.length ? attachments : [],
+  });
   if (error) throw error;
   return data as Post;
 }
@@ -215,7 +214,7 @@ export async function fetchComments(
   const before = options?.before ?? null;
   const { data, error } = await client.rpc('get_post_comments_v2', {
     p_post_id: postId,
-    p_before: before,
+    p_offset_time: before,
     p_limit: limit,
   });
   if (error) throw error;
@@ -225,48 +224,49 @@ export async function fetchComments(
     user_id: row.user_id,
     body: row.body,
     created_at: row.created_at,
-    attachments: (row.attachments as any) || [],
+    attachments: row.attachments || [],
     user: {
       id: row.user_id,
-      username: row.user_username,
-      display_name: row.user_display_name,
-      avatar_emoji: row.user_avatar_emoji,
-      avatar_url: row.user_avatar_url,
+      username: row.user_username ?? row.username ?? '',
+      display_name: row.user_display_name ?? row.display_name ?? null,
+      avatar_emoji: row.user_avatar_emoji ?? row.avatar_emoji ?? null,
+      avatar_url: row.user_avatar_url ?? row.avatar_url ?? null,
     },
   })) as Comment[];
-  const missing = Array.from(
-    new Set(
-      items
-        .filter(it => !it.user?.avatar_url)
-        .map(it => it.user?.id)
-        .filter(Boolean) as string[]
-    )
-  );
-  if (missing.length > 0) {
-    const { data: profiles } = await client
-      .from('user_profiles')
-      .select('id, avatar_url')
-      .in('id', missing);
-    const map = new Map((profiles || []).map((p: any) => [p.id, p.avatar_url]));
-    items = items.map(it =>
-      it.user?.id && !it.user.avatar_url && map.get(it.user.id)
-        ? { ...it, user: { ...it.user!, avatar_url: map.get(it.user.id) || null } }
-        : it
+  {
+    const missing = Array.from(
+      new Set(items.filter(it => !it.user?.avatar_url).map(it => it.user_id))
     );
+    if (missing.length > 0) {
+      const { data: profiles } = await client
+        .from('user_profiles')
+        .select('id, avatar_url')
+        .in('id', missing);
+      const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
+      items = items.map(it =>
+        it.user
+          ? { ...it, user: { ...it.user, avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null } }
+          : it
+      ) as Comment[];
+    }
   }
   return { items, nextCursor: computeNextCursor(items) };
 }
 
 export async function createComment(
   postId: string,
-  body: string
+  body: string,
+  attachments?: Attachment[]
 ): Promise<Comment> {
-  if (!body || body.trim().length === 0) throw new Error('コメントが空です');
-  if (body.length > 300) throw new Error('コメントは300文字以内にしてください');
+  if ((!body || body.trim().length === 0) && (!attachments || attachments.length === 0)) {
+    throw new Error('コメント内容または画像を追加してください');
+  }
+  if (body && body.length > 300) throw new Error('コメントは300文字以内にしてください');
   const client = getSupabaseClient();
   const { data, error } = await client.rpc('create_comment_v2', {
     p_post_id: postId,
-    p_body: body,
+    p_body: body || '',
+    p_attachments: attachments && attachments.length ? attachments : [],
   });
   if (error) throw error;
   return data as Comment;

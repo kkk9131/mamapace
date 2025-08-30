@@ -1,13 +1,11 @@
-import React, { useMemo, useRef } from 'react';
-import { View, Text, Pressable, Animated } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import { View, Text, Pressable, Animated, Image, Modal } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/theme';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { PostWithMeta } from '../types/post';
 import ExpandableText from './ExpandableText';
-import Avatar from './Avatar';
-import { View as RNView } from 'react-native';
 
 export default function PostCard({
   post,
@@ -53,15 +51,9 @@ export default function PostCard({
   );
 
   const [likeBusy, setLikeBusy] = React.useState(false as boolean);
-
-  const extractFirstImageUrl = (text?: string): string | null => {
-    if (!text) return null;
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const urls = text.match(urlRegex) || [];
-    const img = urls.find(u => /(post-images|\.png|\.jpg|\.jpeg|\.webp)/i.test(u));
-    return img || null;
-  };
-  const attachments = (post as any).attachments || [];
+  const [viewer, setViewer] = useState<{ visible: boolean; index: number }>(
+    { visible: false, index: 0 }
+  );
   const handleLike = async () => {
     if (likeBusy) return;
     setLikeBusy(true);
@@ -99,7 +91,7 @@ export default function PostCard({
         tint="dark"
         style={{ padding: theme.spacing(2), backgroundColor: '#ffffff0E' }}
       >
-        {/* TOP SECTION: Username and Time */}
+        {/* TOP SECTION: Avatar + Username and Time */}
         <View
           style={{
             flexDirection: 'row',
@@ -108,34 +100,45 @@ export default function PostCard({
             marginBottom: theme.spacing(1.5),
           }}
         >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="ユーザープロフィールを開く"
-            onPress={e => {
-              e.stopPropagation();
-              onOpenUser && onOpenUser(post.user_id);
-            }}
-            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
-            hitSlop={{ top: 8, bottom: 8, left: 0, right: 0 }}
-          >
-            <Avatar
-              uri={(post as any).user?.avatar_url}
-              emoji={post.user?.avatar_emoji || '👤'}
-              size={28}
-              backgroundColor={colors.surface}
-            />
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: 16,
-                fontWeight: '600',
-                flex: 1,
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            {/* Avatar: image優先、なければemoji */}
+            {post.user?.avatar_url ? (
+              <Image
+                source={{ uri: post.user.avatar_url }}
+                style={{ width: 28, height: 28, borderRadius: 14, marginRight: 8 }}
+              />
+            ) : (
+              <Text
+                style={{ fontSize: 18, marginRight: 8 }}
+                accessibilityLabel="ユーザーアイコン"
+              >
+                {post.user?.avatar_emoji || '👤'}
+              </Text>
+            )}
+
+            {/* Username */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="ユーザープロフィールを開く"
+              onPress={e => {
+                e.stopPropagation();
+                onOpenUser && onOpenUser(post.user_id);
               }}
-              numberOfLines={1}
+              style={{ flex: 1 }}
+              hitSlop={{ top: 8, bottom: 8, left: 0, right: 0 }}
             >
-              {post.user?.display_name || post.user?.username || '匿名'}
-            </Text>
-          </Pressable>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: 16,
+                  fontWeight: '600',
+                }}
+                numberOfLines={1}
+              >
+                {post.user?.display_name || post.user?.username || '匿名'}
+              </Text>
+            </Pressable>
+          </View>
           <Text
             style={{
               color: colors.subtext,
@@ -147,31 +150,35 @@ export default function PostCard({
           </Text>
         </View>
 
-        {/* CONTENT SECTION: Post Body + Optional Image */}
-        {attachments.length > 0 && (
+        {/* CONTENT SECTION: Post Body */}
+        <ExpandableText
+          text={post.body || ''}
+          maxLines={3}
+          containerStyle={{ marginBottom: theme.spacing(2) }}
+          textStyle={{ color: colors.text, fontSize: 16, lineHeight: 24 }}
+        />
+
+        {/* Attachments thumbnails */}
+        {Array.isArray(post.attachments) && post.attachments.length > 0 && (
           <View style={{ marginBottom: theme.spacing(1.5) }}>
-            {attachments.length === 1 ? (
-              <View style={{ borderRadius: 16, overflow: 'hidden' }}>
-                <Animated.Image source={{ uri: attachments[0] }} style={{ width: '100%', height: 220 }} />
-              </View>
-            ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {attachments.slice(0, 4).map((url: string, idx: number) => (
-                  <View key={url} style={{ width: '48%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden' }}>
-                    <Animated.Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} />
-                  </View>
-                ))}
-              </View>
-            )}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {post.attachments.slice(0, 4).map((att, idx) => (
+                <Pressable
+                  key={idx}
+                  onPress={() => setViewer({ visible: true, index: idx })}
+                  style={{ width: '48%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: '#ffffff12' }}
+                >
+                  {att.url ? (
+                    <Image source={{ uri: att.url }} style={{ width: '100%', height: '100%' }} />
+                  ) : (
+                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ color: colors.subtext }}>画像</Text>
+                    </View>
+                  )}
+                </Pressable>
+              ))}
+            </View>
           </View>
-        )}
-        {post.body && (
-          <ExpandableText
-            text={post.body || ''}
-            maxLines={3}
-            containerStyle={{ marginBottom: theme.spacing(2) }}
-            textStyle={{ color: colors.text, fontSize: 16, lineHeight: 24 }}
-          />
         )}
 
         {/* BOTTOM ACTION BAR: Like, Comment, Delete */}
@@ -318,6 +325,15 @@ export default function PostCard({
           )}
         </View>
       </BlurView>
+
+      {/* Simple viewer */}
+      <Modal visible={viewer.visible} transparent animationType="fade" onRequestClose={() => setViewer({ visible: false, index: 0 })}>
+        <Pressable style={{ flex: 1, backgroundColor: '#000000CC', alignItems: 'center', justifyContent: 'center' }} onPress={() => setViewer({ visible: false, index: 0 })}>
+          {post.attachments?.[viewer.index]?.url ? (
+            <Image source={{ uri: post.attachments[viewer.index].url }} style={{ width: '90%', height: '70%', resizeMode: 'contain' }} />
+          ) : null}
+        </Pressable>
+      </Modal>
     </View>
   );
 }

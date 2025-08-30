@@ -18,8 +18,15 @@ import {
   RefreshControl,
   Animated,
   Dimensions,
+  Image,
+  Keyboard,
+  Modal,
 } from 'react-native';
 import { useTheme } from '../theme/theme';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadRoomImages } from '../services/storageService';
+import { getSupabaseClient } from '../services/supabaseClient';
+import { roomService } from '../services/roomService';
 import { useAuth } from '../contexts/AuthContext';
 import { chatService } from '../services/chatService';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
@@ -32,9 +39,6 @@ import {
 } from '../hooks/useRooms';
 import { RoomMessageWithSender, ReportMessageRequest } from '../types/room';
 import ExpandableText from '../components/ExpandableText';
-import * as ImagePicker from 'expo-image-picker';
-import { uploadRoomImage } from '../services/storageService';
-import Avatar from '../components/Avatar';
 
 interface ChannelScreenProps {
   channelId: string;
@@ -66,6 +70,7 @@ export default function ChannelScreen({
 
   // State
   const [messageText, setMessageText] = useState('');
+  const [images, setImages] = useState<{ uri: string }[]>([]);
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
     null
@@ -73,6 +78,7 @@ export default function ChannelScreen({
   const [showExitMenu, setShowExitMenu] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [imageViewer, setImageViewer] = useState<{ visible: boolean; index: number; urls: string[] }>({ visible: false, index: 0, urls: [] });
 
   // Refs
   const flatListRef = useRef<FlatList>(null);
@@ -173,41 +179,38 @@ export default function ChannelScreen({
     }
   }, [channelId, markSeen]);
 
-  // Handle send message
+  // Handle send message (bundle text + images into one message)
   const handleSendMessage = async () => {
-    if (!messageText.trim()) return;
+    if (!messageText.trim() && images.length === 0) return;
 
     const content = messageText.trim();
     setMessageText('');
 
-    const result = await sendMessage(content);
+    let attachments: { url: string; width?: number; height?: number; mime?: string }[] = [];
+    if (images.length > 0) {
+      try {
+        const client = getSupabaseClient();
+        const { data: { user } } = await client.auth.getUser();
+        if (!user) { Alert.alert('エラー', 'ログインが必要です'); return; }
+        attachments = await uploadRoomImages(user.id, images.map(i => i.uri));
+      } catch (e: any) {
+        Alert.alert('エラー', e?.message || '画像の送信に失敗しました');
+        return;
+      } finally {
+        setImages([]);
+      }
+    }
+
+    const type: 'text' | 'image' | 'file' = (!content && attachments.length > 0) ? 'image' : 'text';
+    const result = await sendMessage(content, type, attachments);
     if (result) {
-      // Scroll to bottom after sending
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  };
 
-  const handlePickAndSendImage = async () => {
-    try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (perm.status !== 'granted' && (perm as any).status !== 'limited') return;
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: [ImagePicker.MediaType.Images],
-        quality: 0.9,
-      });
-      if (!(result as any).canceled && (result as any).assets?.length) {
-        const uri = (result as any).assets[0].uri;
-        const url = await uploadRoomImage(user?.id || '', channelId, uri);
-        await sendMessage('', 'image', [url]);
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-      }
-    } catch (e: any) {
-      Alert.alert('エラー', e?.message || '画像の送信に失敗しました');
-    }
+    // Close composer
+    Keyboard.dismiss();
   };
 
   // Handle message report
@@ -271,12 +274,31 @@ export default function ChannelScreen({
     item: RoomMessageWithSender;
     index: number;
   }) => {
-    const isOwnMessage = item.sender_id === ''; // Will be replaced with actual user ID check
+    const isOwnMessage = !!user && item.sender_id === user.id;
+    const isDeleted = !!item.deleted_at;
 
     return (
       <Pressable
         onLongPress={() => {
-          if (!isOwnMessage) {
+          if (isDeleted) return;
+          if (isOwnMessage) {
+            Alert.alert('メッセージ削除', 'このメッセージを削除しますか？', [
+              { text: 'キャンセル', style: 'cancel' },
+              {
+                text: '削除',
+                style: 'destructive',
+                onPress: async () => {
+                  const res = await roomService.deleteChannelMessage(item.id);
+                  if (!res.success) {
+                    Alert.alert('エラー', res.error || '削除に失敗しました');
+                  } else {
+                    // Refresh list to remove the message immediately
+                    refresh();
+                  }
+                },
+              },
+            ]);
+          } else {
             setSelectedMessageId(item.id);
             Alert.alert('メッセージ操作', 'このメッセージを報告しますか？', [
               { text: 'キャンセル', style: 'cancel' },
@@ -313,21 +335,23 @@ export default function ChannelScreen({
                 marginBottom: 8,
               }}
             >
-              <View style={{ flexDirection: handPreference === 'left' ? 'row' : 'row-reverse', alignItems: 'center' }}>
-                <Avatar
-                  uri={(item as any).sender?.avatar_url}
-                  emoji={item.sender_avatar_emoji || '👤'}
-                  size={20}
-                  backgroundColor={colors.surface}
-                  style={{ marginRight: handPreference === 'left' ? 8 : 0, marginLeft: handPreference === 'left' ? 0 : 8 }}
-                />
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {/* アイコン左、名前右（画像優先） */}
+                {item.sender?.avatar_url ? (
+                  <Image
+                    source={{ uri: item.sender.avatar_url }}
+                    style={{ width: 18, height: 18, borderRadius: 9, marginRight: 8 }}
+                  />
+                ) : (
+                  <Text style={{ color: colors.subtext, fontSize: 12, marginRight: 8 }}>
+                    {item.sender_avatar_emoji || '👤'}
+                  </Text>
+                )}
                 <Text
                   style={{
                     color: colors.text,
                     fontSize: 14,
                     fontWeight: 'bold',
-                    marginRight: handPreference === 'left' ? 8 : 0,
-                    marginLeft: handPreference === 'left' ? 0 : 8,
                   }}
                 >
                   {item.sender_display_name || item.sender_username}
@@ -347,24 +371,31 @@ export default function ChannelScreen({
               )}
             </View>
 
-            {Array.isArray((item as any).attachments) && (item as any).attachments.length > 0 ? (
-              <View style={{ marginBottom: 8 }}>
-                {((item as any).attachments as any[]).length === 1 ? (
-                  <Animated.Image source={{ uri: (item as any).attachments[0] }} style={{ width: '100%', height: 220, borderRadius: 12 }} />
-                ) : (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {((item as any).attachments as string[]).slice(0, 4).map((url: string) => (
-                      <View key={url} style={{ width: '48%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden' }}>
-                        <Animated.Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} />
-                      </View>
-                    ))}
-                  </View>
-                )}
+            {/* Attachments (images) */}
+            {!isDeleted && Array.isArray(item.attachments) && item.attachments.length > 0 && (
+              <View style={{ marginBottom: 8, gap: 6, flexDirection: 'row', flexWrap: 'wrap' }}>
+                {item.attachments.map((att: any, idx: number) => (
+                  <Pressable
+                    key={idx}
+                    onPress={() =>
+                      setImageViewer({
+                        visible: true,
+                        index: idx,
+                        urls: item.attachments.map((a: any) => a.url || a),
+                      })
+                    }
+                    style={{ width: '48%', borderRadius: 10, overflow: 'hidden', backgroundColor: '#00000020' }}
+                  >
+                    <Image source={{ uri: att.url || att }} style={{ width: '100%', aspectRatio: 1 }} resizeMode="cover" />
+                  </Pressable>
+                ))}
               </View>
-            ) : null}
-            {item.content ? (
+            )}
+
+            {/* Text content (if any) */}
+            {!isDeleted && !!(item.content && item.content.length) && (!item.message_type || item.message_type !== 'image' || (item.attachments?.length ?? 0) > 0) && (
               <ExpandableText
-                text={item.content || ''}
+                text={item.content}
                 maxLines={3}
                 textStyle={{
                   color: item.is_masked ? colors.subtext : colors.text,
@@ -372,7 +403,25 @@ export default function ChannelScreen({
                 }}
                 containerStyle={{ marginBottom: 8 }}
               />
-            ) : null}
+            )}
+
+            {/* Legacy single-image fallback: content is URL and no attachments */}
+            {!isDeleted && !item.attachments?.length && item.message_type === 'image' && item.content?.startsWith('http') && (
+              <Pressable
+                onPress={() =>
+                  setImageViewer({ visible: true, index: 0, urls: [item.content] })
+                }
+                style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden', backgroundColor: '#00000020' }}
+              >
+                <Image source={{ uri: item.content }} style={{ width: '100%', aspectRatio: 16/9 }} resizeMode="cover" />
+              </Pressable>
+            )}
+
+            {isDeleted && (
+              <Text style={{ color: colors.subtext, fontSize: 13, fontStyle: 'italic' }}>
+                このメッセージは削除されました
+              </Text>
+            )}
 
             <Text style={{ color: colors.subtext, fontSize: 12 }}>
               {new Date(item.created_at).toLocaleString('ja-JP', {
@@ -387,6 +436,7 @@ export default function ChannelScreen({
   };
 
   return (
+    <>
     <Animated.View
       style={{
         flex: 1,
@@ -470,7 +520,7 @@ export default function ChannelScreen({
         {/* Messages */}
         <FlatList
           ref={flatListRef}
-          data={messages}
+          data={messages.filter(m => !m.deleted_at)}
           keyExtractor={item => item.id}
           renderItem={renderMessage}
           contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
@@ -540,25 +590,47 @@ export default function ChannelScreen({
               overflow: 'hidden',
             }}
           >
-              <BlurView
-                intensity={30}
-                tint="dark"
-                style={{
-                  backgroundColor: '#ffffff10',
+            <BlurView
+              intensity={30}
+              tint="dark"
+              style={{
+                backgroundColor: '#ffffff10',
                 flexDirection: handPreference === 'left' ? 'row-reverse' : 'row',
                 alignItems: 'flex-end',
                 paddingHorizontal: 16,
                 paddingVertical: 12,
               }}
             >
-              <Pressable onPress={handlePickAndSendImage} style={({ pressed }) => [{
-                padding: 8,
-                borderRadius: 8,
-                backgroundColor: colors.surface,
-                opacity: pressed ? 0.7 : 1,
-                ...(handPreference === 'left' ? { marginLeft: 8 } : { marginRight: 8 }),
-              }]}>
-                <Text style={{ color: colors.text }}>🖼️</Text>
+              {/* 添付ボタン */}
+              <Pressable
+                onPress={async () => {
+                  try {
+                    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    if (!perm.granted) { Alert.alert('権限', '写真ライブラリへのアクセスが必要です'); return; }
+                    const res = await ImagePicker.launchImageLibraryAsync({ allowsMultipleSelection: true, mediaTypes: ImagePicker.MediaTypeOptions.Images, selectionLimit: 4, quality: 1 });
+                    if (res.canceled) return;
+                    const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
+                    setImages(prev => [...prev, ...picked].slice(0, 4));
+                  } catch {}
+                }}
+                style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: pressed ? '#ffffff20' : '#ffffff14' })}
+              >
+                <Text style={{ color: colors.text, fontSize: 14 }}>🖼️</Text>
+              </Pressable>
+              <Pressable
+                onPress={async () => {
+                  try {
+                    const perm = await ImagePicker.requestCameraPermissionsAsync();
+                    if (!perm.granted) { Alert.alert('権限', 'カメラへのアクセスが必要です'); return; }
+                    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 1 });
+                    if (res.canceled) return;
+                    const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
+                    setImages(prev => [...prev, ...picked].slice(0, 4));
+                  } catch {}
+                }}
+                style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: pressed ? '#ffffff20' : '#ffffff14' })}
+              >
+                <Text style={{ color: colors.text, fontSize: 14 }}>📷</Text>
               </Pressable>
               <TextInput
                 style={{
@@ -580,10 +652,10 @@ export default function ChannelScreen({
 
               <Pressable
                 onPress={handleSendMessage}
-                disabled={!messageText.trim() || exitLoading}
+                disabled={(!messageText.trim() && images.length === 0) || exitLoading}
                 style={({ pressed }) => [
                   {
-                    backgroundColor: messageText.trim()
+                    backgroundColor: (messageText.trim() || images.length > 0)
                       ? colors.pink
                       : colors.subtext + '40',
                     borderRadius: theme.radius.md,
@@ -596,7 +668,7 @@ export default function ChannelScreen({
               >
                 <Text
                   style={{
-                    color: messageText.trim() ? 'white' : colors.subtext,
+                    color: (messageText.trim() || images.length > 0) ? 'white' : colors.subtext,
                     fontSize: 14,
                     fontWeight: 'bold',
                   }}
@@ -605,6 +677,15 @@ export default function ChannelScreen({
                 </Text>
               </Pressable>
             </BlurView>
+            {images.length > 0 && (
+              <View style={{ paddingHorizontal: 16, paddingTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {images.map((img, idx) => (
+                  <Pressable key={idx} onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))} style={{ width: 48, height: 48, borderRadius: 8, overflow: 'hidden', backgroundColor: '#ffffff12' }}>
+                    <Image source={{ uri: img.uri }} style={{ width: '100%', height: '100%' }} />
+                  </Pressable>
+                ))}
+              </View>
+            )}
           </View>
         </View>
 
@@ -854,7 +935,16 @@ export default function ChannelScreen({
                       backgroundColor: '#ffffff10',
                     }}
                   >
-                    <Avatar uri={(item as any).user?.avatar_url} emoji={item.user?.avatar_emoji || '👤'} size={24} style={{ marginRight: 10 }} />
+                    {item.user?.avatar_url ? (
+                      <Image
+                        source={{ uri: item.user.avatar_url }}
+                        style={{ width: 22, height: 22, borderRadius: 11, marginRight: 10 }}
+                      />
+                    ) : (
+                      <Text style={{ fontSize: 18, marginRight: 10 }}>
+                        {item.user?.avatar_emoji || '👤'}
+                      </Text>
+                    )}
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
                         {item.user?.display_name || item.user?.username || 'ユーザー'}
@@ -943,5 +1033,22 @@ export default function ChannelScreen({
         )}
       </KeyboardAvoidingView>
     </Animated.View>
+      {/* Simple image viewer modal */}
+      <Modal
+        visible={imageViewer.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setImageViewer({ visible: false, index: 0, urls: [] })}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: '#000000CC', alignItems: 'center', justifyContent: 'center' }}
+          onPress={() => setImageViewer({ visible: false, index: 0, urls: [] })}
+        >
+          {imageViewer.urls[imageViewer.index] ? (
+            <Image source={{ uri: imageViewer.urls[imageViewer.index] }} style={{ width: '90%', height: '70%', resizeMode: 'contain' }} />
+          ) : null}
+        </Pressable>
+      </Modal>
+  </>
   );
 }

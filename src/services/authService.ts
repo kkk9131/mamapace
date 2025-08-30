@@ -636,14 +636,14 @@ class AuthService {
       const currentUser = sessionManager.getCurrentUser();
 
       const client = supabaseClient.getClient();
-      await client.from('security_audit_log').insert({
-        user_id: currentUser?.id || null,
-        action_type: actionType,
-        success,
-        failure_reason: failureReason,
-        metadata: sanitizedMetadata,
-        user_agent: 'React Native App', // In a real app, get actual user agent
-        ip_address: null, // In a real app, get client IP
+      // Use secured RPC instead of direct insert (table access is revoked)
+      await client.rpc('log_audit_event', {
+        p_action_type: actionType,
+        p_success: success,
+        p_failure_reason: failureReason ?? null,
+        p_metadata: sanitizedMetadata,
+        p_ip_address: null,
+        p_user_agent: 'React Native App',
       });
 
       secureLogger.security('Security event logged', {
