@@ -173,8 +173,11 @@ export async function createPost(body: string, attachments?: Attachment[]): Prom
   }
   if (body && body.length > 300) throw new Error('投稿は300文字以内にしてください');
   const client = getSupabaseClient();
+  const bodyToSend = (body && body.trim().length > 0)
+    ? body.trim()
+    : ((attachments && attachments.length > 0) ? '[image]' : '');
   const { data, error } = await client.rpc('create_post_v2', {
-    p_body: body || '',
+    p_body: bodyToSend,
     p_attachments: attachments && attachments.length ? attachments : [],
   });
   if (error) throw error;
@@ -263,9 +266,12 @@ export async function createComment(
   }
   if (body && body.length > 300) throw new Error('コメントは300文字以内にしてください');
   const client = getSupabaseClient();
+  const bodyToSend = (body && body.trim().length > 0)
+    ? body.trim()
+    : ((attachments && attachments.length > 0) ? '[image]' : '');
   const { data, error } = await client.rpc('create_comment_v2', {
     p_post_id: postId,
-    p_body: body || '',
+    p_body: bodyToSend,
     p_attachments: attachments && attachments.length ? attachments : [],
   });
   if (error) throw error;

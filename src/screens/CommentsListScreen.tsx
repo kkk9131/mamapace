@@ -230,11 +230,13 @@ export default function CommentsListScreen({
                   </Pressable>
                 )}
               </View>
-              <ExpandableText
-                text={item.body || ''}
-                maxLines={3}
-                textStyle={{ color: colors.text }}
-              />
+              {item.body && item.body !== '[image]' && (
+                <ExpandableText
+                  text={item.body}
+                  maxLines={3}
+                  textStyle={{ color: colors.text }}
+                />
+              )}
               {/* Attachments */}
               {Array.isArray(item.attachments) && item.attachments.length > 0 && (
                 <View style={{ marginTop: 8 }}>

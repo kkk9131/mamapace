@@ -281,6 +281,9 @@ export default function ChannelScreen({
       <Pressable
         onLongPress={() => {
           if (isDeleted) return;
+          // Avoid actions for optimistic (unsaved) messages
+          const isOptimistic = (item as any).isOptimistic || (typeof item.id === 'string' && item.id.startsWith('temp_'));
+          if (isOptimistic) return;
           if (isOwnMessage) {
             Alert.alert('メッセージ削除', 'このメッセージを削除しますか？', [
               { text: 'キャンセル', style: 'cancel' },
@@ -393,7 +396,7 @@ export default function ChannelScreen({
             )}
 
             {/* Text content (if any) */}
-            {!isDeleted && !!(item.content && item.content.length) && (!item.message_type || item.message_type !== 'image' || (item.attachments?.length ?? 0) > 0) && (
+            {!isDeleted && !!(item.content && item.content.length) && (!item.message_type || item.message_type !== 'image' || (item.attachments?.length ?? 0) === 0) && (
               <ExpandableText
                 text={item.content}
                 maxLines={3}
