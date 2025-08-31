@@ -310,7 +310,7 @@ class ChatService {
     const checks = {
       length:
         hasAttachments
-          ? true // allow empty content when attachments exist
+          ? content.length <= CHAT_CONFIG.MAX_MESSAGE_LENGTH // allow empty, still enforce max
           : content.length >= CHAT_CONFIG.MIN_MESSAGE_LENGTH &&
             content.length <= CHAT_CONFIG.MAX_MESSAGE_LENGTH,
       content_type:
