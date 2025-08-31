@@ -505,6 +505,11 @@ export class RoomService {
         }
       }
 
+      // Prepare content: ensure non-empty when attachments exist to satisfy DB constraint
+      const contentToInsert = (request.content && request.content.trim().length > 0)
+        ? request.content
+        : ((request.attachments && request.attachments.length > 0) ? '[image]' : '');
+
       // Insert the message with sender_id
       const { data: message, error } = await supabase
         .from('room_messages')
@@ -513,7 +518,7 @@ export class RoomService {
           anonymous_room_id: null, // 明示的にNULLを設定
           sender_id: user.user.id,
           message_type: request.message_type || 'text',
-          content: request.content,
+          content: contentToInsert,
           attachments: request.attachments || [],
         })
         .select('id')

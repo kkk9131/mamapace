@@ -335,18 +335,20 @@ export default function ChatScreen({
 
               {/* Text content or legacy image-only content */}
               {(() => {
-                if (!isDeleted && item.message_type === MessageType.IMAGE && (!item.content || item.content.startsWith('http'))) {
-                  // Legacy single-image message: show image if no attachments
-                  if (!item.metadata?.attachments || item.metadata.attachments.length === 0) {
+                if (isDeleted) return null;
+                const hasAtt = Array.isArray(item.metadata?.attachments) && item.metadata!.attachments!.length > 0;
+                // Legacy single-image (no attachments, content is URL)
+                if (item.message_type === MessageType.IMAGE && (!item.content || item.content.startsWith('http'))) {
+                  if (!hasAtt) {
                     return (
                       <Pressable onPress={() => setViewer({ visible: true, index: 0, urls: [item.content] })}>
                         <Image source={{ uri: item.content }} style={{ width: 220, height: 220, borderRadius: 8, resizeMode: 'cover' }} />
                       </Pressable>
                     );
+                  }
                 }
-                }
-                // Otherwise show text if exists
-                if (item.content && item.content.length) {
+                // Show text if exists and not placeholder when attachments present
+                if (item.content && item.content.length && (!hasAtt || item.content !== '[image]')) {
                   return (
                     <Text
                       style={{
@@ -355,7 +357,7 @@ export default function ChatScreen({
                         fontSize: isInvitation ? 14 : undefined,
                       }}
                     >
-                      {isDeleted ? 'このメッセージは削除されました' : item.content}
+                      {item.content}
                     </Text>
                   );
                 }

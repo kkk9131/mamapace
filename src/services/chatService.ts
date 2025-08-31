@@ -304,12 +304,15 @@ class ChatService {
    */
   private validateMessage(
     content: string,
-    messageType: MessageType = MessageType.TEXT
+    messageType: MessageType = MessageType.TEXT,
+    hasAttachments: boolean = false
   ): MessageValidation {
     const checks = {
       length:
-        content.length >= CHAT_CONFIG.MIN_MESSAGE_LENGTH &&
-        content.length <= CHAT_CONFIG.MAX_MESSAGE_LENGTH,
+        hasAttachments
+          ? true // allow empty content when attachments exist
+          : content.length >= CHAT_CONFIG.MIN_MESSAGE_LENGTH &&
+            content.length <= CHAT_CONFIG.MAX_MESSAGE_LENGTH,
       content_type:
         messageType === MessageType.TEXT ||
         messageType === MessageType.IMAGE ||
@@ -700,7 +703,8 @@ class ChatService {
       // Validate message
       const validation = this.validateMessage(
         request.content,
-        request.message_type
+        request.message_type,
+        !!(request.metadata && Array.isArray(request.metadata.attachments) && request.metadata.attachments.length > 0)
       );
       if (!validation.isValid) {
         return {
@@ -741,10 +745,16 @@ class ChatService {
         };
       }
 
+      // If content is empty but attachments exist, send placeholder to satisfy DB constraints
+      const hasAttachments = !!(request.metadata && Array.isArray(request.metadata.attachments) && request.metadata.attachments.length > 0);
+      const contentToSend = (request.content && request.content.trim().length > 0)
+        ? request.content.trim()
+        : (hasAttachments ? '[image]' : request.content);
+
       const { data, error } = await client.rpc('send_message', {
         p_sender_id: user.id,
         p_recipient_id: conversation.participant_id,
-        p_content: request.content,
+        p_content: contentToSend,
         p_message_type: request.message_type || MessageType.TEXT,
         p_metadata: request.metadata || {},
       });

@@ -150,13 +150,15 @@ export default function PostCard({
           </Text>
         </View>
 
-        {/* CONTENT SECTION: Post Body */}
-        <ExpandableText
-          text={post.body || ''}
-          maxLines={3}
-          containerStyle={{ marginBottom: theme.spacing(2) }}
-          textStyle={{ color: colors.text, fontSize: 16, lineHeight: 24 }}
-        />
+        {/* CONTENT SECTION: Post Body (hide placeholder when attachments-only) */}
+        {post.body && post.body !== '[image]' && (
+          <ExpandableText
+            text={post.body}
+            maxLines={3}
+            containerStyle={{ marginBottom: theme.spacing(2) }}
+            textStyle={{ color: colors.text, fontSize: 16, lineHeight: 24 }}
+          />
+        )}
 
         {/* Attachments thumbnails */}
         {Array.isArray(post.attachments) && post.attachments.length > 0 && (
