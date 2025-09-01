@@ -1,30 +1,11 @@
-import { View, Text, FlatList, Pressable, Animated } from 'react-native';
+import { View, Text, FlatList, Pressable, Animated, ActivityIndicator } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
-
-const items = [
-  {
-    id: 'n1',
-    type: 'like',
-    text: 'ママの味方があなたの投稿に共感を送りました',
-    time: '3m',
-    read: false,
-  },
-  {
-    id: 'n2',
-    type: 'comment',
-    text: '愚痴ルームで新しい反応がありました',
-    time: '10m',
-    read: true,
-  },
-  {
-    id: 'n3',
-    type: 'system',
-    text: '安心・安全のための新機能を追加しました',
-    time: '昨日',
-    read: true,
-  },
-];
+import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { notificationService, NotificationItem } from '../services/notificationService';
+import { formatDistanceToNow } from 'date-fns';
+import { ja } from 'date-fns/locale';
 
 const iconOf = (t: string) =>
   t === 'like' ? '💗' : t === 'comment' ? '💬' : '⭐️';
@@ -32,6 +13,25 @@ const iconOf = (t: string) =>
 export default function NotificationsScreen() {
   const theme = useTheme() as any;
   const { colors } = theme;
+  const { user } = useAuth();
+  const [items, setItems] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!user) return;
+      setLoading(true);
+      const { data } = await notificationService.list(user.id);
+      if (mounted) {
+        setItems(data);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
   const fade = new Animated.Value(0);
   Animated.timing(fade, {
     toValue: 1,
@@ -47,6 +47,11 @@ export default function NotificationsScreen() {
         opacity: fade,
       }}
     >
+      {loading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.pink} />
+        </View>
+      ) : (
       <FlatList
         data={items}
         keyExtractor={i => i.id}
@@ -56,6 +61,12 @@ export default function NotificationsScreen() {
         )}
         renderItem={({ item }) => (
           <Pressable
+            onPress={async () => {
+              if (!item.read && user) {
+                setItems(prev => prev.map(p => (p.id === item.id ? { ...p, read: true } : p)));
+                await notificationService.markRead(user.id, item.id);
+              }
+            }}
             style={({ pressed }) => [
               {
                 borderRadius: theme.radius.lg,
@@ -95,8 +106,25 @@ export default function NotificationsScreen() {
                       <Text style={{ marginRight: 6 }}>
                         {iconOf(item.type as string)}
                       </Text>{' '}
-                      {item.text}
+                      {item.content}
                     </Text>
+                    {/* Close button */}
+                    <Pressable
+                      onPress={async (e) => {
+                        e.stopPropagation();
+                        if (!user) return;
+                        const id = item.id;
+                        setItems(prev => prev.filter(p => p.id !== id));
+                        await notificationService.remove(user.id, id);
+                      }}
+                      style={({ pressed }) => ({
+                        marginLeft: 8,
+                        opacity: pressed ? 0.6 : 0.9,
+                      })}
+                      hitSlop={8}
+                    >
+                      <Text style={{ color: colors.subtext, fontSize: 16 }}>✕</Text>
+                    </Pressable>
                   </View>
                   <View style={{ alignItems: 'flex-end', marginBottom: 6 }}>
                     <Text
@@ -110,7 +138,7 @@ export default function NotificationsScreen() {
                         borderRadius: 8,
                       }}
                     >
-                      {item.time}
+                      {formatDistanceToNow(new Date(item.created_at), { addSuffix: true, locale: ja })}
                     </Text>
                   </View>
                   {!item.read && (
@@ -140,6 +168,7 @@ export default function NotificationsScreen() {
           </Pressable>
         )}
       />
+      )}
     </Animated.View>
   );
 }

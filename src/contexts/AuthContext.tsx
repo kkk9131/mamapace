@@ -31,6 +31,11 @@ import * as supaAuth from '../services/supabaseAuthAdapter';
 import { getMyProfile, updateMyProfile } from '../services/profileService';
 import { initializeAllServices } from '../utils/serviceInitializer';
 import { secureLogger } from '../utils/privacyProtection';
+import {
+  registerDeviceForPush,
+  unregisterDeviceForPush,
+} from '../services/pushNotificationService';
+import Constants from 'expo-constants';
 
 // =====================================================
 // CONTEXT STATE TYPES
@@ -235,6 +240,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Set up session monitoring
         setupSessionMonitoring();
+
+        // Best-effort push registration
+        try {
+          await registerDeviceForPush(user.id);
+        } catch {}
       } else {
         dispatch({ type: 'SET_USER', payload: null });
         secureLogger.info('AuthContext: No valid session found');
@@ -457,6 +467,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Set up session monitoring for authenticated user
           setupSessionMonitoring();
+
+          // Best-effort push registration
+          try {
+            await registerDeviceForPush(response.user.id);
+          } catch {}
         } else {
           const errorResponse = response as AuthErrorResponse;
           dispatch({ type: 'SET_ERROR', payload: errorResponse.error });
@@ -527,6 +542,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearInterval(sessionCheckInterval);
         setSessionCheckInterval(null);
       }
+
+      // Best-effort device unregistration for push (skip in dev if configured)
+      try {
+        const keepToken =
+          (Constants as any)?.expoConfig?.extra?.PUSH_KEEP_TOKEN_ON_LOGOUT ===
+          true;
+        if (!keepToken && state.user) {
+          await unregisterDeviceForPush(state.user.id);
+        } else if (keepToken) {
+          secureLogger.info('Skipping push token unregister on logout (dev mode)');
+        }
+      } catch {}
 
       try {
         await supaAuth.signOut();
