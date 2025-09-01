@@ -1,9 +1,10 @@
-import { View, Text, Switch, Pressable, Animated, Alert, Image } from 'react-native';
-import { useEffect, useRef } from 'react';
+import { View, Text, Switch, Pressable, Animated, Alert, Image, ScrollView } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../theme/theme';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
+import { notificationPreferencesService } from '../services/notificationPreferencesService';
 
 export default function SettingsScreen({
   onLogoutNavigate,
@@ -13,35 +14,71 @@ export default function SettingsScreen({
   const theme = useTheme() as any;
   const { colors } = theme;
   const fade = useRef(new Animated.Value(1)).current; // 初期値を1に設定してフラッシュを防ぐ
-  const { logout, refreshToken } = useAuth();
+  const { logout, refreshToken, user } = useAuth();
+  const [prefs, setPrefs] = useState({
+    allow_message: true,
+    allow_room: true,
+    allow_like: true,
+    allow_comment: true,
+    allow_follow: true,
+    allow_system: true,
+  });
+
+  useEffect(() => {
+    (async () => {
+      if (!user?.id) return;
+      const p = await notificationPreferencesService.get(user.id);
+      setPrefs(p as any);
+    })();
+  }, [user?.id]);
+
+  const setPref = async (key: keyof typeof prefs, value: boolean) => {
+    setPrefs(prev => ({ ...prev, [key]: value }));
+    if (user?.id) {
+      const ok = await notificationPreferencesService.update(user.id, { [key]: value } as any);
+      if (!ok) Alert.alert('通知設定', '更新に失敗しました。時間をおいてお試しください。');
+    }
+  };
   const { handPreference, setHandPreference } = useHandPreference();
 
-  const Section = ({ title, children }: any) => (
-    <View
-      style={{
-        borderRadius: theme.radius.lg,
-        overflow: 'hidden',
-        ...theme.shadow.card,
-      }}
-    >
-      <BlurView
-        intensity={30}
-        tint="dark"
-        style={{ padding: theme.spacing(1.5), backgroundColor: '#ffffff10' }}
+  const Section = ({ title, children, collapsible = false, initialOpen = true }: any) => {
+    const [open, setOpen] = useState(initialOpen);
+    return (
+      <View
+        style={{
+          borderRadius: theme.radius.lg,
+          overflow: 'hidden',
+          ...theme.shadow.card,
+        }}
       >
-        <Text
-          style={{
-            color: colors.subtext,
-            fontSize: 12,
-            marginBottom: theme.spacing(1),
-          }}
+        <BlurView
+          intensity={30}
+          tint="dark"
+          style={{ padding: theme.spacing(1.5), backgroundColor: '#ffffff10' }}
         >
-          {title}
-        </Text>
-        {children}
-      </BlurView>
-    </View>
-  );
+          <Pressable
+            onPress={() => collapsible && setOpen(o => !o)}
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing(1) }}
+          >
+            <Text
+              style={{
+                color: colors.subtext,
+                fontSize: 12,
+                fontWeight: '700',
+                letterSpacing: 0.3,
+              }}
+            >
+              {title}
+            </Text>
+            {collapsible && (
+              <Text style={{ color: colors.subtext, fontSize: 16 }}>{open ? '▾' : '▸'}</Text>
+            )}
+          </Pressable>
+          {(!collapsible || open) && children}
+        </BlurView>
+      </View>
+    );
+  };
 
   return (
     <Animated.View
@@ -54,81 +91,93 @@ export default function SettingsScreen({
       }}
     >
       {/* Header with Mamapace Icon */}
-      <View
-        style={{
-          alignItems: 'center',
-          marginBottom: theme.spacing(4),
-          paddingVertical: theme.spacing(2),
-        }}
-      >
+      <ScrollView contentContainerStyle={{ paddingBottom: theme.spacing(12) }} showsVerticalScrollIndicator={false}>
         <View
           style={{
-            borderRadius: theme.radius.lg,
-            overflow: 'hidden',
-            ...theme.shadow.card,
-            marginBottom: theme.spacing(2),
+            alignItems: 'center',
+            marginBottom: theme.spacing(4),
+            paddingVertical: theme.spacing(2),
           }}
         >
-          <BlurView
-            intensity={30}
-            tint="dark"
+          <View
             style={{
-              backgroundColor: '#ffffff10',
-              padding: theme.spacing(3),
-              alignItems: 'center',
+              borderRadius: theme.radius.lg,
+              overflow: 'hidden',
+              ...theme.shadow.card,
+              marginBottom: theme.spacing(2),
             }}
           >
-            <Image 
-              source={require('../../assets/mamapace-logo.png')}
+            <BlurView
+              intensity={30}
+              tint="dark"
               style={{
-                width: 80,
-                height: 80,
-                borderRadius: 20,
-                marginBottom: theme.spacing(1.5),
+                backgroundColor: '#ffffff10',
+                padding: theme.spacing(3),
+                alignItems: 'center',
               }}
-              resizeMode="contain"
-            />
-            <Text style={{ 
-              color: colors.text, 
-              fontSize: 20, 
-              fontWeight: '700',
-              letterSpacing: 0.5
-            }}>
-              Mamapace
-            </Text>
-            <Text style={{ 
-              color: colors.subtext, 
-              fontSize: 14,
-              textAlign: 'center',
-              marginTop: 4
-            }}>
-              設定
-            </Text>
-          </BlurView>
-        </View>
-      </View>
-
-      <View
-        style={{ gap: theme.spacing(1.25), paddingBottom: theme.spacing(6) }}
-      >
-
-
-        <Section title="空き手">
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Toggle 
-              label="左" 
-              active={handPreference === 'left'}
-              onPress={() => setHandPreference('left')}
-            />
-            <Toggle 
-              label="右" 
-              active={handPreference === 'right'}
-              onPress={() => setHandPreference('right')}
-            />
+            >
+              <Image 
+                source={require('../../assets/mamapace-logo.png')}
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 20,
+                  marginBottom: theme.spacing(1.5),
+                }}
+                resizeMode="contain"
+              />
+              <Text style={{ 
+                color: colors.text, 
+                fontSize: 20, 
+                fontWeight: '700',
+                letterSpacing: 0.5
+              }}>
+                Mamapace
+              </Text>
+              <Text style={{ 
+                color: colors.subtext, 
+                fontSize: 14,
+                textAlign: 'center',
+                marginTop: 4
+              }}>
+                設定
+              </Text>
+            </BlurView>
           </View>
-        </Section>
-        <View style={{ height: theme.spacing(4) }} />
-      </View>
+        </View>
+
+        <View
+          style={{ gap: theme.spacing(1.25) }}
+        >
+          <Section title="通知" collapsible initialOpen>
+            <View style={{ gap: 8 }}>
+              <ToggleRow label="メッセージ" value={prefs.allow_message} onValueChange={(v: boolean) => setPref('allow_message', v)} />
+              <ToggleRow label="ルーム投稿" value={prefs.allow_room} onValueChange={(v: boolean) => setPref('allow_room', v)} />
+              <ToggleRow label="コメント" value={prefs.allow_comment} onValueChange={(v: boolean) => setPref('allow_comment', v)} />
+              <ToggleRow label="共感" value={prefs.allow_like} onValueChange={(v: boolean) => setPref('allow_like', v)} />
+              <ToggleRow label="フォロー" value={prefs.allow_follow} onValueChange={(v: boolean) => setPref('allow_follow', v)} />
+              <ToggleRow label="システム" value={prefs.allow_system} onValueChange={(v: boolean) => setPref('allow_system', v)} />
+            </View>
+          </Section>
+          <View style={{ height: theme.spacing(2) }} />
+
+          <Section title="空き手">
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Toggle 
+                label="左" 
+                active={handPreference === 'left'}
+                onPress={() => setHandPreference('left')}
+              />
+              <Toggle 
+                label="右" 
+                active={handPreference === 'right'}
+                onPress={() => setHandPreference('right')}
+              />
+            </View>
+          </Section>
+          <View style={{ height: theme.spacing(4) }} />
+        </View>
+      </ScrollView>
       <View
         style={{
           position: 'absolute',
@@ -196,5 +245,16 @@ function Toggle({ label, active, onPress }: { label: string; active?: boolean; o
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+function ToggleRow({ label, value, onValueChange }: { label: string; value: boolean; onValueChange: (v: boolean) => void }) {
+  const theme = useTheme() as any;
+  const { colors } = theme;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: theme.radius.md, paddingVertical: 10, paddingHorizontal: 12 }}>
+      <Text style={{ color: colors.text, fontWeight: '600' }}>{label}</Text>
+      <Switch value={value} onValueChange={onValueChange} thumbColor={value ? colors.pink : '#888'} />
+    </View>
   );
 }

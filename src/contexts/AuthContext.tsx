@@ -31,6 +31,11 @@ import * as supaAuth from '../services/supabaseAuthAdapter';
 import { getMyProfile, updateMyProfile } from '../services/profileService';
 import { initializeAllServices } from '../utils/serviceInitializer';
 import { secureLogger } from '../utils/privacyProtection';
+import {
+  registerDeviceForPush,
+  unregisterDeviceForPush,
+} from '../services/pushNotificationService';
+import Constants from 'expo-constants';
 
 // =====================================================
 // CONTEXT STATE TYPES
@@ -235,6 +240,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Set up session monitoring
         setupSessionMonitoring();
+
+        // Best-effort push registration
+        try {
+          await registerDeviceForPush(user.id);
+        } catch (e) {
+          secureLogger.warn('Push registration failed on session restore', { error: String(e) });
+        }
       } else {
         dispatch({ type: 'SET_USER', payload: null });
         secureLogger.info('AuthContext: No valid session found');
@@ -252,6 +264,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /**
    * Sets up session monitoring and automatic refresh
    */
+  const SESSION_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
   const setupSessionMonitoring = useCallback(() => {
     // Clear existing interval
     if (sessionCheckInterval) {
@@ -281,8 +295,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           secureLogger.error('AuthContext: Session check failed', { error });
         }
       },
-      5 * 60 * 1000
-    ); // 5 minutes
+      SESSION_CHECK_INTERVAL_MS
+    );
 
     setSessionCheckInterval(interval);
   }, [sessionCheckInterval]);
@@ -457,6 +471,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Set up session monitoring for authenticated user
           setupSessionMonitoring();
+
+          // Best-effort push registration
+          try {
+            await registerDeviceForPush(response.user.id);
+          } catch (e) {
+            secureLogger.warn('Push registration failed on login', { error: String(e) });
+          }
         } else {
           const errorResponse = response as AuthErrorResponse;
           dispatch({ type: 'SET_ERROR', payload: errorResponse.error });
@@ -526,6 +547,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (sessionCheckInterval) {
         clearInterval(sessionCheckInterval);
         setSessionCheckInterval(null);
+      }
+
+      // Best-effort device unregistration for push (skip in dev if configured)
+      try {
+        const keepToken =
+          (Constants as any)?.expoConfig?.extra?.PUSH_KEEP_TOKEN_ON_LOGOUT ===
+          true;
+        if (!keepToken && state.user) {
+          await unregisterDeviceForPush(state.user.id);
+        } else if (keepToken) {
+          secureLogger.info('Skipping push token unregister on logout (dev mode)');
+        }
+      } catch (e) {
+        secureLogger.warn('Supabase signOut failed', { error: String(e) });
       }
 
       try {
