@@ -7,8 +7,23 @@ import { notificationService, NotificationItem } from '../services/notificationS
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 
-const iconOf = (t: string) =>
-  t === 'like' ? '💗' : t === 'comment' ? '💬' : '⭐️';
+const iconOf = (t: string) => {
+  switch (t) {
+    case 'like':
+      return '💗';
+    case 'comment':
+      return '💬';
+    case 'message':
+      return '✉️';
+    case 'room':
+      return '🗨️';
+    case 'follow':
+      return '➕';
+    case 'system':
+    default:
+      return '⭐️';
+  }
+};
 
 export default function NotificationsScreen() {
   const theme = useTheme() as any;

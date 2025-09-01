@@ -3,7 +3,7 @@ import { secureLogger } from '../utils/privacyProtection';
 
 export type NotificationItem = {
   id: string;
-  type: 'like' | 'comment' | 'system';
+  type: 'like' | 'comment' | 'system' | 'follow' | 'message' | 'room';
   content: string;
   created_at: string;
   read: boolean;
