@@ -62,9 +62,15 @@ export default function NotificationsScreen() {
         renderItem={({ item }) => (
           <Pressable
             onPress={async () => {
-              if (!item.read && user) {
+              if (!user) return;
+              if (!item.read) {
+                // optimistic
                 setItems(prev => prev.map(p => (p.id === item.id ? { ...p, read: true } : p)));
-                await notificationService.markRead(user.id, item.id);
+                const res = await notificationService.markRead(user.id, item.id);
+                if (!res.ok) {
+                  // revert on failure
+                  setItems(prev => prev.map(p => (p.id === item.id ? { ...p, read: false } : p)));
+                }
               }
             }}
             style={({ pressed }) => [
@@ -114,8 +120,14 @@ export default function NotificationsScreen() {
                         e.stopPropagation();
                         if (!user) return;
                         const id = item.id;
+                        // optimistic remove
                         setItems(prev => prev.filter(p => p.id !== id));
-                        await notificationService.remove(user.id, id);
+                        const res = await notificationService.remove(user.id, id);
+                        if (!res.ok) {
+                          // revert by reloading latest page (simple fallback)
+                          const { data } = await notificationService.list(user.id, { limit: 50 });
+                          setItems(data);
+                        }
                       }}
                       style={({ pressed }) => ({
                         marginLeft: 8,

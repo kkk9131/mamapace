@@ -10,15 +10,23 @@ export type NotificationItem = {
 };
 
 export const notificationService = {
-  async list(userId: string, opts?: { limit?: number; cursor?: string }) {
+  async list(
+    userId: string,
+    opts?: { limit?: number; cursor?: string }
+  ) {
     try {
       const client = getSupabaseClient();
-      const q = client
+      let q = client
         .from('notifications')
         .select('id,type,content,created_at,read_at')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(opts?.limit ?? 50);
+        .order('created_at', { ascending: false });
+
+      const limit = opts?.limit ?? 50;
+      if (opts?.cursor) {
+        q = q.lt('created_at', opts.cursor);
+      }
+      q = q.limit(limit);
 
       const { data, error } = await q;
       if (error) throw error;
@@ -29,7 +37,8 @@ export const notificationService = {
         created_at: n.created_at,
         read: Boolean(n.read_at),
       }));
-      return { data: items };
+      const nextCursor = items.length > 0 ? items[items.length - 1].created_at : null;
+      return { data: items, nextCursor } as const;
     } catch (e) {
       secureLogger.error('notificationService.list failed', { error: String(e) });
       return { data: [] as NotificationItem[], error: 'list_failed' as const };

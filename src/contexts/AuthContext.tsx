@@ -244,7 +244,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Best-effort push registration
         try {
           await registerDeviceForPush(user.id);
-        } catch {}
+        } catch (e) {
+          secureLogger.warn('Push registration failed on session restore', { error: String(e) });
+        }
       } else {
         dispatch({ type: 'SET_USER', payload: null });
         secureLogger.info('AuthContext: No valid session found');
@@ -262,6 +264,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /**
    * Sets up session monitoring and automatic refresh
    */
+  const SESSION_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
   const setupSessionMonitoring = useCallback(() => {
     // Clear existing interval
     if (sessionCheckInterval) {
@@ -291,8 +295,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           secureLogger.error('AuthContext: Session check failed', { error });
         }
       },
-      5 * 60 * 1000
-    ); // 5 minutes
+      SESSION_CHECK_INTERVAL_MS
+    );
 
     setSessionCheckInterval(interval);
   }, [sessionCheckInterval]);
@@ -471,7 +475,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Best-effort push registration
           try {
             await registerDeviceForPush(response.user.id);
-          } catch {}
+          } catch (e) {
+            secureLogger.warn('Push registration failed on login', { error: String(e) });
+          }
         } else {
           const errorResponse = response as AuthErrorResponse;
           dispatch({ type: 'SET_ERROR', payload: errorResponse.error });
@@ -553,7 +559,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (keepToken) {
           secureLogger.info('Skipping push token unregister on logout (dev mode)');
         }
-      } catch {}
+      } catch (e) {
+        secureLogger.warn('Supabase signOut failed', { error: String(e) });
+      }
 
       try {
         await supaAuth.signOut();

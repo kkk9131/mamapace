@@ -51,7 +51,7 @@ async function ensureAndroidChannels() {
       sound: 'default',
       showBadge: true,
       enableVibrate: true,
-    } as any);
+    });
 
     // Messages / room posts (more attention)
     await Notifications.setNotificationChannelAsync('messages', {
@@ -60,7 +60,7 @@ async function ensureAndroidChannels() {
       sound: 'default',
       showBadge: true,
       enableVibrate: true,
-    } as any);
+    });
   } catch (e) {
     secureLogger.warn('Failed to configure Android notification channels', {
       error: String(e),
@@ -171,5 +171,7 @@ export async function touchPushRegistration(userId: string): Promise<void> {
       .update({ last_active_at: new Date().toISOString() })
       .eq('user_id', userId)
       .eq('device_id', deviceId);
-  } catch {}
+  } catch (e) {
+    secureLogger.warn('touchPushRegistration failed', { error: String(e) });
+  }
 }
