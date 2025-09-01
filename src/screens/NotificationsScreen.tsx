@@ -1,4 +1,5 @@
 import { View, Text, FlatList, Pressable, Animated, ActivityIndicator, RefreshControl } from 'react-native';
+import { NOTIFICATION_PAGE_SIZE } from '../config/notificationsConfig';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import { useEffect, useMemo, useState } from 'react';
@@ -38,7 +39,7 @@ export default function NotificationsScreen() {
   const loadInitial = async () => {
     if (!user) return;
     setLoading(true);
-    const { data, nextCursor } = await notificationService.list(user.id, { limit: 20 });
+    const { data, nextCursor } = await notificationService.list(user.id, { limit: NOTIFICATION_PAGE_SIZE });
     setItems(data);
     setNextCursor(nextCursor ?? null);
     setLoading(false);
@@ -65,7 +66,7 @@ export default function NotificationsScreen() {
   const loadMore = async () => {
     if (!user || loadingMore || !nextCursor) return;
     setLoadingMore(true);
-    const { data, nextCursor: next } = await notificationService.list(user.id, { limit: 20, cursor: nextCursor });
+    const { data, nextCursor: next } = await notificationService.list(user.id, { limit: NOTIFICATION_PAGE_SIZE, cursor: nextCursor });
     setItems(prev => [...prev, ...data]);
     setNextCursor(next ?? null);
     setLoadingMore(false);

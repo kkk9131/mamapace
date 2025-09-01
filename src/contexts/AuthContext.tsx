@@ -31,6 +31,7 @@ import * as supaAuth from '../services/supabaseAuthAdapter';
 import { getMyProfile, updateMyProfile } from '../services/profileService';
 import { initializeAllServices } from '../utils/serviceInitializer';
 import { secureLogger } from '../utils/privacyProtection';
+import { SESSION_CHECK_INTERVAL_MS } from '../config/notificationsConfig';
 import {
   registerDeviceForPush,
   unregisterDeviceForPush,
@@ -264,8 +265,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /**
    * Sets up session monitoring and automatic refresh
    */
-  const SESSION_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-
   const setupSessionMonitoring = useCallback(() => {
     // Clear existing interval
     if (sessionCheckInterval) {
