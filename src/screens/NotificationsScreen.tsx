@@ -1,4 +1,4 @@
-import { View, Text, FlatList, Pressable, Animated, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Pressable, Animated, ActivityIndicator, RefreshControl } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import { useEffect, useMemo, useState } from 'react';
@@ -31,22 +31,45 @@ export default function NotificationsScreen() {
   const { user } = useAuth();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+
+  const loadInitial = async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data, nextCursor } = await notificationService.list(user.id, { limit: 20 });
+    setItems(data);
+    setNextCursor(nextCursor ?? null);
+    setLoading(false);
+  };
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       if (!user) return;
-      setLoading(true);
-      const { data } = await notificationService.list(user.id);
-      if (mounted) {
-        setItems(data);
-        setLoading(false);
-      }
+      await loadInitial();
     })();
     return () => {
       mounted = false;
     };
   }, [user?.id]);
+
+  const onRefresh = async () => {
+    if (!user) return;
+    setRefreshing(true);
+    await loadInitial();
+    setRefreshing(false);
+  };
+
+  const loadMore = async () => {
+    if (!user || loadingMore || !nextCursor) return;
+    setLoadingMore(true);
+    const { data, nextCursor: next } = await notificationService.list(user.id, { limit: 20, cursor: nextCursor });
+    setItems(prev => [...prev, ...data]);
+    setNextCursor(next ?? null);
+    setLoadingMore(false);
+  };
   const fade = new Animated.Value(0);
   Animated.timing(fade, {
     toValue: 1,
@@ -71,6 +94,14 @@ export default function NotificationsScreen() {
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: theme.spacing(2), paddingTop: 8 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.pink} />}
+        onEndReachedThreshold={0.5}
+        onEndReached={loadMore}
+        ListFooterComponent={loadingMore ? (
+          <View style={{ paddingVertical: 12 }}>
+            <ActivityIndicator color={colors.pink} />
+          </View>
+        ) : null}
         ItemSeparatorComponent={() => (
           <View style={{ height: theme.spacing(1) }} />
         )}
