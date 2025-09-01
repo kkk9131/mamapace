@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+import { getExpoProjectId } from '../config/notificationsConfig';
 import { getSupabaseClient } from './supabaseClient';
 import { secureLogger } from '../utils/privacyProtection';
 
@@ -97,11 +98,10 @@ export async function registerDeviceForPush(userId: string): Promise<PushRegistr
     await ensureAndroidChannels();
 
     // Newer Expo SDKs require projectId when outside of EAS runtime env
-    const projectId = (Constants as any)?.expoConfig?.extra?.eas?.projectId ||
-      (Constants as any)?.easConfig?.projectId || undefined;
+    const projectId = getExpoProjectId();
 
     const tokenResponse = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined as any
+      projectId ? { projectId } : undefined
     );
     const token = tokenResponse.data;
 
