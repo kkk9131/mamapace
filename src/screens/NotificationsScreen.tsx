@@ -27,8 +27,14 @@ const iconOf = (t: string) => {
 };
 
 export default function NotificationsScreen() {
-  const theme = useTheme() as any;
-  const { colors } = theme;
+  const themeAny = useTheme() as any;
+  const theme = themeAny || {};
+  const colors = themeAny?.colors || {
+    text: '#ffffff',
+    subtext: '#aaaaaa',
+    surface: '#ffffff10',
+    pink: '#ff6ea9',
+  };
   const { user } = useAuth();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,12 +77,8 @@ export default function NotificationsScreen() {
     setNextCursor(next ?? null);
     setLoadingMore(false);
   };
-  const fade = new Animated.Value(0);
-  Animated.timing(fade, {
-    toValue: 1,
-    duration: 200,
-    useNativeDriver: true,
-  }).start();
+  // Remove initial fade to prevent flash on entering the screen
+  const fade = Animated.Value ? new Animated.Value(1) : (1 as unknown as Animated.Value);
   return (
     <Animated.View
       style={{
