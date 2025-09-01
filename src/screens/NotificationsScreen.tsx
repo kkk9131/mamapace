@@ -27,8 +27,19 @@ const iconOf = (t: string) => {
 };
 
 export default function NotificationsScreen() {
-  const theme = useTheme() as any;
-  const { colors } = theme;
+  const themeRaw = useTheme() as any | undefined;
+  const theme = useMemo(() => ({
+    spacing: themeRaw?.spacing ?? ((v: number) => v * 8),
+    radius: themeRaw?.radius ?? { lg: 12, md: 8 },
+    shadow: themeRaw?.shadow ?? { card: {} },
+    colors: themeRaw?.colors ?? {
+      text: '#ffffff',
+      subtext: '#aaaaaa',
+      surface: '#ffffff10',
+      pink: '#ff6ea9',
+    },
+  }), [themeRaw]);
+  const { colors } = theme as any;
   const { user } = useAuth();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,14 +57,10 @@ export default function NotificationsScreen() {
   };
 
   useEffect(() => {
-    let mounted = true;
     (async () => {
       if (!user) return;
       await loadInitial();
     })();
-    return () => {
-      mounted = false;
-    };
   }, [user?.id]);
 
   const onRefresh = async () => {
@@ -71,12 +78,8 @@ export default function NotificationsScreen() {
     setNextCursor(next ?? null);
     setLoadingMore(false);
   };
-  const fade = new Animated.Value(0);
-  Animated.timing(fade, {
-    toValue: 1,
-    duration: 200,
-    useNativeDriver: true,
-  }).start();
+  // Prevent flash on enter with static opacity value
+  const fade = useMemo(() => new Animated.Value(1), []);
   return (
     <Animated.View
       style={{
