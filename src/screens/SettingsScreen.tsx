@@ -23,6 +23,9 @@ export default function SettingsScreen({
     allow_follow: true,
     allow_system: true,
   });
+  const pendingPatchRef = useRef<Partial<typeof prefs>>({});
+  const flushTimer = useRef<NodeJS.Timeout | null>(null);
+  const FLUSH_DELAY_MS = 300;
 
   useEffect(() => {
     (async () => {
@@ -32,12 +35,32 @@ export default function SettingsScreen({
     })();
   }, [user?.id]);
 
+  const flushPatch = async () => {
+    if (!user?.id) return;
+    const patch = pendingPatchRef.current;
+    pendingPatchRef.current = {};
+    if (Object.keys(patch).length === 0) return;
+    const ok = await notificationPreferencesService.update(user.id, patch as any);
+    if (!ok) Alert.alert('通知設定', '更新に失敗しました。時間をおいてお試しください。');
+  };
+
+  const scheduleFlush = () => {
+    if (flushTimer.current) clearTimeout(flushTimer.current);
+    flushTimer.current = setTimeout(flushPatch, FLUSH_DELAY_MS);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (flushTimer.current) clearTimeout(flushTimer.current);
+      // Best-effort flush on unmount
+      flushPatch();
+    };
+  }, []);
+
   const setPref = async (key: keyof typeof prefs, value: boolean) => {
     setPrefs(prev => ({ ...prev, [key]: value }));
-    if (user?.id) {
-      const ok = await notificationPreferencesService.update(user.id, { [key]: value } as any);
-      if (!ok) Alert.alert('通知設定', '更新に失敗しました。時間をおいてお試しください。');
-    }
+    pendingPatchRef.current = { ...pendingPatchRef.current, [key]: value };
+    scheduleFlush();
   };
   const { handPreference, setHandPreference } = useHandPreference();
 
