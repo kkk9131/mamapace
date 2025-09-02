@@ -21,9 +21,12 @@ export async function uploadAvatarImage(userId: string, uri: string): Promise<st
   const path = `${userId}/${Date.now()}.${ext || 'jpg'}`;
 
   // Use direct HTTP upload to Supabase Storage (works reliably in Expo/RN)
+  const env = ((global as any)?.process?.env ?? {}) as Record<string, string | undefined>;
   const supaUrl =
     (Constants as any)?.expoConfig?.extra?.SUPABASE_URL ||
-    (Constants as any)?.manifestExtra?.SUPABASE_URL;
+    (Constants as any)?.manifestExtra?.SUPABASE_URL ||
+    env.EXPO_PUBLIC_SUPABASE_URL ||
+    env.SUPABASE_URL;
   if (!supaUrl) throw new Error('SupabaseのURLが設定されていません');
 
   const {
@@ -71,9 +74,12 @@ export async function uploadPostImages(
   const limit = Math.min(uris.length, 4);
 
   const client = getSupabaseClient();
+  const env = ((global as any)?.process?.env ?? {}) as Record<string, string | undefined>;
   const supaUrl =
     (Constants as any)?.expoConfig?.extra?.SUPABASE_URL ||
-    (Constants as any)?.manifestExtra?.SUPABASE_URL;
+    (Constants as any)?.manifestExtra?.SUPABASE_URL ||
+    env.EXPO_PUBLIC_SUPABASE_URL ||
+    env.SUPABASE_URL;
   if (!supaUrl) throw new Error('SupabaseのURLが設定されていません');
 
   const {
@@ -127,7 +133,8 @@ export async function uploadChatImages(
 ): Promise<{ url: string; width?: number; height?: number; mime?: string }[]> {
   // same as uploadPostImages but target bucket is 'chat-images'
   const client = getSupabaseClient();
-  const supaUrl = (Constants as any)?.expoConfig?.extra?.SUPABASE_URL || (Constants as any)?.manifestExtra?.SUPABASE_URL;
+  const env = ((global as any)?.process?.env ?? {}) as Record<string, string | undefined>;
+  const supaUrl = (Constants as any)?.expoConfig?.extra?.SUPABASE_URL || (Constants as any)?.manifestExtra?.SUPABASE_URL || env.EXPO_PUBLIC_SUPABASE_URL || env.SUPABASE_URL;
   if (!supaUrl) throw new Error('SupabaseのURLが設定されていません');
   const { data: { session } } = await client.auth.getSession();
   if (!session?.access_token) throw new Error('ログインが必要です');
@@ -154,7 +161,8 @@ export async function uploadRoomImages(
 ): Promise<{ url: string; width?: number; height?: number; mime?: string }[]> {
   // same as uploadPostImages but target bucket is 'room-images'
   const client = getSupabaseClient();
-  const supaUrl = (Constants as any)?.expoConfig?.extra?.SUPABASE_URL || (Constants as any)?.manifestExtra?.SUPABASE_URL;
+  const env = ((global as any)?.process?.env ?? {}) as Record<string, string | undefined>;
+  const supaUrl = (Constants as any)?.expoConfig?.extra?.SUPABASE_URL || (Constants as any)?.manifestExtra?.SUPABASE_URL || env.EXPO_PUBLIC_SUPABASE_URL || env.SUPABASE_URL;
   if (!supaUrl) throw new Error('SupabaseのURLが設定されていません');
   const { data: { session } } = await client.auth.getSession();
   if (!session?.access_token) throw new Error('ログインが必要です');
