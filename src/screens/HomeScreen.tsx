@@ -204,17 +204,17 @@ export default function HomeScreen({
   const handleToggleLike = async (postId: string, current: boolean) => {
     // optimistic update
     setItems(prev =>
-      prev.map(p =>
-        p.id === postId
-          ? {
-              ...p,
-              reaction_summary: {
-                reactedByMe: !current,
-                count: p.reaction_summary.count + (current ? -1 : +1),
-              },
-            }
-          : p
-      )
+      prev.map(p => {
+        if (p.id !== postId) return p;
+        const base = p.reaction_summary || { reactedByMe: false, count: 0 };
+        return {
+          ...p,
+          reaction_summary: {
+            reactedByMe: !current,
+            count: (base.count || 0) + (current ? -1 : +1),
+          },
+        };
+      })
     );
     try {
       if (!user?.id) throw new Error('not logged in');
@@ -222,17 +222,17 @@ export default function HomeScreen({
     } catch (e) {
       // rollback on error
       setItems(prev =>
-        prev.map(p =>
-          p.id === postId
-            ? {
-                ...p,
-                reaction_summary: {
-                  reactedByMe: current,
-                  count: p.reaction_summary.count + (current ? +1 : -1),
-                },
-              }
-            : p
-        )
+        prev.map(p => {
+          if (p.id !== postId) return p;
+          const base = p.reaction_summary || { reactedByMe: false, count: 0 };
+          return {
+            ...p,
+            reaction_summary: {
+              reactedByMe: current,
+              count: (base.count || 0) + (current ? +1 : -1),
+            },
+          };
+        })
       );
       notifyError('操作に失敗しました。時間をおいて再度お試しください');
     }

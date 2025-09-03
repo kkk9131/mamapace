@@ -64,33 +64,33 @@ export default function MyPostsListScreen() {
 
   const handleToggleLike = async (postId: string, current: boolean) => {
     setItems(prev =>
-      prev.map(p =>
-        p.id === postId
-          ? {
-              ...p,
-              reaction_summary: {
-                reactedByMe: !current,
-                count: p.reaction_summary.count + (current ? -1 : +1),
-              },
-            }
-          : p
-      )
+      prev.map(p => {
+        if (p.id !== postId) return p;
+        const base = p.reaction_summary || { reactedByMe: false, count: 0 };
+        return {
+          ...p,
+          reaction_summary: {
+            reactedByMe: !current,
+            count: (base.count || 0) + (current ? -1 : +1),
+          },
+        };
+      })
     );
     try {
       await toggleReaction(postId, current);
     } catch (e) {
       setItems(prev =>
-        prev.map(p =>
-          p.id === postId
-            ? {
-                ...p,
-                reaction_summary: {
-                  reactedByMe: current,
-                  count: p.reaction_summary.count + (current ? +1 : -1),
-                },
-              }
-            : p
-        )
+        prev.map(p => {
+          if (p.id !== postId) return p;
+          const base = p.reaction_summary || { reactedByMe: false, count: 0 };
+          return {
+            ...p,
+            reaction_summary: {
+              reactedByMe: current,
+              count: (base.count || 0) + (current ? +1 : -1),
+            },
+          };
+        })
       );
     }
   };

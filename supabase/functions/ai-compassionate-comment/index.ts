@@ -15,7 +15,6 @@ type Env = {
 interface RequestBody {
   postId: string;
   body: string;
-  languageHint?: string | null;
 }
 
 // Basic utilities
@@ -31,9 +30,24 @@ function clampText(input: string, maxLen = 280): string {
   return input.slice(0, maxLen - 1) + '…';
 }
 
+// Security/perf constants
+const DEFAULT_DAILY_LIMIT = 3;
+const RATE_LIMIT_QUERY_LIMIT = 200;
+const MAX_INPUT_LEN = 800; // limit prompt input size to Gemini
+
+function sanitizeInput(text: string): string {
+  try {
+    // Remove control characters except common whitespace, trim and clamp
+    const cleaned = text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim();
+    return cleaned.length > MAX_INPUT_LEN ? cleaned.slice(0, MAX_INPUT_LEN) + '…' : cleaned;
+  } catch {
+    return text;
+  }
+}
+
 async function generateCompassionateText(apiKey: string, postText: string): Promise<string> {
   // Gemini 1.5 Flash REST API call
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
   const systemInstruction = [
     'You are a warm, empathetic assistant supporting parents.',
     'Write one short reply that feels kind, safe, and non-judgmental.',
@@ -51,7 +65,7 @@ async function generateCompassionateText(apiKey: string, postText: string): Prom
       {
         role: 'user',
         parts: [
-          { text: `${systemInstruction}\n\nPost: ${postText}` },
+          { text: `${systemInstruction}\n\nPost: ${sanitizeInput(postText)}` },
         ],
       },
     ],
@@ -69,6 +83,7 @@ async function generateCompassionateText(apiKey: string, postText: string): Prom
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
     },
     body: JSON.stringify(payload),
   });
@@ -85,6 +100,18 @@ async function generateCompassionateText(apiKey: string, postText: string): Prom
 Deno.serve(async (req) => {
   try {
     if (req.method !== 'POST') {
+      // CORS preflight support
+      if (req.method === 'OPTIONS') {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'authorization, content-type',
+            'Access-Control-Max-Age': '86400',
+          },
+        });
+      }
       return jsonResponse(405, { error: 'Method Not Allowed' });
     }
 
@@ -92,7 +119,7 @@ Deno.serve(async (req) => {
     const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') || '';
     const SYSTEM_USER_ID = Deno.env.get('SYSTEM_USER_ID') || '';
-    const DAILY_LIMIT = Number(Deno.env.get('DAILY_LIMIT') ?? '3');
+    const DAILY_LIMIT = Number(Deno.env.get('DAILY_LIMIT') ?? String(DEFAULT_DAILY_LIMIT));
 
     if (!SERVICE_KEY || !GEMINI_API_KEY || !SYSTEM_USER_ID) {
       return jsonResponse(500, {
@@ -103,6 +130,12 @@ Deno.serve(async (req) => {
           haveSystemUser: !!SYSTEM_USER_ID,
         },
       });
+    }
+
+    // Explicit auth presence check (verify_jwt also enabled at function level)
+    const authz = req.headers.get('authorization');
+    if (!authz || !authz.toLowerCase().startsWith('bearer ')) {
+      return jsonResponse(401, { error: 'Unauthorized' });
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
@@ -134,7 +167,7 @@ Deno.serve(async (req) => {
       .select('id, post_id, created_at')
       .eq('user_id', SYSTEM_USER_ID)
       .gte('created_at', since.toISOString())
-      .limit(200);
+      .limit(RATE_LIMIT_QUERY_LIMIT);
     if (aiErr) throw new Error(`db_fetch_ai_comments_today: ${aiErr.message || JSON.stringify(aiErr)}`);
     const postIds = Array.from(new Set((aiCommentsToday ?? []).map((c: any) => c.post_id)));
     let matchedCount = 0;
@@ -174,7 +207,10 @@ Deno.serve(async (req) => {
       .single();
     if (insertErr) throw new Error(`db_insert_comment: ${insertErr.message || JSON.stringify(insertErr)}`);
 
-    return jsonResponse(200, { ok: true, comment: newComment });
+    return new Response(JSON.stringify({ ok: true, comment: newComment }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
   } catch (e) {
     const msg = (e && typeof e === 'object' && 'message' in (e as any))
       ? (e as any).message
@@ -186,6 +222,9 @@ Deno.serve(async (req) => {
       haveSystemUser: !!Deno.env.get('SYSTEM_USER_ID'),
     };
     console.error('ai-compassionate-comment error', msg, diag);
-    return jsonResponse(500, { error: msg, diag });
+    return new Response(JSON.stringify({ error: msg, diag }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
   }
 });
