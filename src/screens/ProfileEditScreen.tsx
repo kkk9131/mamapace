@@ -13,6 +13,7 @@ import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
+import { imagesOnlyMediaTypes } from '../utils/imagePickerCompat';
 import { updateMyProfile, updateMyAvatarUrl } from '../services/profileService';
 import { uploadAvatarImage } from '../services/storageService';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
@@ -58,12 +59,13 @@ export default function ProfileEditScreen({ navigation }: any) {
 
   const handlePickImage = async () => {
     try {
-      const mediaTypes = (ImagePicker as any).MediaType
-        ? [((ImagePicker as any).MediaType as any).Images]
-        : (ImagePicker as any).MediaTypeOptions?.Images;
-
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('権限', '写真ライブラリへのアクセスが必要です');
+        return;
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes,
+        mediaTypes: imagesOnlyMediaTypes(),
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.9,

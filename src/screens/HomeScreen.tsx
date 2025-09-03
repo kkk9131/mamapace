@@ -13,11 +13,7 @@ import { useTheme } from '../theme/theme';
 import PostCard from '../components/PostCard';
 import { PostSkeletonCard } from '../components/Skeleton';
 import { PostWithMeta } from '../types/post';
-import {
-  fetchHomeFeed,
-  toggleReaction,
-  deletePost,
-} from '../services/postService';
+import { fetchHomeFeed, toggleReaction } from '../services/postService';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
@@ -38,8 +34,19 @@ export default function HomeScreen({
   onOpenProfileEdit?: () => void;
   onOpenUser?: (userId: string) => void;
 }) {
-  const theme = useTheme() as any;
-  const { colors } = theme;
+  const themeRaw = useTheme() as any | undefined;
+  const theme = useMemo(() => ({
+    spacing: themeRaw?.spacing ?? ((v: number) => v * 8),
+    radius: themeRaw?.radius ?? { lg: 12, md: 8 },
+    shadow: themeRaw?.shadow ?? { card: {} },
+    colors: themeRaw?.colors ?? {
+      text: '#ffffff',
+      subtext: '#aaaaaa',
+      surface: '#ffffff10',
+      pink: '#ff6ea9',
+    },
+  }), [themeRaw]);
+  const { colors } = theme as any;
   const fade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(fade, {
@@ -136,10 +143,10 @@ export default function HomeScreen({
                   p.id === postId
                     ? {
                         ...p,
-                        reaction_summary: {
-                          ...p.reaction_summary,
-                          count: (p.reaction_summary.count || 0) + 1,
-                        },
+                        reaction_summary: (() => {
+                          const base = p.reaction_summary || { reactedByMe: false, count: 0 };
+                          return { ...base, count: (base.count || 0) + 1 };
+                        })(),
                       }
                     : p
                 )
@@ -157,13 +164,13 @@ export default function HomeScreen({
                   p.id === postId
                     ? {
                         ...p,
-                        reaction_summary: {
-                          ...p.reaction_summary,
-                          count: Math.max(
-                            0,
-                            (p.reaction_summary.count || 0) - 1
-                          ),
-                        },
+                        reaction_summary: (() => {
+                          const base = p.reaction_summary || { reactedByMe: false, count: 0 };
+                          return {
+                            ...base,
+                            count: Math.max(0, (base.count || 0) - 1),
+                          };
+                        })(),
                       }
                     : p
                 )
@@ -231,15 +238,7 @@ export default function HomeScreen({
     }
   };
 
-  const handleDelete = async (postId: string) => {
-    try {
-      if (!user?.id) return;
-      await deletePost(postId);
-      setItems(prev => prev.filter(p => p.id !== postId));
-    } catch (e: any) {
-      notifyError(e?.message || '削除に失敗しました');
-    }
-  };
+  // Deletion is restricted to "あなた"画面（MyPostsListScreen）
 
   return (
     <Animated.View
@@ -303,7 +302,7 @@ export default function HomeScreen({
           <PostCard
             post={item}
             isOwner={item.user_id === user?.id}
-            onDelete={handleDelete}
+            // No deletion on Home; only on "あなた" screen
             commentDelta={commentDeltas?.[item.id] || 0}
             onOpenComments={id => onOpenPost && onOpenPost(id)}
             onToggleLike={handleToggleLike}

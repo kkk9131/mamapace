@@ -17,7 +17,9 @@ import { notifyError } from '../utils/notify';
 
 import { useEffect, useRef, useState } from 'react';
 import { createPost } from '../services/postService';
+import { triggerCompassionateAiComment } from '../services/aiCommentService';
 import * as ImagePicker from 'expo-image-picker';
+import { imagesOnlyMediaTypes, imageOnlyMediaTypeSingle } from '../utils/imagePickerCompat';
 import { uploadPostImages } from '../services/storageService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -30,7 +32,7 @@ export default function ComposeScreen({
 }) {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const [aiOn, setAiOn] = useState(true);
+  const [aiOn, setAiOn] = useState(false);
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -109,7 +111,7 @@ export default function ComposeScreen({
                       }
                       const res = await ImagePicker.launchImageLibraryAsync({
                         allowsMultipleSelection: true,
-                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        mediaTypes: imagesOnlyMediaTypes(),
                         selectionLimit: 4,
                         quality: 1,
                       });
@@ -150,7 +152,7 @@ export default function ComposeScreen({
                         return;
                       }
                       const res = await ImagePicker.launchCameraAsync({
-                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        mediaTypes: imageOnlyMediaTypeSingle(),
                         quality: 1,
                       });
                       if (res.canceled) return;
@@ -275,7 +277,12 @@ export default function ComposeScreen({
                 if (images.length > 0) {
                   attachments = await uploadPostImages(user.id, images.map(i => i.uri));
                 }
-                await createPost(body.trim(), attachments);
+                const created = await createPost(body.trim(), attachments);
+                if (aiOn && created?.id) {
+                  // Fire-and-forget; do not block UX
+                  const bodyForAi = (created as any)?.body || body.trim() || '[image]';
+                  triggerCompassionateAiComment({ postId: created.id, body: bodyForAi }).catch(() => {});
+                }
                 if (onPosted) onPosted();
                 else onClose && onClose();
               } catch (e: any) {

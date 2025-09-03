@@ -3,7 +3,7 @@
 
 create table if not exists public.push_subscriptions (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null references public.user_profiles(id) on delete cascade,
   device_id text not null,
   expo_push_token text not null,
   device_os text,
@@ -48,4 +48,3 @@ do $$ begin
 end $$;
 
 create index if not exists push_subscriptions_user_id_idx on public.push_subscriptions(user_id);
-

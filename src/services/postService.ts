@@ -269,13 +269,29 @@ export async function createComment(
   const bodyToSend = (body && body.trim().length > 0)
     ? body.trim()
     : ((attachments && attachments.length > 0) ? '[image]' : '');
-  const { data, error } = await client.rpc('create_comment_v2', {
-    p_post_id: postId,
-    p_body: bodyToSend,
-    p_attachments: attachments && attachments.length ? attachments : [],
-  });
-  if (error) throw error;
-  return data as Comment;
+  // まずは新シグネチャ (uuid, text, jsonb) を試す。存在しない環境ではフォールバックする。
+  const tryAttachments = async () =>
+    await client.rpc('create_comment_v2', {
+      p_post_id: postId,
+      p_body: bodyToSend,
+      p_attachments: attachments && attachments.length ? attachments : [],
+    });
+  const tryLegacy = async () =>
+    await client.rpc('create_comment_v2', {
+      p_post_id: postId,
+      p_body: bodyToSend,
+    } as any);
+
+  let res = await tryAttachments();
+  if (res.error) {
+    const msg = String(res.error?.message || '');
+    // 代表的なエラー: 関数が無い/引数数が合わない/attachments列が無い
+    if (/does not exist|No function matches the given name|argument|attachments/i.test(msg) || (res as any).code === '42883') {
+      res = await tryLegacy();
+    }
+  }
+  if (res.error) throw res.error;
+  return res.data as Comment;
 }
 
 export async function deletePost(postId: string): Promise<boolean> {

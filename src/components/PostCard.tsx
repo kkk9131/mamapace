@@ -26,8 +26,19 @@ export default function PostCard({
   isOwner?: boolean;
   onDelete?: (postId: string) => void;
 }) {
-  const theme = useTheme() as any;
-  const { colors } = theme;
+  const themeRaw = useTheme() as any | undefined;
+  const theme = useMemo(() => ({
+    spacing: themeRaw?.spacing ?? ((v: number) => v * 8),
+    radius: themeRaw?.radius ?? { lg: 12, md: 8 },
+    shadow: themeRaw?.shadow ?? { card: {} },
+    colors: themeRaw?.colors ?? {
+      text: '#ffffff',
+      subtext: '#aaaaaa',
+      surface: '#ffffff10',
+      pink: '#ff6ea9',
+    },
+  }), [themeRaw]);
+  const { colors } = theme as any;
   const { handPreference } = useHandPreference();
   const likeScale = useRef(new Animated.Value(1)).current;
   const float = useRef(new Animated.Value(0)).current;
@@ -302,8 +313,8 @@ export default function PostCard({
             </Pressable>
           </View>
 
-          {/* Right side: Delete button (only for own posts) */}
-          {isOwner && (
+          {/* Right side: Delete button (only when owner AND handler provided) */}
+          {isOwner && !!onDelete && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="投稿を削除"

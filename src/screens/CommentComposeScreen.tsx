@@ -14,6 +14,7 @@ import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 import { createComment } from '../services/postService';
 import * as ImagePicker from 'expo-image-picker';
+import { imagesOnlyMediaTypes, imageOnlyMediaTypeSingle } from '../utils/imagePickerCompat';
 import { uploadPostImages } from '../services/storageService';
 import { Image } from 'react-native';
 import { notifyError } from '../utils/notify';
@@ -120,7 +121,7 @@ export default function CommentComposeScreen({
                           if (!perm.granted) { notifyError('写真ライブラリへのアクセスが必要です'); return; }
                           const res = await ImagePicker.launchImageLibraryAsync({
                             allowsMultipleSelection: true,
-                            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                            mediaTypes: imagesOnlyMediaTypes(),
                             selectionLimit: 4,
                             quality: 1,
                           });
@@ -143,7 +144,7 @@ export default function CommentComposeScreen({
                         try {
                           const perm = await ImagePicker.requestCameraPermissionsAsync();
                           if (!perm.granted) { notifyError('カメラへのアクセスが必要です'); return; }
-                          const res = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 1 });
+                          const res = await ImagePicker.launchCameraAsync({ mediaTypes: imageOnlyMediaTypeSingle(), quality: 1 });
                           if (res.canceled) return;
                           const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
                           setImages(prev => [...prev, ...picked].slice(0, 4));
@@ -228,6 +229,9 @@ export default function CommentComposeScreen({
                         }
                         await createComment(postId, body.trim(), attachments);
                         Keyboard.dismiss();
+                        // 入力リセット
+                        setBody('');
+                        setImages([]);
                         if (onPosted) onPosted();
                         else onClose && onClose();
                       } catch (e: any) {
@@ -311,6 +315,8 @@ export default function CommentComposeScreen({
                         }
                         await createComment(postId, body.trim(), attachments);
                         Keyboard.dismiss();
+                        setBody('');
+                        setImages([]);
                         if (onPosted) onPosted();
                         else onClose && onClose();
                       } catch (e: any) {

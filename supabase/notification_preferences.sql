@@ -1,7 +1,7 @@
 -- User notification preferences (per user)
 
 create table if not exists public.notification_preferences (
-  user_id uuid primary key references auth.users(id) on delete cascade,
+  user_id uuid primary key references public.user_profiles(id) on delete cascade,
   allow_message boolean not null default true,
   allow_room boolean not null default true,
   allow_like boolean not null default true,
@@ -37,4 +37,3 @@ do $$ begin
       for update using (auth.uid() = user_id);
   end if;
 end $$;
-

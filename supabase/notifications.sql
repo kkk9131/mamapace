@@ -2,7 +2,7 @@
 
 create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null references public.user_profiles(id) on delete cascade,
   type text not null check (type in ('like','comment','system','follow','message','room')),
   content text not null,
   created_at timestamptz not null default now(),
