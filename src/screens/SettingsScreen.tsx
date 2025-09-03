@@ -5,6 +5,7 @@ import { BlurView } from 'expo-blur';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { notificationPreferencesService } from '../services/notificationPreferencesService';
+import { createBatchUpdater } from '../utils/batchUpdate';
 
 export default function SettingsScreen({
   onLogoutNavigate,
@@ -23,9 +24,12 @@ export default function SettingsScreen({
     allow_follow: true,
     allow_system: true,
   });
-  const pendingPatchRef = useRef<Partial<typeof prefs>>({});
-  const flushTimer = useRef<NodeJS.Timeout | null>(null);
-  const FLUSH_DELAY_MS = 300;
+  const updaterRef = useRef(
+    createBatchUpdater<typeof prefs>(
+      (patch) => (user?.id ? notificationPreferencesService.update(user.id, patch as any) : Promise.resolve(false)),
+      300
+    )
+  );
 
   useEffect(() => {
     (async () => {
@@ -35,32 +39,16 @@ export default function SettingsScreen({
     })();
   }, [user?.id]);
 
-  const flushPatch = async () => {
-    if (!user?.id) return;
-    const patch = pendingPatchRef.current;
-    pendingPatchRef.current = {};
-    if (Object.keys(patch).length === 0) return;
-    const ok = await notificationPreferencesService.update(user.id, patch as any);
-    if (!ok) Alert.alert('通知設定', '更新に失敗しました。時間をおいてお試しください。');
-  };
-
-  const scheduleFlush = () => {
-    if (flushTimer.current) clearTimeout(flushTimer.current);
-    flushTimer.current = setTimeout(flushPatch, FLUSH_DELAY_MS);
-  };
-
   useEffect(() => {
     return () => {
-      if (flushTimer.current) clearTimeout(flushTimer.current);
       // Best-effort flush on unmount
-      flushPatch();
+      updaterRef.current.flushNow();
     };
   }, []);
 
   const setPref = async (key: keyof typeof prefs, value: boolean) => {
     setPrefs(prev => ({ ...prev, [key]: value }));
-    pendingPatchRef.current = { ...pendingPatchRef.current, [key]: value };
-    scheduleFlush();
+    updaterRef.current.set(key, value);
   };
   const { handPreference, setHandPreference } = useHandPreference();
 

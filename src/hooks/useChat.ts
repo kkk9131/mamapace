@@ -70,6 +70,13 @@ const HOOK_CONFIG = {
 // CHAT HOOK
 // =====================================================
 
+// 軽量なメモリキャッシュ（画面遷移時の一時消失防止）
+const chatStateCache = new Map<string, {
+  messages: MessageWithSender[];
+  chat: ChatWithParticipants | null;
+  nextCursor?: string;
+}>();
+
 export function useChat(chatId: string) {
   const { user, isAuthenticated } = useAuth();
   const [state, setState] = useState<ChatState>({
@@ -697,6 +704,16 @@ export function useChat(chatId: string) {
   useEffect(() => {
     if (chatId && isAuthenticated) {
       retryCountRef.current = 0;
+      // キャッシュがあれば即時反映（非同期ロード完了までのチラつき回避）
+      const cached = chatStateCache.get(chatId);
+      if (cached) {
+        setState(prev => ({
+          ...prev,
+          chat: cached.chat,
+          messages: cached.messages,
+          nextCursor: cached.nextCursor,
+        }));
+      }
       loadChat();
     }
 
@@ -715,16 +732,11 @@ export function useChat(chatId: string) {
         clearTimeout(autoReadTimeoutRef.current);
       }
 
-      // Reset state
-      setState({
-        chat: null,
-        messages: [],
-        isLoading: false,
-        isLoadingMessages: false,
-        isSending: false,
-        error: null,
-        hasMoreMessages: true,
-        typingUsers: [],
+      // 現在の状態をキャッシュに保存（次回マウントで即時反映）
+      chatStateCache.set(chatId, {
+        chat: state.chat,
+        messages: state.messages,
+        nextCursor: state.nextCursor,
       });
     };
     // Remove loadChat from dependencies to prevent infinite loop

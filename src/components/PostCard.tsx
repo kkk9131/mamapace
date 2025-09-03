@@ -44,14 +44,10 @@ export default function PostCard({
   const float = useRef(new Animated.Value(0)).current;
   const commentScale = useRef(new Animated.Value(1)).current;
 
-  const likeCount = Math.max(
-    0,
-    (post.reaction_summary.count || 0) + (reactionDelta || 0)
-  );
-  const commentCount = Math.max(
-    0,
-    (post.comment_summary.count || 0) + (commentDelta || 0)
-  );
+  const baseReaction = post.reaction_summary || { reactedByMe: false, count: 0 };
+  const baseComment = post.comment_summary || { count: 0 };
+  const likeCount = Math.max(0, (baseReaction.count || 0) + (reactionDelta || 0));
+  const commentCount = Math.max(0, (baseComment.count || 0) + (commentDelta || 0));
   const likeText = useMemo(
     () => (likeCount > 0 ? `${likeCount}` : ''),
     [likeCount]
@@ -89,7 +85,7 @@ export default function PostCard({
       duration: 450,
       useNativeDriver: true,
     }).start();
-    onToggleLike && onToggleLike(post.id, post.reaction_summary.reactedByMe);
+    onToggleLike && onToggleLike(post.id, baseReaction.reactedByMe);
     setLikeBusy(false);
   };
 
@@ -313,8 +309,8 @@ export default function PostCard({
             </Pressable>
           </View>
 
-          {/* Right side: Delete button (only for own posts) */}
-          {isOwner && (
+          {/* Right side: Delete button (only when owner AND handler provided) */}
+          {isOwner && !!onDelete && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="投稿を削除"

@@ -17,8 +17,10 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "プロフィール画像を選択するためにフォトライブラリへアクセスします。",
-        "NSCameraUsageDescription": "プロフィール画像を撮影するためにカメラへアクセスします。"
-      }
+        "NSCameraUsageDescription": "プロフィール画像を撮影するためにカメラへアクセスします。",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.kaztrigger.mamapace"
     },
     "android": {
       "adaptiveIcon": {

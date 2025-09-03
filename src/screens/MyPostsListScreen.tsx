@@ -5,12 +5,14 @@ import {
   Pressable,
   Animated,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useTheme } from '../theme/theme';
 import { useEffect, useRef, useState } from 'react';
 import PostCard from '../components/PostCard';
 import { PostWithMeta } from '../types/post';
-import { fetchMyPosts, toggleReaction } from '../services/postService';
+import { fetchMyPosts, toggleReaction, deletePost } from '../services/postService';
+import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function MyPostsListScreen() {
@@ -62,35 +64,54 @@ export default function MyPostsListScreen() {
 
   const handleToggleLike = async (postId: string, current: boolean) => {
     setItems(prev =>
-      prev.map(p =>
-        p.id === postId
-          ? {
-              ...p,
-              reaction_summary: {
-                reactedByMe: !current,
-                count: p.reaction_summary.count + (current ? -1 : +1),
-              },
-            }
-          : p
-      )
+      prev.map(p => {
+        if (p.id !== postId) return p;
+        const base = p.reaction_summary || { reactedByMe: false, count: 0 };
+        return {
+          ...p,
+          reaction_summary: {
+            reactedByMe: !current,
+            count: (base.count || 0) + (current ? -1 : +1),
+          },
+        };
+      })
     );
     try {
       await toggleReaction(postId, current);
     } catch (e) {
       setItems(prev =>
-        prev.map(p =>
-          p.id === postId
-            ? {
-                ...p,
-                reaction_summary: {
-                  reactedByMe: current,
-                  count: p.reaction_summary.count + (current ? +1 : -1),
-                },
-              }
-            : p
-        )
+        prev.map(p => {
+          if (p.id !== postId) return p;
+          const base = p.reaction_summary || { reactedByMe: false, count: 0 };
+          return {
+            ...p,
+            reaction_summary: {
+              reactedByMe: current,
+              count: (base.count || 0) + (current ? +1 : -1),
+            },
+          };
+        })
       );
     }
+  };
+
+  const handleDelete = async (postId: string) => {
+    Alert.alert('投稿を削除', 'この投稿を削除しますか？', [
+      { text: 'キャンセル', style: 'cancel' },
+      {
+        text: '削除',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            if (!user?.id) return;
+            await deletePost(postId);
+            setItems(prev => prev.filter(p => p.id !== postId));
+          } catch (e: any) {
+            notifyError(e?.message || '削除に失敗しました');
+          }
+        },
+      },
+    ]);
   };
 
   return (
@@ -117,6 +138,8 @@ export default function MyPostsListScreen() {
             post={item}
             onOpenComments={() => {}}
             onToggleLike={handleToggleLike}
+            isOwner={true}
+            onDelete={handleDelete}
           />
         )}
         onEndReachedThreshold={0.4}

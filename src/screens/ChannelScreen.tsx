@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../theme/theme';
 import * as ImagePicker from 'expo-image-picker';
+import { imagesOnlyMediaTypes, imageOnlyMediaTypeSingle } from '../utils/imagePickerCompat';
 import { uploadRoomImages } from '../services/storageService';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { roomService } from '../services/roomService';
@@ -529,6 +530,16 @@ export default function ChannelScreen({
           contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
           inverted={false}
           showsVerticalScrollIndicator={false}
+          onContentSizeChange={() => {
+            setTimeout(() => {
+              flatListRef.current?.scrollToEnd({ animated: false });
+            }, 50);
+          }}
+          onLayout={() => {
+            setTimeout(() => {
+              flatListRef.current?.scrollToEnd({ animated: false });
+            }, 50);
+          }}
           refreshControl={
             <RefreshControl
               refreshing={loading}
@@ -610,7 +621,7 @@ export default function ChannelScreen({
                   try {
                     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
                     if (!perm.granted) { Alert.alert('権限', '写真ライブラリへのアクセスが必要です'); return; }
-                    const res = await ImagePicker.launchImageLibraryAsync({ allowsMultipleSelection: true, mediaTypes: ImagePicker.MediaTypeOptions.Images, selectionLimit: 4, quality: 1 });
+                    const res = await ImagePicker.launchImageLibraryAsync({ allowsMultipleSelection: true, mediaTypes: imagesOnlyMediaTypes(), selectionLimit: 4, quality: 1 });
                     if (res.canceled) return;
                     const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
                     setImages(prev => [...prev, ...picked].slice(0, 4));
@@ -625,7 +636,7 @@ export default function ChannelScreen({
                   try {
                     const perm = await ImagePicker.requestCameraPermissionsAsync();
                     if (!perm.granted) { Alert.alert('権限', 'カメラへのアクセスが必要です'); return; }
-                    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 1 });
+                    const res = await ImagePicker.launchCameraAsync({ mediaTypes: imageOnlyMediaTypeSingle(), quality: 1 });
                     if (res.canceled) return;
                     const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
                     setImages(prev => [...prev, ...picked].slice(0, 4));

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import HomeScreen from '../screens/HomeScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
@@ -94,12 +94,43 @@ function TextButton({
   );
 }
 
-export default function CustomTabs() {
+export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigateTo?: string | null; onNavigateConsumed?: () => void }) {
   const theme = useTheme() as any;
   const { colors } = theme;
   const { isAuthenticated, isLoading, user } = useAuth();
   const { handPreference } = useHandPreference();
   const [active, setActive] = useState<any>('home');
+
+  // React to external navigation requests (e.g., notification tap)
+  useEffect(() => {
+    if (!navigateTo) return;
+    try {
+      let parsed: any = undefined;
+      try { parsed = JSON.parse(navigateTo); } catch {}
+      if (parsed && parsed.screen) {
+        const s = String(parsed.screen);
+        if (s === 'chat' && parsed.chat_id) {
+          setActiveChatId(String(parsed.chat_id));
+          setActive('chat' as any);
+        } else if (s === 'comments' && parsed.post_id) {
+          setActivePostId(String(parsed.post_id));
+          setActive('comments' as any);
+        } else if (s === 'userProfile' && parsed.user_id) {
+          setActiveUserId(String(parsed.user_id));
+          setActive('userProfile' as any);
+        } else if (s === 'rooms') {
+          setActive('rooms' as any);
+        } else {
+          setActive(s as any);
+        }
+      } else {
+        // Simple tab name
+        setActive(navigateTo as any);
+      }
+    } finally {
+      onNavigateConsumed && onNavigateConsumed();
+    }
+  }, [navigateTo, onNavigateConsumed]);
   const [homeRefreshKey, setHomeRefreshKey] = useState<number>(0);
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [activeUserId, setActiveUserId] = useState<string | null>(null);

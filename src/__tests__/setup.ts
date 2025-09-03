@@ -43,28 +43,61 @@ jest.mock('expo-haptics', () => ({
   },
 }));
 
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: jest.fn(() => ({
-    auth: {
-      signInWithPassword: jest.fn(),
-      signUp: jest.fn(),
-      signOut: jest.fn(),
-      getSession: jest.fn(),
-      onAuthStateChange: jest.fn(() => ({
-        data: { subscription: { unsubscribe: jest.fn() } },
-      })),
-    },
-    from: jest.fn(() => ({
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn(),
-    })),
-    rpc: jest.fn(),
-  })),
+// Mock Expo core to avoid native references in tests
+jest.mock('expo', () => ({}));
+
+// Mock Expo Blur
+jest.mock('expo-blur', () => ({
+  BlurView: 'BlurView',
 }));
+
+// Mock Expo Image Manipulator
+jest.mock('expo-image-manipulator', () => ({
+  manipulateAsync: jest.fn(async (uri: string) => ({ uri, width: 800, height: 600 })),
+  SaveFormat: { JPEG: 'jpeg', PNG: 'png' },
+}));
+
+// Mock Expo FileSystem minimal default (tests may override per-suite)
+jest.mock('expo-file-system', () => ({
+  uploadAsync: jest.fn(async () => ({ status: 200, body: '' })),
+  FileSystemUploadType: { BINARY_CONTENT: 'binary' },
+}));
+
+jest.mock('@supabase/supabase-js', () => {
+  const chain = {
+    select: jest.fn(function () { return this; }),
+    insert: jest.fn(function () { return this; }),
+    update: jest.fn(function () { return this; }),
+    delete: jest.fn(function () { return this; }),
+    eq: jest.fn(function () { return this; }),
+    order: jest.fn(function () { return this; }),
+    lt: jest.fn(function () { return this; }),
+    limit: jest.fn(function () { return this; }),
+    single: jest.fn(),
+    maybeSingle: jest.fn(),
+    upsert: jest.fn(function () { return this; }),
+  } as any;
+  return ({
+    createClient: jest.fn(() => ({
+      auth: {
+        signInWithPassword: jest.fn(),
+        signUp: jest.fn(),
+        signOut: jest.fn(),
+        getSession: jest.fn(),
+        onAuthStateChange: jest.fn(() => ({
+          data: { subscription: { unsubscribe: jest.fn() } },
+        })),
+      },
+      from: jest.fn(() => ({ ...chain })),
+      storage: {
+        from: jest.fn(() => ({
+          getPublicUrl: jest.fn((path: string) => ({ data: { publicUrl: `https://cdn.example.com/${path}` } })),
+        })),
+      },
+      rpc: jest.fn(),
+    })),
+  });
+});
 
 // Mock React Navigation
 jest.mock('@react-navigation/native', () => ({
@@ -97,6 +130,7 @@ jest.mock('react-native', () => ({
   Text: 'Text',
   TextInput: 'TextInput',
   Pressable: 'Pressable',
+  Switch: 'Switch',
   FlatList: 'FlatList',
   ScrollView: 'ScrollView',
   KeyboardAvoidingView: 'KeyboardAvoidingView',
