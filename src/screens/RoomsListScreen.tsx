@@ -39,6 +39,7 @@ export default function RoomsListScreen({
   const [activeChatUserName, setActiveChatUserName] = useState<string | null>(
     null
   );
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // Animation - smart animation handling to prevent blank screen on back navigation
   React.useEffect(() => {
@@ -129,6 +130,10 @@ export default function RoomsListScreen({
           setActiveChatUserName(userName);
           setCurrentView('directChat');
         }}
+        onOpenUser={(userId: string) => {
+          setSelectedUserId(userId);
+          setCurrentView('userProfile');
+        }}
       />
     );
   }
@@ -162,6 +167,28 @@ export default function RoomsListScreen({
           setActiveChatId(null);
           setActiveChatUserName(null);
           setCurrentView('channel');
+        }}
+        onNavigateToUser={(userId: string) => {
+          setSelectedUserId(userId);
+          setCurrentView('userProfile');
+        }}
+      />
+    );
+  }
+
+  if (currentView === 'userProfile' && selectedUserId) {
+    const UserProfileScreen = require('./UserProfileScreen').default;
+    return (
+      <UserProfileScreen
+        userId={selectedUserId}
+        onBack={() => {
+          setSelectedUserId(null);
+          setCurrentView('channel');
+        }}
+        onNavigateToChat={(chatId: string, userName: string) => {
+          setActiveChatId(chatId);
+          setActiveChatUserName(userName);
+          setCurrentView('directChat');
         }}
       />
     );

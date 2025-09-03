@@ -11,6 +11,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useTheme } from '../theme/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import {
   useSpaceSearch,
@@ -35,7 +36,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
 
   // State management
   const [currentView, setCurrentView] = useState<
-    'list' | 'search' | 'anonymous' | 'channel' | 'create' | 'invite' | 'directChat'
+    'list' | 'search' | 'anonymous' | 'channel' | 'create' | 'invite' | 'directChat' | 'userProfile'
   >('list');
   const [selectedFilter, setSelectedFilter] = useState<string>('すべて');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -49,6 +50,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
   const [activeChatUserName, setActiveChatUserName] = useState<string | null>(
     null
   );
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // Hooks
   const {
@@ -181,6 +183,10 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
           setActiveChatUserName(userName);
           setCurrentView('directChat');
         }}
+        onOpenUser={(userId: string) => {
+          setSelectedUserId(userId);
+          setCurrentView('userProfile');
+        }}
       />
     );
   }
@@ -231,6 +237,28 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
           setActiveChatUserName(null);
           setCurrentView('channel');
         }}
+        onNavigateToUser={(userId: string) => {
+          setSelectedUserId(userId);
+          setCurrentView('userProfile');
+        }}
+      />
+    );
+  }
+
+  if (currentView === 'userProfile' && selectedUserId) {
+    const UserProfileScreen = require('./UserProfileScreen').default;
+    return (
+      <UserProfileScreen
+        userId={selectedUserId}
+        onBack={() => {
+          setSelectedUserId(null);
+          setCurrentView('channel');
+        }}
+        onNavigateToChat={(chatId: string, userName: string) => {
+          setActiveChatId(chatId);
+          setActiveChatUserName(userName);
+          setCurrentView('directChat');
+        }}
       />
     );
   }
@@ -270,7 +298,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
               setSearchQuery('');
             }}
           >
-            <Text style={{ color: colors.text, fontSize: 16 }}>←</Text>
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </Pressable>
           <Text
             style={{
@@ -353,14 +381,10 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                     </Text>
                   )}
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ color: colors.subtext, fontSize: 12 }}>
-                      {item.member_count}/{item.max_members}人
-                    </Text>
                     <Text
                       style={{
                         color: colors.subtext,
                         fontSize: 12,
-                        marginLeft: 8,
                       }}
                     >
                       by {item.owner.display_name || item.owner.username}
@@ -626,17 +650,11 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                           {item.description}
                         </Text>
                       )}
-                      <View
-                        style={{ flexDirection: 'row', alignItems: 'center' }}
-                      >
-                        <Text style={{ color: colors.subtext, fontSize: 12 }}>
-                          {item.member_count}/{item.max_members}人
-                        </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Text
                           style={{
                             color: colors.subtext,
                             fontSize: 12,
-                            marginLeft: 8,
                           }}
                         >
                           by {item.owner.display_name || item.owner.username}

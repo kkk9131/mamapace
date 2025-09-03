@@ -16,8 +16,15 @@ import { getFollowing, unfollowUser } from '../services/profileService';
 import { FollowUser } from '../services/profileService';
 import { secureLogger } from '../utils/privacyProtection';
 import { getSupabaseClient } from '../services/supabaseClient';
+import { Ionicons } from '@expo/vector-icons';
+import { chatService } from '../services/chatService';
 
-export default function FollowingListScreen() {
+interface FollowingListScreenProps {
+  onNavigateToChat?: (chatId: string, userName: string) => void;
+  onOpenUser?: (userId: string) => void;
+}
+
+export default function FollowingListScreen({ onNavigateToChat, onOpenUser }: FollowingListScreenProps) {
   const theme = useTheme() as any;
   const { colors } = theme;
   const { user } = useAuth();
@@ -110,6 +117,7 @@ export default function FollowingListScreen() {
   };
 
   const renderFollowing = ({ item }: { item: FollowUser }) => {
+    const displayName = item.display_name || item.username;
     return (
       <View
         style={{
@@ -148,30 +156,60 @@ export default function FollowingListScreen() {
               <Text>{item.avatar_emoji || '👩‍🍼'}</Text>
             </View>
           )}
-          <View style={{ flex: 1 }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${displayName}のプロフィールを開く`}
+            onPress={() => { onOpenUser && onOpenUser(item.user_id); }}
+            style={{ flex: 1 }}
+          >
             <Text style={{ color: colors.text, fontWeight: '700' }}>
-              {item.display_name || item.username}
+              {displayName}
             </Text>
             <Text style={{ color: colors.subtext, fontSize: 12 }}>
               @{item.username}
             </Text>
-          </View>
-          <Pressable
-            onPress={() => handleUnfollow(item.user_id)}
-            style={({ pressed }) => [
-              {
-                backgroundColor: colors.surface,
-                borderRadius: theme.radius.md,
-                paddingHorizontal: theme.spacing(1),
-                paddingVertical: 6,
-                transform: [{ scale: pressed ? 0.97 : 1 }],
-              },
-            ]}
-          >
-            <Text style={{ color: colors.text, fontWeight: '700' }}>
-              フォロー中
-            </Text>
           </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Pressable
+              accessibilityLabel={`${displayName}とチャット`}
+              onPress={async () => {
+                try {
+                  const res = await chatService.createOrGetChat({ participantIds: [item.user_id], type: 'direct' });
+                  if (res.success && res.data?.id) {
+                    onNavigateToChat && onNavigateToChat(res.data.id, displayName);
+                  } else {
+                    Alert.alert('エラー', res.error || 'チャットの作成に失敗しました');
+                  }
+                } catch (e: any) {
+                  Alert.alert('エラー', e?.message || 'チャットの作成に失敗しました');
+                }
+              }}
+              style={({ pressed }) => [{
+                width: 36, height: 36, borderRadius: 18,
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: colors.surface,
+                transform: [{ scale: pressed ? 0.96 : 1 }]
+              }]}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.text} />
+            </Pressable>
+            <Pressable
+              onPress={() => handleUnfollow(item.user_id)}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: colors.surface,
+                  borderRadius: theme.radius.md,
+                  paddingHorizontal: theme.spacing(1),
+                  paddingVertical: 6,
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                },
+              ]}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700' }}>
+                フォロー中
+              </Text>
+            </Pressable>
+          </View>
         </BlurView>
       </View>
     );

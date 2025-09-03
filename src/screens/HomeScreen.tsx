@@ -7,7 +7,6 @@ import {
   RefreshControl,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { BlurView } from 'expo-blur';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '../theme/theme';
 import PostCard from '../components/PostCard';
@@ -18,6 +17,7 @@ import { getSupabaseClient } from '../services/supabaseClient';
 import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen({
   refreshKey,
@@ -63,6 +63,7 @@ export default function HomeScreen({
   const endReached = useRef(false);
   const { user } = useAuth();
   const { handPreference } = useHandPreference();
+  const insets = useSafeAreaInsets();
 
   const load = async (opts?: { refresh?: boolean }) => {
     if (loading) return;
@@ -249,44 +250,7 @@ export default function HomeScreen({
         opacity: fade,
       }}
     >
-      <View style={{ paddingHorizontal: theme.spacing(2), marginBottom: 20 }}>
-        <View style={{ borderRadius: 999, overflow: 'hidden' }}>
-          <BlurView
-            intensity={40}
-            tint="dark"
-            style={{
-              paddingVertical: 8,
-              paddingHorizontal: 10,
-              backgroundColor: '#ffffff0E',
-            }}
-          >
-            <View
-              style={{
-                flexDirection: 'row',
-                gap: 8,
-                justifyContent: 'space-between',
-              }}
-            >
-              {['元気', '眠い', 'しんどい', '幸せ'].map(m => (
-                <Pressable
-                  key={m}
-                  style={({ pressed }) => [
-                    {
-                      backgroundColor: '#ffffff12',
-                      paddingVertical: 6,
-                      paddingHorizontal: 12,
-                      borderRadius: 999,
-                      transform: [{ scale: pressed ? 0.97 : 1 }],
-                    },
-                  ]}
-                >
-                  <Text style={{ color: colors.text, fontSize: 12 }}>{m}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </BlurView>
-        </View>
-      </View>
+      {/* Removed top quick tabs (元気/眠い/しんどい/幸せ) */}
       <FlatList
         data={items}
         keyExtractor={i => i.id}
@@ -354,7 +318,8 @@ export default function HomeScreen({
           {
             position: 'absolute',
             ...(handPreference === 'left' ? { left: 20 } : { right: 20 }),
-            bottom: 88,
+            // Keep FAB above the tab bar (56) + bottom inset with a small gap
+            bottom: (insets.bottom || 0) + 56 + 16,
             backgroundColor: colors.pink,
             borderRadius: 28,
             width: 56,
