@@ -18,11 +18,10 @@ interface RequestBody {
 }
 
 // Basic utilities
-function jsonResponse(status: number, data: unknown) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+function jsonResponse(status: number, data: unknown, corsOrigin?: string | null) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (corsOrigin) headers['Access-Control-Allow-Origin'] = corsOrigin;
+  return new Response(JSON.stringify(data), { status, headers });
 }
 
 function clampText(input: string, maxLen = 280): string {
@@ -92,7 +91,11 @@ async function generateCompassionateText(apiKey: string, postText: string): Prom
     const text = await res.text();
     throw new Error(`Gemini API error: ${res.status} ${text}`);
   }
-  const data = await res.json();
+  interface GeminiPart { text?: string }
+  interface GeminiContent { parts?: GeminiPart[] }
+  interface GeminiCandidate { content?: GeminiContent }
+  interface GeminiResponse { candidates?: GeminiCandidate[] }
+  const data = (await res.json()) as GeminiResponse;
   const out = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
   return clampText((out || '').trim(), 280);
 }
@@ -102,17 +105,19 @@ Deno.serve(async (req) => {
     if (req.method !== 'POST') {
       // CORS preflight support
       if (req.method === 'OPTIONS') {
+        const allowedOrigin = resolveAllowedOrigin(req);
+        if (!allowedOrigin) return new Response(null, { status: 403 });
         return new Response(null, {
           status: 204,
           headers: {
-            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Origin': allowedOrigin,
             'Access-Control-Allow-Methods': 'POST, OPTIONS',
             'Access-Control-Allow-Headers': 'authorization, content-type',
             'Access-Control-Max-Age': '86400',
           },
         });
       }
-      return jsonResponse(405, { error: 'Method Not Allowed' });
+      return jsonResponse(405, { error: 'Method Not Allowed' }, resolveAllowedOrigin(req));
     }
 
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || new URL(req.url).origin;
@@ -120,6 +125,8 @@ Deno.serve(async (req) => {
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') || '';
     const SYSTEM_USER_ID = Deno.env.get('SYSTEM_USER_ID') || '';
     const DAILY_LIMIT = Number(Deno.env.get('DAILY_LIMIT') ?? String(DEFAULT_DAILY_LIMIT));
+    const DEBUG_ERRORS = (Deno.env.get('DEBUG_ERRORS') || '').toLowerCase() === 'true';
+    const allowedOrigin = resolveAllowedOrigin(req);
 
     if (!SERVICE_KEY || !GEMINI_API_KEY || !SYSTEM_USER_ID) {
       return jsonResponse(500, {
@@ -129,13 +136,13 @@ Deno.serve(async (req) => {
           haveGeminiKey: !!GEMINI_API_KEY,
           haveSystemUser: !!SYSTEM_USER_ID,
         },
-      });
+      }, allowedOrigin);
     }
 
     // Explicit auth presence check (verify_jwt also enabled at function level)
     const authz = req.headers.get('authorization');
     if (!authz || !authz.toLowerCase().startsWith('bearer ')) {
-      return jsonResponse(401, { error: 'Unauthorized' });
+      return jsonResponse(401, { error: 'Unauthorized' }, allowedOrigin);
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
@@ -146,7 +153,7 @@ Deno.serve(async (req) => {
     const postId = body?.postId;
     const postText = (body?.body ?? '').toString();
     if (!postId || !postText) {
-      return jsonResponse(400, { error: 'postId and body are required' });
+      return jsonResponse(400, { error: 'postId and body are required' }, allowedOrigin);
     }
 
     // Fetch post and its author
@@ -156,7 +163,7 @@ Deno.serve(async (req) => {
       .eq('id', postId)
       .maybeSingle();
     if (postErr) throw new Error(`db_fetch_post: ${postErr.message || JSON.stringify(postErr)}`);
-    if (!post) return jsonResponse(404, { error: 'Post not found' });
+    if (!post) return jsonResponse(404, { error: 'Post not found' }, allowedOrigin);
 
     // Rate limit: max N AI comments per author per day
     const since = new Date();
@@ -181,7 +188,7 @@ Deno.serve(async (req) => {
       matchedCount = (aiCommentsToday ?? []).filter((c: any) => mapOwner.get(c.post_id) === post.user_id).length;
     }
     if (matchedCount >= DAILY_LIMIT) {
-      return jsonResponse(429, { error: 'daily_limit_reached' });
+      return jsonResponse(429, { error: 'daily_limit_reached' }, allowedOrigin);
     }
 
     // Generate empathetic message
@@ -207,10 +214,7 @@ Deno.serve(async (req) => {
       .single();
     if (insertErr) throw new Error(`db_insert_comment: ${insertErr.message || JSON.stringify(insertErr)}`);
 
-    return new Response(JSON.stringify({ ok: true, comment: newComment }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    return jsonResponse(200, { ok: true, comment: newComment }, allowedOrigin);
   } catch (e) {
     const msg = (e && typeof e === 'object' && 'message' in (e as any))
       ? (e as any).message
@@ -222,9 +226,20 @@ Deno.serve(async (req) => {
       haveSystemUser: !!Deno.env.get('SYSTEM_USER_ID'),
     };
     console.error('ai-compassionate-comment error', msg, diag);
-    return new Response(JSON.stringify({ error: msg, diag }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    const allowedOrigin = resolveAllowedOrigin(req);
+    const body = (Deno.env.get('DEBUG_ERRORS') || '').toLowerCase() === 'true'
+      ? { error: msg, diag }
+      : { error: 'internal_error' };
+    return jsonResponse(500, body, allowedOrigin);
   }
 });
+
+// CORS: resolve allowed origin based on env ALLOWED_ORIGINS (comma-separated). Default '*' if unset.
+function resolveAllowedOrigin(req: Request): string | null {
+  const conf = (Deno.env.get('ALLOWED_ORIGINS') || '').trim();
+  if (!conf) return '*';
+  const set = new Set(conf.split(',').map(s => s.trim()).filter(Boolean));
+  const origin = req.headers.get('origin');
+  if (origin && set.has(origin)) return origin;
+  return null;
+}
