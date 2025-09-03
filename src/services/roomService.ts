@@ -244,14 +244,46 @@ export class RoomService {
         (ownerProfiles || []).map(profile => [profile.id, profile])
       );
 
-      // Transform data to include can_join flag and owner information
+      // Compute member counts from channel_members to avoid stale counts on spaces
+      const spaceIds = spaces.map((s: any) => s.id);
+      let channelMap = new Map<string, string>(); // space_id -> channel_id
+      let memberCountMap = new Map<string, number>(); // channel_id -> count
+
+      // Fetch channels for spaces
+      if (spaceIds.length) {
+        const { data: channels } = await supabase
+          .from('channels')
+          .select('id, space_id')
+          .in('space_id', spaceIds);
+        (channels || []).forEach((c: any) => channelMap.set(c.space_id, c.id));
+
+        const channelIds = (channels || []).map((c: any) => c.id);
+        if (channelIds.length) {
+          // Fetch members for these channels and count on client side
+          const { data: members } = await supabase
+            .from('channel_members')
+            .select('channel_id')
+            .in('channel_id', channelIds);
+          (members || []).forEach((m: any) => {
+            const cur = memberCountMap.get(m.channel_id) || 0;
+            memberCountMap.set(m.channel_id, cur + 1);
+          });
+        }
+      }
+
+      // Transform data to include can_join flag, owner information, and accurate member_count
       const spacesWithOwner: SpaceWithOwner[] = spaces.map((space: any) => {
         const owner = ownerMap.get(space.owner_id);
+        const channelId = channelMap.get(space.id);
+        const computedCount = channelId ? (memberCountMap.get(channelId) || 0) : space.member_count || 0;
+        const maxMembers = space.max_members ?? 500;
         return {
           ...space,
+          member_count: computedCount,
+          max_members: maxMembers,
           owner: owner || null,
-          can_join: space.member_count < space.max_members,
-        };
+          can_join: computedCount < maxMembers,
+        } as SpaceWithOwner;
       });
 
       return {

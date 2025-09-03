@@ -20,6 +20,7 @@ import { BlurView } from 'expo-blur';
 import { getFollowList } from '../services/profileService';
 import { PublicUserProfile } from '../types/auth';
 import { useAuth } from '../contexts/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 import { secureLogger } from '../utils/privacyProtection';
 import { chatService } from '../services/chatService';
 
@@ -295,9 +296,11 @@ export default function InviteFollowersScreen({
               ...(handPreference === 'left' ? { marginRight: 12 } : { marginLeft: 12 }),
             }}
           >
-            <Text style={{ color: colors.text, fontSize: 16 }}>
-              {handPreference === 'left' ? '←' : '→'}
-            </Text>
+            <Ionicons
+              name={handPreference === 'left' ? 'chevron-back' : 'chevron-forward'}
+              size={20}
+              color={colors.text}
+            />
           </Pressable>
           
           <View style={{ flex: 1 }}>

@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { notificationPreferencesService } from '../services/notificationPreferencesService';
 import { createBatchUpdater } from '../utils/batchUpdate';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SettingsScreen({
   onLogoutNavigate,
@@ -51,6 +52,7 @@ export default function SettingsScreen({
     updaterRef.current.set(key, value);
   };
   const { handPreference, setHandPreference } = useHandPreference();
+  const insets = useSafeAreaInsets();
 
   const Section = ({ title, children, collapsible = false, initialOpen = true }: any) => {
     const [open, setOpen] = useState(initialOpen);
@@ -102,7 +104,10 @@ export default function SettingsScreen({
       }}
     >
       {/* Header with Mamapace Icon */}
-      <ScrollView contentContainerStyle={{ paddingBottom: theme.spacing(12) }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: (insets.bottom || 0) + 56 + theme.spacing(6) }}
+        showsVerticalScrollIndicator={false}
+      >
         <View
           style={{
             alignItems: 'center',
@@ -187,49 +192,38 @@ export default function SettingsScreen({
             </View>
           </Section>
           <View style={{ height: theme.spacing(4) }} />
+
+          {/* Logout button (scrolls with content) */}
+          <Pressable
+            onPress={() => {
+              Alert.alert('確認', '本当にログアウトしますか？', [
+                { text: 'キャンセル', style: 'cancel' },
+                {
+                  text: 'ログアウト',
+                  style: 'destructive',
+                  onPress: () => {
+                    logout();
+                    onLogoutNavigate && onLogoutNavigate();
+                  },
+                },
+              ]);
+            }}
+            style={({ pressed }) => [
+              {
+                backgroundColor: colors.surface,
+                borderRadius: theme.radius.md,
+                paddingVertical: 12,
+                alignItems: 'center',
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+                ...theme.shadow.card,
+              },
+            ]}
+          >
+            <Text style={{ color: colors.danger, fontWeight: '700' }}>ログアウト</Text>
+          </Pressable>
+          <View style={{ height: theme.spacing(2) }} />
         </View>
       </ScrollView>
-      <View
-        style={{
-          position: 'absolute',
-          left: theme.spacing(2),
-          right: theme.spacing(2),
-          bottom: 72,
-        }}
-      >
-
-        <Pressable
-          onPress={() => {
-            Alert.alert('確認', '本当にログアウトしますか？', [
-              { text: 'キャンセル', style: 'cancel' },
-              {
-                text: 'ログアウト',
-                style: 'destructive',
-                onPress: () => {
-                  // 実際のログアウト処理（コンテキスト）
-                  logout();
-                  // 追加のナビゲーションが必要なら呼び出し側で実装
-                  onLogoutNavigate && onLogoutNavigate();
-                },
-              },
-            ]);
-          }}
-          style={({ pressed }) => [
-            {
-              backgroundColor: colors.surface,
-              borderRadius: theme.radius.md,
-              paddingVertical: 12,
-              alignItems: 'center',
-              transform: [{ scale: pressed ? 0.98 : 1 }],
-              ...theme.shadow.card,
-            },
-          ]}
-        >
-          <Text style={{ color: colors.danger, fontWeight: '700' }}>
-            ログアウト
-          </Text>
-        </Pressable>
-      </View>
     </Animated.View>
   );
 }

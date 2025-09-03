@@ -57,7 +57,7 @@ export default function Sidebar({
         style={{
           position: 'absolute',
           inset: 0 as any,
-          backgroundColor: '#00000066',
+          backgroundColor: colors.overlay,
           opacity: fade,
           zIndex: 10,
         }}
@@ -82,12 +82,12 @@ export default function Sidebar({
             flex: 1,
             paddingTop: 60,
             paddingHorizontal: 20,
-            backgroundColor: '#101217AA',
+            backgroundColor: colors.surfaceAlpha,
             ...(isLeft ? {
-              borderRightColor: '#22252B',
+              borderRightColor: colors.border,
               borderRightWidth: 1,
             } : {
-              borderLeftColor: '#22252B',
+              borderLeftColor: colors.border,
               borderLeftWidth: 1,
             }),
           }}
@@ -103,7 +103,7 @@ export default function Sidebar({
               marginBottom: 32,
               paddingBottom: 20,
               borderBottomWidth: 1,
-              borderBottomColor: '#22252B',
+              borderBottomColor: colors.border,
               opacity: pressed ? 0.7 : 1,
             })}
           >
@@ -143,16 +143,16 @@ export default function Sidebar({
                     paddingVertical: 14,
                     paddingHorizontal: 16,
                     borderRadius: 12,
-                    backgroundColor:
-                      active === it.key
-                        ? '#ffffff20'
-                        : pressed
-                          ? '#ffffff10'
-                          : 'transparent',
-                    marginBottom: 8,
-                  },
-                ]}
-              >
+                backgroundColor:
+                  active === it.key
+                    ? colors.surfaceAlpha
+                    : pressed
+                      ? colors.surface
+                      : 'transparent',
+                marginBottom: 8,
+              },
+            ]}
+          >
                 <Text style={{ 
                   color: active === it.key ? colors.text : colors.subtext, 
                   fontSize: 15,

@@ -22,6 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { useRef, useState, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function CommentComposeScreen({
   postId,
@@ -135,7 +136,7 @@ export default function CommentComposeScreen({
                         backgroundColor: images.length >= 4 ? '#ffffff08' : pressed ? '#ffffff20' : '#ffffff14', borderWidth: 1, borderColor: '#ffffff22',
                       })}
                     >
-                      <Text style={{ color: colors.text, fontSize: 14 }}>🖼️</Text>
+                      <Ionicons name="images-outline" size={18} color={colors.text} />
                     </Pressable>
                     {/* カメラ */}
                     <Pressable
@@ -155,7 +156,7 @@ export default function CommentComposeScreen({
                         backgroundColor: images.length >= 4 ? '#ffffff08' : pressed ? '#ffffff20' : '#ffffff14', borderWidth: 1, borderColor: '#ffffff22',
                       })}
                     >
-                      <Text style={{ color: colors.text, fontSize: 14 }}>📷</Text>
+                      <Ionicons name="camera-outline" size={18} color={colors.text} />
                     </Pressable>
                     <Text style={{ color: colors.subtext, fontSize: 12 }}>{images.length}/4</Text>
                   </View>
@@ -252,9 +253,11 @@ export default function CommentComposeScreen({
                       },
                     ]}
                   >
-                    <Text style={{ color: '#23181D', fontWeight: '700' }}>
-                      {submitting ? '送信中…' : '送信'}
-                    </Text>
+                    {submitting ? (
+                      <Text style={{ color: '#23181D', fontWeight: '700' }}>…</Text>
+                    ) : (
+                      <Ionicons name="send" size={18} color={'#23181D'} />
+                    )}
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
@@ -337,9 +340,11 @@ export default function CommentComposeScreen({
                       },
                     ]}
                   >
-                    <Text style={{ color: '#23181D', fontWeight: '700' }}>
-                      {submitting ? '送信中…' : '送信'}
-                    </Text>
+                    {submitting ? (
+                      <Text style={{ color: '#23181D', fontWeight: '700' }}>…</Text>
+                    ) : (
+                      <Ionicons name="send" size={18} color={'#23181D'} />
+                    )}
                   </Pressable>
                 </>
               )}

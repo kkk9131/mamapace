@@ -28,6 +28,7 @@ import { imagesOnlyMediaTypes, imageOnlyMediaTypeSingle } from '../utils/imagePi
 import { uploadRoomImages } from '../services/storageService';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { roomService } from '../services/roomService';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { chatService } from '../services/chatService';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
@@ -51,6 +52,7 @@ interface ChannelScreenProps {
   onInvite?: () => void; // Called when invite button is pressed
   onMembers?: () => void; // Called when members button is pressed
   onNavigateToChat?: (chatId: string, userName: string) => void; // Navigate to direct chat
+  onOpenUser?: (userId: string) => void; // Navigate to user profile
 }
 
 export default function ChannelScreen({
@@ -63,6 +65,7 @@ export default function ChannelScreen({
   onInvite,
   onMembers,
   onNavigateToChat,
+  onOpenUser,
 }: ChannelScreenProps) {
   const theme = useTheme() as any;
   const { colors } = theme;
@@ -339,7 +342,14 @@ export default function ChannelScreen({
                 marginBottom: 8,
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${item.sender_display_name || item.sender_username}のプロフィールを開く`}
+                onPress={(e) => { e.stopPropagation(); if (onOpenUser && item.sender_id) onOpenUser(item.sender_id); }}
+                onPressIn={(e) => e.stopPropagation()}
+                onPressOut={(e) => e.stopPropagation()}
+                style={{ flexDirection: 'row', alignItems: 'center' }}
+              >
                 {/* アイコン左、名前右（画像優先） */}
                 {item.sender?.avatar_url ? (
                   <Image
@@ -360,7 +370,7 @@ export default function ChannelScreen({
                 >
                   {item.sender_display_name || item.sender_username}
                 </Text>
-              </View>
+              </Pressable>
 
               {item.is_edited && (
                 <Text
@@ -475,9 +485,11 @@ export default function ChannelScreen({
                   ...(handPreference === 'left' ? { marginRight: 12 } : { marginLeft: 12 })
                 }}
               >
-                <Text style={{ color: colors.text, fontSize: 16 }}>
-                  {handPreference === 'left' ? '←' : '→'}
-                </Text>
+                <Ionicons
+                  name={handPreference === 'left' ? 'chevron-back' : 'chevron-forward'}
+                  size={20}
+                  color={colors.text}
+                />
               </Pressable>
             )}
             <View style={{ flex: 1 }}>
@@ -629,7 +641,7 @@ export default function ChannelScreen({
                 }}
                 style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: pressed ? '#ffffff20' : '#ffffff14' })}
               >
-                <Text style={{ color: colors.text, fontSize: 14 }}>🖼️</Text>
+                <Ionicons name="images-outline" size={18} color={colors.text} />
               </Pressable>
               <Pressable
                 onPress={async () => {
@@ -644,7 +656,7 @@ export default function ChannelScreen({
                 }}
                 style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: pressed ? '#ffffff20' : '#ffffff14' })}
               >
-                <Text style={{ color: colors.text, fontSize: 14 }}>📷</Text>
+                <Ionicons name="camera-outline" size={18} color={colors.text} />
               </Pressable>
               <TextInput
                 style={{
@@ -680,15 +692,11 @@ export default function ChannelScreen({
                   },
                 ]}
               >
-                <Text
-                  style={{
-                    color: (messageText.trim() || images.length > 0) ? 'white' : colors.subtext,
-                    fontSize: 14,
-                    fontWeight: 'bold',
-                  }}
-                >
-                  送信
-                </Text>
+                <Ionicons
+                  name={(messageText.trim() || images.length > 0) ? 'send' : 'send-outline'}
+                  size={20}
+                  color={(messageText.trim() || images.length > 0) ? '#23181D' : colors.subtext}
+                />
               </Pressable>
             </BlurView>
             {images.length > 0 && (
@@ -939,7 +947,8 @@ export default function ChannelScreen({
                   <View style={{ height: theme.spacing(1) }} />
                 )}
                 renderItem={({ item }) => (
-                  <View
+                  <Pressable
+                    onPress={() => { if (onOpenUser) onOpenUser(item.user_id); }}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -985,12 +994,16 @@ export default function ChannelScreen({
                         borderRadius: theme.radius.md,
                         opacity: pressed ? 0.8 : 1,
                       })}
+                      
+                      // Prevent row onPress
+                      onPressIn={(e) => e.stopPropagation()}
+                      onPressOut={(e) => e.stopPropagation()}
                     >
                       <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>
                         チャット
                       </Text>
                     </Pressable>
-                  </View>
+                  </Pressable>
                 )}
                 ListEmptyComponent={() => (
                   <View style={{ padding: theme.spacing(2) }}>

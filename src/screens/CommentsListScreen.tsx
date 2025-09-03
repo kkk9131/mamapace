@@ -28,10 +28,12 @@ export default function CommentsListScreen({
   postId,
   refreshKey,
   onCompose,
+  onOpenUser,
 }: {
   postId: string;
   refreshKey?: number;
   onCompose?: () => void;
+  onOpenUser?: (userId: string) => void;
 }) {
   const theme = useTheme() as any;
   const { colors } = theme;
@@ -186,7 +188,12 @@ export default function CommentsListScreen({
                   marginBottom: 6,
                 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.user?.display_name || item.user?.username || '匿名'}のプロフィールを開く`}
+                  onPress={() => { onOpenUser && onOpenUser(item.user_id); }}
+                  style={{ flexDirection: 'row', alignItems: 'center' }}
+                >
                   {item.user?.avatar_url ? (
                     <Image
                       source={{ uri: item.user.avatar_url }}
@@ -201,7 +208,7 @@ export default function CommentsListScreen({
                     {item.user?.display_name || item.user?.username || '匿名'} ・{' '}
                     {new Date(item.created_at).toLocaleString()}
                   </Text>
-                </View>
+                </Pressable>
                 {item.user_id === user?.id && (
                   <Pressable
                     accessibilityRole="button"

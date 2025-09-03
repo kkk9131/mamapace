@@ -19,6 +19,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useTheme } from '../theme/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { BlurView } from 'expo-blur';
 import { useAnonymousRoom, useModeration } from '../hooks/useRooms';
@@ -230,7 +231,7 @@ export default function AnonRoomScreen({ onBack }: AnonRoomScreenProps) {
           >
             {onBack && (
               <Pressable onPress={onBack}>
-                <Text style={{ color: colors.text, fontSize: 16 }}>←</Text>
+                <Ionicons name="chevron-back" size={20} color={colors.text} />
               </Pressable>
             )}
 

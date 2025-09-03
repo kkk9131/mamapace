@@ -25,6 +25,7 @@ import { PublicUserProfile } from '../types/auth';
 import { fetchHomeFeed } from '../services/postService';
 import { secureLogger } from '../utils/privacyProtection';
 import { chatService } from '../services/chatService';
+import { Ionicons } from '@expo/vector-icons';
 
 interface UserProfileScreenProps {
   userId: string;
@@ -232,9 +233,11 @@ export default function UserProfileScreen({
               },
             ]}
           >
-            <Text style={{ color: colors.text, fontSize: 16 }}>
-              {handPreference === 'left' ? '←' : '→'}
-            </Text>
+            <Ionicons
+              name={handPreference === 'left' ? 'chevron-back' : 'chevron-forward'}
+              size={20}
+              color={colors.text}
+            />
           </Pressable>
         )}
       </View>

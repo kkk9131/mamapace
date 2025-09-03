@@ -24,11 +24,13 @@ import { useChat } from '../hooks/useChat';
 import { MessageType, OptimisticMessage } from '../types/chat';
 import { chatService } from '../services/chatService';
 import { getSupabaseClient } from '../services/supabaseClient';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ChatScreenProps {
   chatId?: string;
   userName?: string;
   onBack?: () => void;
+  onNavigateToUser?: (userId: string) => void;
   route?: {
     params?: {
       chatId?: string;
@@ -40,6 +42,7 @@ export default function ChatScreen({
   chatId: propChatId,
   userName,
   onBack,
+  onNavigateToUser,
   route,
 }: ChatScreenProps) {
   const { colors } = useTheme();
@@ -55,6 +58,7 @@ export default function ChatScreen({
 
   // Use chat hook with actual chatId
   const {
+    chat,
     messages,
     isLoading,
     isSending,
@@ -70,6 +74,39 @@ export default function ChatScreen({
     typingUsers,
     isLoadingMessages,
   } = useChat(chatId || '');
+
+  // Header user info (chat partner)
+  const [headerName, setHeaderName] = useState<string | null>(userName || null);
+  const [headerAvatarUrl, setHeaderAvatarUrl] = useState<string | null>(null);
+  const [headerAvatarEmoji, setHeaderAvatarEmoji] = useState<string | null>(null);
+
+  const otherUserId = chat?.participant_ids?.[0] || null;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // Prefer chat participants when available (direct chat assumed)
+        const otherId = otherUserId;
+        if (otherId) {
+          const client = getSupabaseClient();
+          const { data } = await client
+            .from('user_profiles')
+            .select('display_name, username, avatar_url, avatar_emoji')
+            .eq('id', otherId)
+            .single();
+          if (!cancelled && data) {
+            setHeaderName(data.display_name || data.username || headerName || 'チャット');
+            setHeaderAvatarUrl(data.avatar_url || null);
+            setHeaderAvatarEmoji(data.avatar_emoji || null);
+          }
+        } else if (userName && !cancelled) {
+          setHeaderName(userName);
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [otherUserId, userName]);
 
   // Handle send message
   const handleSendMessage = useCallback(async () => {
@@ -304,7 +341,14 @@ export default function ChatScreen({
               }}
             >
               {/* アイコン + ユーザー名（左にアイコン、右にユーザー名） */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${senderName}のプロフィールを開く`}
+                onPress={() => {
+                  if (onNavigateToUser && item.sender_id) onNavigateToUser(item.sender_id);
+                }}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}
+              >
                 {item.sender?.avatar_url ? (
                   <Image
                     source={{ uri: item.sender.avatar_url }}
@@ -318,7 +362,7 @@ export default function ChatScreen({
                 <Text style={{ color: isMe ? '#23181D' : colors.subtext, fontSize: 11 }}>
                   {senderName}
                 </Text>
-              </View>
+              </Pressable>
               {/* Attachments (images) */}
               {Array.isArray(item.metadata?.attachments) && item.metadata!.attachments!.length > 0 && (
                 <View style={{ marginBottom: 8, gap: 6, flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -569,9 +613,7 @@ export default function ChatScreen({
               alignSelf: 'flex-start',
             }}
           >
-            <Text style={{ color: colors.text, fontSize: 16 }}>
-              ←
-            </Text>
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </Pressable>
         )}
       </View>
@@ -607,16 +649,28 @@ export default function ChatScreen({
                   backgroundColor: pressed ? colors.surface : 'transparent',
                 })}
               >
-                <Text style={{ color: colors.text, fontSize: 16 }}>
-                  {handPreference === 'left' ? '←' : '→'}
-                </Text>
+                <Ionicons
+                  name={handPreference === 'left' ? 'chevron-back' : 'chevron-forward'}
+                  size={20}
+                  color={colors.text}
+                />
               </Pressable>
             )}
-            <Text
-              style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="ユーザープロフィールを開く"
+              onPress={() => { if (otherUserId && onNavigateToUser) onNavigateToUser(otherUserId); }}
+              style={{ flexDirection: 'row', alignItems: 'center' }}
             >
-              {userName || 'チャット'}
-            </Text>
+              {headerAvatarUrl ? (
+                <Image source={{ uri: headerAvatarUrl }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8 }} />
+              ) : headerAvatarEmoji ? (
+                <Text style={{ fontSize: 16, marginRight: 8 }}>{headerAvatarEmoji}</Text>
+              ) : null}
+              <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>
+                {headerName || 'チャット'}
+              </Text>
+            </Pressable>
           </View>
         </View>
         <View
@@ -663,16 +717,23 @@ export default function ChatScreen({
                   borderRadius: 8,
                 }}
               >
-                <Text style={{ color: colors.text, fontSize: 16 }}>
-                  {handPreference === 'left' ? '←' : '→'}
-                </Text>
+                <Ionicons
+                  name={handPreference === 'left' ? 'chevron-back' : 'chevron-forward'}
+                  size={20}
+                  color={colors.text}
+                />
               </Pressable>
             )}
-            <Text
-              style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}
-            >
-              {userName || 'チャット'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {headerAvatarUrl ? (
+                <Image source={{ uri: headerAvatarUrl }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8 }} />
+              ) : headerAvatarEmoji ? (
+                <Text style={{ fontSize: 16, marginRight: 8 }}>{headerAvatarEmoji}</Text>
+              ) : null}
+              <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>
+                {headerName || 'チャット'}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -749,7 +810,7 @@ export default function ChatScreen({
               }}
               style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: pressed ? '#ffffff20' : '#ffffff14' })}
             >
-              <Text style={{ color: colors.text, fontSize: 14 }}>🖼️</Text>
+              <Ionicons name="images-outline" size={18} color={colors.text} />
             </Pressable>
             <Pressable
               disabled={images.length >= 4}
@@ -765,7 +826,7 @@ export default function ChatScreen({
               }}
               style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: pressed ? '#ffffff20' : '#ffffff14' })}
             >
-              <Text style={{ color: colors.text, fontSize: 14 }}>📷</Text>
+              <Ionicons name="camera-outline" size={18} color={colors.text} />
             </Pressable>
             <TextInput
               placeholder="メッセージを入力"
@@ -795,18 +856,15 @@ export default function ChatScreen({
 
               })}
             >
-              <Text
-                style={{
-                  color:
-                    (inputMessage.trim() || images.length > 0) && !isSending
-                      ? '#23181D'
-                      : colors.subtext,
-                  fontSize: 16,
-                  fontWeight: '600',
-                }}
-              >
-                {isSending ? '...' : '送信'}
-              </Text>
+              {isSending ? (
+                <Text style={{ color: colors.subtext, fontSize: 14 }}>...</Text>
+              ) : (
+                <Ionicons
+                  name={(inputMessage.trim() || images.length > 0) ? 'send' : 'send-outline'}
+                  size={20}
+                  color={(inputMessage.trim() || images.length > 0) ? '#23181D' : colors.subtext}
+                />
+              )}
             </Pressable>
           </View>
         </View>

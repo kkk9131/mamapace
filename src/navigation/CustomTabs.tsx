@@ -31,6 +31,8 @@ import ProfileEditScreen from '../screens/ProfileEditScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import ChannelScreen from '../screens/ChannelScreen';
 import CreateSpaceScreen from '../screens/CreateSpaceScreen';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 const tabs = [
   { key: 'me', label: 'あなた', Component: ProfileScreen },
@@ -41,16 +43,20 @@ const tabs = [
 
 const Hidden = { compose: ComposeScreen } as const;
 
-function TextButton({
-  label,
+function IconTab({
+  icon,
+  iconOutline,
   active,
   onPress,
   onLongPress,
+  accessibilityLabel,
 }: {
-  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  iconOutline: keyof typeof Ionicons.glyphMap;
   active: boolean;
   onPress: () => void;
   onLongPress?: () => void;
+  accessibilityLabel: string;
 }) {
   const { colors } = useTheme();
   const scale = new Animated.Value(1);
@@ -59,37 +65,37 @@ function TextButton({
       Animated.spring(scale, {
         toValue: 0.9,
         useNativeDriver: true,
-        speed: 14,
+        speed: 16,
         bounciness: 10,
       }),
       Animated.spring(scale, {
         toValue: 1,
         useNativeDriver: true,
-        speed: 14,
+        speed: 16,
         bounciness: 10,
       }),
     ]).start();
   };
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       onPress={async () => {
         pulse();
         await Haptics.selectionAsync();
         onPress();
       }}
       onLongPress={onLongPress}
-      style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+      style={{ flex: 1, alignItems: 'center', justifyContent: 'center', height: 56 }}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
-      <Animated.Text
-        style={{
-          transform: [{ scale }],
-          color: active ? colors.pink : colors.subtext,
-          fontSize: 16,
-          fontWeight: '700',
-        }}
-      >
-        {label}
-      </Animated.Text>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Ionicons
+          name={active ? icon : iconOutline}
+          size={26}
+          color={active ? colors.pink : colors.subtext}
+        />
+      </Animated.View>
     </Pressable>
   );
 }
@@ -97,6 +103,7 @@ function TextButton({
 export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigateTo?: string | null; onNavigateConsumed?: () => void }) {
   const theme = useTheme() as any;
   const { colors } = theme;
+  const insets = useSafeAreaInsets();
   const { isAuthenticated, isLoading, user } = useAuth();
   const { handPreference } = useHandPreference();
   const [active, setActive] = useState<any>('home');
@@ -257,6 +264,10 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
                   setActiveChatUserName(null);
                   setActive(chatReturnTo as any);
                 }}
+                onNavigateToUser={(userId: string) => {
+                  setActiveUserId(userId);
+                  setActive('userProfile' as any);
+                }}
               />
             ) : (
               <ChatsListScreen
@@ -296,12 +307,38 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
                 refreshKey={commentsRefreshKey}
                 postId={activePostId}
                 onCompose={() => setActive('comment' as any)}
+                onOpenUser={(userId: string) => {
+                  setActiveUserId(userId);
+                  setActive('userProfile' as any);
+                }}
               />
             ) : null
           ) : active === 'followers' ? (
-            <FollowersListScreen />
+            <FollowersListScreen
+              onNavigateToChat={(chatId: string, userName: string) => {
+                setActiveChatId(chatId);
+                setActiveChatUserName(userName);
+                setChatReturnTo('followers');
+                setActive('chat' as any);
+              }}
+              onOpenUser={(userId: string) => {
+                setActiveUserId(userId);
+                setActive('userProfile' as any);
+              }}
+            />
           ) : active === 'following' ? (
-            <FollowingListScreen />
+            <FollowingListScreen
+              onNavigateToChat={(chatId: string, userName: string) => {
+                setActiveChatId(chatId);
+                setActiveChatUserName(userName);
+                setChatReturnTo('following');
+                setActive('chat' as any);
+              }}
+              onOpenUser={(userId: string) => {
+                setActiveUserId(userId);
+                setActive('userProfile' as any);
+              }}
+            />
           ) : active === 'liked' ? (
             <LikedPostsListScreen
               onOpen={postId => {
@@ -344,28 +381,29 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
               position: 'absolute',
               left: 12,
               right: 12,
-              bottom: 8,
-              height: 56,
+              bottom: Math.max(8, insets.bottom ? 4 : 8),
+              height: 56 + (insets.bottom || 0),
               borderRadius: 16,
               flexDirection: 'row',
-              backgroundColor: colors.card + '88',
-              borderColor: '#22252B',
+              backgroundColor: colors.cardAlpha,
+              borderColor: colors.border,
               borderWidth: 1,
               overflow: 'hidden',
+              paddingBottom: insets.bottom || 0,
             }}
           >
             {(['me', 'noti', 'home'] as const).map(k => (
-              <TextButton
+              <IconTab
                 key={k}
-                label={k === 'me' ? '◐' : k === 'noti' ? '◎' : '◆'}
+                icon={k === 'me' ? 'person' : k === 'noti' ? 'notifications' : 'home'}
+                iconOutline={k === 'me' ? 'person-outline' : k === 'noti' ? 'notifications-outline' : 'home-outline'}
+                accessibilityLabel={k === 'me' ? 'あなた' : k === 'noti' ? '通知' : 'ホーム'}
                 active={active === k}
                 onPress={() => setActive(k as any)}
                 onLongPress={
-                  (handPreference === 'right' && k === 'home') || 
+                  (handPreference === 'right' && k === 'home') ||
                   (handPreference === 'left' && k === 'me')
-                    ? () => {
-                        setSidebarOpen(true);
-                      }
+                    ? () => setSidebarOpen(true)
                     : undefined
                 }
               />

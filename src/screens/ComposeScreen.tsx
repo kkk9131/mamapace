@@ -22,6 +22,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { imagesOnlyMediaTypes, imageOnlyMediaTypeSingle } from '../utils/imagePickerCompat';
 import { uploadPostImages } from '../services/storageService';
 import { useAuth } from '../contexts/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ComposeScreen({
   onClose,
@@ -89,7 +90,7 @@ export default function ComposeScreen({
                 },
               ]}
             >
-              <Text style={{ color: colors.text, fontSize: 16 }}>◀️</Text>
+              <Ionicons name="chevron-back" size={20} color={colors.text} />
             </Pressable>
           </View>
           <View style={{ borderRadius: 16, overflow: 'hidden' }}>
@@ -139,7 +140,7 @@ export default function ComposeScreen({
                     opacity: images.length >= 4 ? 0.6 : 1,
                   })}
                 >
-                  <Text style={{ color: colors.text, fontSize: 16 }}>🖼️</Text>
+                  <Ionicons name="images-outline" size={18} color={colors.text} />
                 </Pressable>
                 {/* カメラボタン */}
                 <Pressable
@@ -179,7 +180,7 @@ export default function ComposeScreen({
                     opacity: images.length >= 4 ? 0.6 : 1,
                   })}
                 >
-                  <Text style={{ color: colors.text, fontSize: 16 }}>📷</Text>
+                  <Ionicons name="camera-outline" size={18} color={colors.text} />
                 </Pressable>
                 <View style={{
                   paddingHorizontal: 10,
