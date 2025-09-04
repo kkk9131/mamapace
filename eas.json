@@ -13,6 +13,11 @@
     },
     "production": {
       "autoIncrement": true
+    },
+    "ios-sim": {
+      "ios": {
+        "simulator": true
+      }
     }
   },
   "submit": {
