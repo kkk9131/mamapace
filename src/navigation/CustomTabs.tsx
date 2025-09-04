@@ -18,6 +18,7 @@ import ComposeScreen from '../screens/ComposeScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 // import AnonFeedScreen from '../screens/AnonFeedScreen'; // Removed - now handled within RoomsScreen
 import RoomsListScreen from '../screens/RoomsListScreen';
+import ErrorBoundary from '../components/ErrorBoundary';
 import CommentComposeScreen from '../screens/CommentComposeScreen';
 import CommentsListScreen from '../screens/CommentsListScreen';
 import FollowersListScreen from '../screens/FollowersListScreen';
@@ -231,7 +232,9 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
               );
             })()
           ) : active === 'rooms' ? (
-            <RoomsScreen />
+            <ErrorBoundary>
+              <RoomsScreen />
+            </ErrorBoundary>
           ) : active === 'createRoom' ? (
             <CreateSpaceScreen
               onSuccess={() => {
@@ -240,14 +243,16 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
               onCancel={() => setActive('rooms' as any)}
             />
           ) : active === 'chats' ? (
-            <ChatsListScreen
+            <ErrorBoundary>
+              <ChatsListScreen
               onOpen={(chatId: string, userName: string) => {
                 setActiveChatId(chatId);
                 setActiveChatUserName(userName);
                 setChatReturnTo('chats');
                 setActive('chat' as any);
               }}
-            />
+              />
+            </ErrorBoundary>
           ) : active === 'anon' ? (
             // Redirect to home if anon is accessed directly
             (() => {
@@ -303,7 +308,9 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
               }}
             />
           ) : active === 'roomsList' ? (
-            <RoomsListScreen refreshKey={roomsListKey} onBack={() => setActive('me' as any)} />
+            <ErrorBoundary>
+              <RoomsListScreen refreshKey={roomsListKey} onBack={() => setActive('me' as any)} />
+            </ErrorBoundary>
           ) : active === 'comment' ? (
             activePostId ? (
               <CommentComposeScreen
