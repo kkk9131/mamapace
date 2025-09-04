@@ -411,9 +411,10 @@ export class RoomService {
         data: { channel_id: channel.id },
         message: 'Successfully joined space',
       };
-    } catch (error: any) {
-      console.error('[RoomService] Join space exception:', error.message);
-      return { error: 'Failed to join space' };
+    } catch (error: unknown) {
+      const msg = RoomService.normalizeError(error, 'Failed to join space');
+      console.error('[RoomService] Join space exception:', msg);
+      return { error: msg };
     }
   }
 
@@ -467,9 +468,10 @@ export class RoomService {
         success: true,
         message: 'Successfully left space',
       };
-    } catch (error: any) {
-      console.error('[RoomService] Leave space exception:', error.message);
-      return { error: 'Failed to leave space' };
+    } catch (error: unknown) {
+      const msg = RoomService.normalizeError(error, 'Failed to leave space');
+      console.error('[RoomService] Leave space exception:', msg);
+      return { error: msg };
     }
   }
 
