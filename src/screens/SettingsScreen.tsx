@@ -4,6 +4,7 @@ import { useTheme } from '../theme/theme';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
+import OnboardingTutorial from '../components/OnboardingTutorial';
 import { notificationPreferencesService } from '../services/notificationPreferencesService';
 import { createBatchUpdater } from '../utils/batchUpdate';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ export default function SettingsScreen({
   const { colors } = theme;
   const fade = useRef(new Animated.Value(1)).current; // 初期値を1に設定してフラッシュを防ぐ
   const { logout, refreshToken, user } = useAuth();
+  const [showHelp, setShowHelp] = useState(false);
   const [prefs, setPrefs] = useState({
     allow_message: true,
     allow_room: true,
@@ -103,6 +105,9 @@ export default function SettingsScreen({
         opacity: fade,
       }}
     >
+      {showHelp && (
+        <OnboardingTutorial onClose={() => setShowHelp(false)} />
+      )}
       {/* Header with Mamapace Icon */}
       <ScrollView
         contentContainerStyle={{ paddingBottom: (insets.bottom || 0) + 56 + theme.spacing(6) }}
@@ -190,6 +195,25 @@ export default function SettingsScreen({
                 onPress={() => setHandPreference('right')}
               />
             </View>
+          </Section>
+          <View style={{ height: theme.spacing(2) }} />
+
+          <Section title="ヘルプ">
+            <Pressable
+              onPress={() => setShowHelp(true)}
+              style={({ pressed }) => [{
+                backgroundColor: colors.surface,
+                borderRadius: theme.radius.md,
+                paddingVertical: 12,
+                alignItems: 'center',
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+                ...theme.shadow.card,
+              }]}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700' }}>
+                使い方を見る（チュートリアル）
+              </Text>
+            </Pressable>
           </Section>
           <View style={{ height: theme.spacing(4) }} />
 
