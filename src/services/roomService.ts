@@ -253,7 +253,7 @@ export class RoomService {
       );
 
       // Compute member counts from channel_members to avoid stale counts on spaces
-      const spaceIds = spaces.map((s: any) => s.id);
+      const spaceIds = (spaces as Space[]).map((s) => s.id);
       let channelMap = new Map<string, string>(); // space_id -> channel_id
       let memberCountMap = new Map<string, number>(); // channel_id -> count
 
@@ -263,16 +263,16 @@ export class RoomService {
           .from('channels')
           .select('id, space_id')
           .in('space_id', spaceIds);
-        (channels || []).forEach((c: any) => channelMap.set(c.space_id, c.id));
+        (channels || []).forEach((c: { id: string; space_id: string }) => channelMap.set(c.space_id, c.id));
 
-        const channelIds = (channels || []).map((c: any) => c.id);
+        const channelIds = (channels || []).map((c: { id: string }) => c.id);
         if (channelIds.length) {
           // Fetch members for these channels and count on client side
           const { data: members } = await supabase
             .from('channel_members')
             .select('channel_id')
             .in('channel_id', channelIds);
-          (members || []).forEach((m: any) => {
+          (members || []).forEach((m: { channel_id: string }) => {
             const cur = memberCountMap.get(m.channel_id) || 0;
             memberCountMap.set(m.channel_id, cur + 1);
           });
@@ -280,7 +280,7 @@ export class RoomService {
       }
 
       // Transform data to include can_join flag, owner information, and accurate member_count
-      const spacesWithOwner: SpaceWithOwner[] = spaces.map((space: any) => {
+      const spacesWithOwner: SpaceWithOwner[] = (spaces as Space[]).map((space) => {
         const owner = ownerMap.get(space.owner_id);
         const channelId = channelMap.get(space.id);
         const computedCount = channelId ? (memberCountMap.get(channelId) || 0) : space.member_count || 0;
@@ -605,22 +605,22 @@ export class RoomService {
         .eq('user_id', user.user.id)
         .eq('is_active', true);
 
-      let memberSpaces: any[] = [];
+      let memberSpaces: Space[] = [];
       if (sm && sm.length > 0) {
-        const ids = sm.map((r: any) => r.space_id);
+        const ids = sm.map((r: { space_id: string }) => r.space_id);
         const { data: spaces } = await supabase
           .from('spaces')
           .select('*')
           .in('id', ids);
-        memberSpaces = spaces || [];
+        memberSpaces = (spaces as Space[]) || [];
       }
 
-      const combine = [...(owned || []), ...memberSpaces];
-      const unique = new Map<string, any>();
+      const combine: Space[] = ([...(owned || []), ...memberSpaces] as Space[]);
+      const unique = new Map<string, Space>();
       for (const s of combine) unique.set(s.id, s);
 
       const result: ChannelWithSpace[] = Array.from(unique.values()).map(
-        (s: any) => ({
+        (s: Space) => ({
           // Channel is disabled; return placeholder channel object
           id: '',
           space_id: s.id,
