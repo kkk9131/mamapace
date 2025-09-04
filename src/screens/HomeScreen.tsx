@@ -34,19 +34,8 @@ export default function HomeScreen({
   onOpenProfileEdit?: () => void;
   onOpenUser?: (userId: string) => void;
 }) {
-  const themeRaw = useTheme() as any | undefined;
-  const theme = useMemo(() => ({
-    spacing: themeRaw?.spacing ?? ((v: number) => v * 8),
-    radius: themeRaw?.radius ?? { lg: 12, md: 8 },
-    shadow: themeRaw?.shadow ?? { card: {} },
-    colors: themeRaw?.colors ?? {
-      text: '#ffffff',
-      subtext: '#aaaaaa',
-      surface: '#ffffff10',
-      pink: '#ff6ea9',
-    },
-  }), [themeRaw]);
-  const { colors } = theme as any;
+  const theme = useTheme();
+  const { colors } = theme;
   const fade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(fade, {

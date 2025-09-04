@@ -59,7 +59,7 @@ export default function SecureInput({
   autoCapitalize = 'none',
   testID,
 }: SecureInputProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
 
   // State for input masking and security

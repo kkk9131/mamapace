@@ -38,7 +38,7 @@ export default function UserProfileScreen({
   onBack,
   onNavigateToChat,
 }: UserProfileScreenProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const { user } = useAuth();
   const { handPreference } = useHandPreference();

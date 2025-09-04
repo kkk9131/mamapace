@@ -58,7 +58,7 @@ export default function ExpandableText({
   expandAccessibilityLabel = '本文をもっと見る',
   collapseAccessibilityLabel = '本文を閉じる',
 }: ExpandableTextProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const { handPreference } = useHandPreference();
   const [expanded, setExpanded] = useState(false);

@@ -25,7 +25,7 @@ interface FollowingListScreenProps {
 }
 
 export default function FollowingListScreen({ onNavigateToChat, onOpenUser }: FollowingListScreenProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const { user } = useAuth();
   const fade = new Animated.Value(0);

@@ -1,7 +1,27 @@
 import { dark, light } from './colors';
 import { useColorScheme } from 'react-native';
 
-export const useTheme = () => {
+export type Theme = {
+  colors: typeof light;
+  radius: { sm: number; md: number; lg: number };
+  spacing: (n: number) => number;
+  shadow: {
+    card: {
+      shadowColor: string;
+      shadowOpacity: number;
+      shadowRadius: number;
+      shadowOffset: { width: number; height: number };
+      elevation: number;
+    };
+  };
+  typography: {
+    title: { fontSize: 18; fontWeight: '700' };
+    body: { fontSize: 16; fontWeight: '400' };
+    caption: { fontSize: 12; fontWeight: '500' };
+  };
+};
+
+export const useTheme = (): Theme => {
   const scheme = useColorScheme();
   const colors = scheme === 'light' ? light : dark;
   return {

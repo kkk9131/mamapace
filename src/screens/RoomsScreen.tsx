@@ -30,13 +30,13 @@ interface RoomsScreenProps {
 }
 
 export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const fade = useRef(new Animated.Value(0)).current;
 
   // State management
   const [currentView, setCurrentView] = useState<
-    'list' | 'search' | 'anonymous' | 'channel' | 'create' | 'invite' | 'directChat' | 'userProfile'
+    'list' | 'search' | 'anonymous' | 'channel' | 'space' | 'create' | 'invite' | 'directChat' | 'userProfile'
   >('list');
   const [selectedFilter, setSelectedFilter] = useState<string>('すべて');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -72,6 +72,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
     joinSpace,
   } = useSpaceOperations();
   const { canCreateSpaces } = useSpacePermissions();
+  // Joined rooms list is no longer shown on this screen
 
   // Animation - smart animation handling to prevent blank screen on back navigation
   useEffect(() => {
@@ -122,7 +123,15 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
       Alert.alert('参加完了', `${space.name}に参加しました`);
       // Refresh popular spaces to update join status
       refreshPopular();
-      setCurrentView('list');
+      // NOTE: Joined rooms list is not shown on this screen anymore
+      // Navigate based on channel availability
+      if (result.channel_id) {
+        handleChannelSelect(result.channel_id, space.name, space.id);
+      } else {
+        setSelectedSpaceId(space.id);
+        setSelectedSpaceName(space.name);
+        setCurrentView('space');
+      }
     } else if (operationError) {
       Alert.alert('エラー', operationError);
     }
@@ -188,6 +197,52 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
           setCurrentView('userProfile');
         }}
       />
+    );
+  }
+
+  if (currentView === 'space' && selectedSpaceId) {
+    return (
+      <Animated.View
+        style={{ flex: 1, backgroundColor: colors.bg || '#000000', opacity: fade }}
+      >
+        <View style={{ paddingTop: 48, paddingHorizontal: theme.spacing(2) }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Pressable onPress={() => setCurrentView('list')}>
+              <Ionicons name="chevron-back" size={20} color={colors.text} />
+            </Pressable>
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginLeft: 12 }}>
+              {selectedSpaceName}
+            </Text>
+          </View>
+          <View style={{ marginTop: 16 }}>
+            <Text style={{ color: colors.subtext, fontSize: 14 }}>
+              現在このルームではチャンネル機能が無効です。参加状態のみ保持しています。
+            </Text>
+          </View>
+          <View style={{ marginTop: 16 }}>
+            <Pressable
+              onPress={async () => {
+                const res = await roomService.leaveSpace(selectedSpaceId);
+                if ((res as any).success) {
+                  Alert.alert('退出', 'ルームから退出しました');
+                  setCurrentView('list');
+                } else {
+                  Alert.alert('エラー', (res as any).error || '退出に失敗しました');
+                }
+              }}
+              style={({ pressed }) => [{
+                backgroundColor: colors.pink,
+                paddingVertical: 12,
+                borderRadius: theme.radius.md,
+                alignItems: 'center',
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+              }]}
+            >
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>このルームから退出</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Animated.View>
     );
   }
 

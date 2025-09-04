@@ -30,7 +30,7 @@ interface FollowersListScreenProps {
 }
 
 export default function FollowersListScreen({ onNavigateToChat, onOpenUser }: FollowersListScreenProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const { user } = useAuth();
   const fade = new Animated.Value(0);

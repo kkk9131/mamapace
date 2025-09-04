@@ -16,7 +16,7 @@ export default function ProfileScreen({
 }: {
   onNavigate?: (key: string) => void;
 }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const fade = useRef(new Animated.Value(1)).current; // 初期値を1に設定してフラッシュを防ぐ
   const { user } = useAuth();
@@ -270,7 +270,7 @@ export default function ProfileScreen({
 }
 
 function Pill({ label, onPress }: { label: string; onPress?: () => void }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   return (
     <Pressable
@@ -291,7 +291,7 @@ function Pill({ label, onPress }: { label: string; onPress?: () => void }) {
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   return (
     <View style={{ alignItems: 'center' }}>

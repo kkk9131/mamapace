@@ -52,6 +52,9 @@ export default function ChatScreen({
   const [images, setImages] = useState<{ uri: string }[]>([]);
   const [viewer, setViewer] = useState<{ visible: boolean; index: number; urls: string[] }>({ visible: false, index: 0, urls: [] });
   const flatListRef = useRef<FlatList>(null);
+  const csTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const layoutTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const msgTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get chatId from props or route params
   const chatId = propChatId || route?.params?.chatId;
@@ -141,11 +144,12 @@ export default function ChatScreen({
   // Auto-scroll to bottom on new messages (LINE style)
   useEffect(() => {
     if (messages.length > 0) {
-      setTimeout(() => {
+      if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+      msgTimerRef.current = setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [messages]);
+    }, [messages]);
 
   // Handle input change with typing indicators
   const handleInputChange = useCallback(
@@ -189,6 +193,15 @@ export default function ChatScreen({
       ]);
     }
   }, [error, clearError, retry]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (csTimerRef.current) clearTimeout(csTimerRef.current);
+      if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
+      if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+    };
+  }, []);
 
   // Handle invitation response
   const handleInvitationResponse = useCallback(async (messageId: string, response: 'accept' | 'decline', spaceId: string, spaceName: string, invitationId?: string) => {
@@ -761,13 +774,15 @@ export default function ChatScreen({
           }
           onContentSizeChange={() => {
             // Scroll to bottom when new messages are added
-            setTimeout(() => {
+            if (csTimerRef.current) clearTimeout(csTimerRef.current);
+            csTimerRef.current = setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: true });
             }, 100);
           }}
           onLayout={() => {
             // Scroll to bottom on initial layout
-            setTimeout(() => {
+            if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
+            layoutTimerRef.current = setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: false });
             }, 100);
           }}

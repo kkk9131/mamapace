@@ -41,7 +41,7 @@ export default function InviteFollowersScreen({
   onBack,
   onInviteSent,
 }: InviteFollowersScreenProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const { handPreference } = useHandPreference();
   const { user } = useAuth();

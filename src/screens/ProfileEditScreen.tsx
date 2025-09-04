@@ -33,7 +33,7 @@ const EMOJI_OPTIONS = [
 ];
 
 export default function ProfileEditScreen({ navigation }: any) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const { user } = useAuth();
   const { handPreference } = useHandPreference();

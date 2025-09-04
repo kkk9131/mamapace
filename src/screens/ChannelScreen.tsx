@@ -67,7 +67,7 @@ export default function ChannelScreen({
   onNavigateToChat,
   onOpenUser,
 }: ChannelScreenProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const { user } = useAuth();
   const { handPreference } = useHandPreference();
@@ -83,11 +83,14 @@ export default function ChannelScreen({
   const [showMenu, setShowMenu] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const [imageViewer, setImageViewer] = useState<{ visible: boolean; index: number; urls: string[] }>({ visible: false, index: 0, urls: [] });
+  const [isOwner, setIsOwner] = useState(false);
 
   // Refs
   const flatListRef = useRef<FlatList>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const membersSlide = useRef(new Animated.Value(0)).current; // 0: hidden, 1: shown
+  const csTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const layoutTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Hooks
   const {
@@ -119,6 +122,13 @@ export default function ChannelScreen({
     error: membersError,
     refresh: refreshMembers,
   } = useChannelMembers(channelId);
+
+  // Determine if current user is owner
+  useEffect(() => {
+    if (!user?.id) { setIsOwner(false); return; }
+    const mine = members.find(m => m.user_id === user.id);
+    setIsOwner(!!mine && mine.role === 'owner');
+  }, [members, user?.id]);
 
   // Start direct chat with selected member
   const handleStartChat = async (targetUserId: string, userName: string) => {
@@ -154,7 +164,12 @@ export default function ChannelScreen({
       }).start();
     }, 50);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // Clear pending scroll timers
+      if (csTimerRef.current) clearTimeout(csTimerRef.current);
+      if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
+    };
   }, [fadeAnim]);
 
   // Animate members sidebar
@@ -175,6 +190,14 @@ export default function ChannelScreen({
       }).start();
     }
   }, [showMembers, membersSlide, refreshMembers]);
+
+  // Ensure scroll timers are cleared on unmount (safety net)
+  useEffect(() => {
+    return () => {
+      if (csTimerRef.current) clearTimeout(csTimerRef.current);
+      if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
+    };
+  }, []);
 
   // Mark channel as seen when screen loads
   useEffect(() => {
@@ -543,12 +566,14 @@ export default function ChannelScreen({
           inverted={false}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => {
-            setTimeout(() => {
+            if (csTimerRef.current) clearTimeout(csTimerRef.current);
+            csTimerRef.current = setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: false });
             }, 50);
           }}
           onLayout={() => {
-            setTimeout(() => {
+            if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
+            layoutTimerRef.current = setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: false });
             }, 50);
           }}
@@ -846,6 +871,52 @@ export default function ChannelScreen({
                   {exitLoading ? '退出中...' : '退出'}
                 </Text>
               </Pressable>
+
+              {/* Delete room - owner only */}
+              {isOwner && (
+                <Pressable
+                  onPress={() => {
+                    setShowMenu(false);
+                    if (!spaceId) return;
+                    Alert.alert(
+                      'ルーム削除',
+                      `${spaceName} を削除しますか？\nこの操作は元に戻せません。`,
+                      [
+                        { text: 'キャンセル', style: 'cancel' },
+                        {
+                          text: '削除',
+                          style: 'destructive',
+                          onPress: async () => {
+                            const res = await roomService.deleteSpace(spaceId);
+                            if ((res as any).success) {
+                              Alert.alert('削除完了', 'ルームを削除しました');
+                              if (onBack) onBack();
+                            } else {
+                              Alert.alert('エラー', (res as any).error || '削除に失敗しました');
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: 'transparent',
+                      borderRadius: theme.radius.md,
+                      paddingHorizontal: theme.spacing(4),
+                      paddingVertical: theme.spacing(1.5),
+                      opacity: pressed ? 0.7 : 1,
+                      minWidth: 120,
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: '#ff4d4f',
+                      marginTop: theme.spacing(1),
+                    },
+                  ]}
+                >
+                  <Text style={{ color: '#ff4d4f', fontSize: 16, fontWeight: 'bold' }}>ルーム削除</Text>
+                </Pressable>
+              )}
 
               <Pressable
                 onPress={() => setShowMenu(false)}

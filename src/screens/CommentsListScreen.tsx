@@ -35,7 +35,7 @@ export default function CommentsListScreen({
   onCompose?: () => void;
   onOpenUser?: (userId: string) => void;
 }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const { handPreference } = useHandPreference();
   const fade = useRef(new Animated.Value(0)).current;

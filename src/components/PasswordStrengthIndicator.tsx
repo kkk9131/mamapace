@@ -31,7 +31,7 @@ export default function PasswordStrengthIndicator({
   showDetails = true,
   showStrengthBar = true,
 }: PasswordStrengthIndicatorProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
 
   // =====================================================
