@@ -17,11 +17,13 @@ import InviteFollowersScreen from './InviteFollowersScreen';
 interface RoomsListScreenProps {
   onNavigateToChannel?: (channelId: string, spaceName: string) => void;
   onBack?: () => void;
+  refreshKey?: number;
 }
 
 export default function RoomsListScreen({
   onNavigateToChannel,
   onBack,
+  refreshKey,
 }: RoomsListScreenProps) {
   const theme = useTheme() as any;
   const { colors } = theme;
@@ -29,7 +31,7 @@ export default function RoomsListScreen({
 
   // State management
   const [currentView, setCurrentView] = useState<
-    'list' | 'anonymous' | 'channel' | 'invite' | 'directChat'
+    'list' | 'anonymous' | 'channel' | 'space' | 'invite' | 'directChat'
   >('list');
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [selectedSpaceName, setSelectedSpaceName] = useState<string>('');
@@ -60,8 +62,13 @@ export default function RoomsListScreen({
     }
   }, [currentView, fade]);
 
-  // Hooks
+  // Hooks: channel-based chat list (chat experience)
   const { chatList, loading, error, refresh } = useChatList();
+
+  // Refresh when navigated to this screen
+  React.useEffect(() => {
+    refresh();
+  }, [refreshKey]);
 
   // Handle navigation
   const handleChannelSelect = (
@@ -135,6 +142,42 @@ export default function RoomsListScreen({
           setCurrentView('userProfile');
         }}
       />
+    );
+  }
+  if (currentView === 'space' && selectedSpaceId) {
+    return (
+      <Animated.View
+        style={{
+          flex: 1,
+          backgroundColor: 'transparent',
+          paddingTop: 40,
+          opacity: fade,
+        }}
+      >
+        <View style={{ paddingHorizontal: theme.spacing(2), marginBottom: 16 }}>
+          <Text style={{ color: colors.text, fontSize: 24, fontWeight: 'bold' }}>
+            {selectedSpaceName}
+          </Text>
+          <Text style={{ color: colors.subtext, fontSize: 14, marginTop: 8 }}>
+            現在このルームではチャンネル機能が無効です。参加状態のみ保持しています。
+          </Text>
+        </View>
+
+        <View style={{ paddingHorizontal: theme.spacing(2) }}>
+          <Pressable
+            onPress={() => setCurrentView('list')}
+            style={({ pressed }) => [{
+              backgroundColor: colors.surface,
+              paddingVertical: 12,
+              borderRadius: theme.radius.md,
+              alignItems: 'center',
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            }]}
+          >
+            <Text style={{ color: colors.text, fontWeight: 'bold' }}>戻る</Text>
+          </Pressable>
+        </View>
+      </Animated.View>
     );
   }
 
@@ -224,7 +267,6 @@ export default function RoomsListScreen({
       {/* Room List */}
       <FlatList
         data={[
-          // Anonymous room (always first)
           {
             id: 'anonymous',
             type: 'anonymous' as const,
@@ -234,7 +276,6 @@ export default function RoomsListScreen({
             has_new: false,
             unread_count: 0,
           },
-          // User's spaces
           ...chatList.map(item => ({
             id: item.channel_id,
             type: 'channel' as const,

@@ -47,7 +47,7 @@ export class RoomService {
   // =====================================================
 
   /**
-   * Create a new space using direct table operations
+   * Create a new space (via RPC) and its default channel, add owner as member
    */
   static async createSpace(
     request: CreateSpaceRequest
@@ -60,68 +60,59 @@ export class RoomService {
         return { error: 'Not authenticated' };
       }
 
-      // Insert new space
-      const { data: space, error: spaceError } = await supabase
-        .from('spaces')
-        .insert({
-          name: request.name,
-          description: request.description || null,
-          tags: request.tags || [],
-          is_public: request.is_public ?? true,
-          owner_id: user.user.id,
-          max_members: request.max_members || (request.is_public ? 500 : 50),
-        })
-        .select('id')
-        .single();
+      // Use SECURITY DEFINER RPC to create space + default channel atomically
+      const { data, error } = await supabase.rpc('create_space', {
+        p_name: request.name,
+        p_description: request.description ?? null,
+        p_tags: request.tags ?? [],
+        p_is_public: request.is_public ?? true,
+        p_max_members: request.max_members ?? null,
+      });
 
-      if (spaceError) {
-        console.error('[RoomService] Create space error:', spaceError.message);
-        return { error: spaceError.message };
+      if (error) {
+        console.error('[RoomService] Create space error:', error.message);
+        return { error: error.message };
       }
 
-      // Create default channel for the space
-      const { data: channel, error: channelError } = await supabase
-        .from('channels')
-        .insert({
-          space_id: space.id,
-          name: 'general',
-          description: null,
-          channel_type: 'text',
-        })
-        .select('id')
-        .single();
-
-      if (channelError) {
-        console.error(
-          '[RoomService] Create channel error:',
-          channelError.message
-        );
-        // Try to cleanup space if channel creation failed
-        await supabase.from('spaces').delete().eq('id', space.id);
-        return { error: channelError.message };
+      if (!data || data.error) {
+        const errMsg = data?.error || 'Failed to create space';
+        console.error('[RoomService] Create space error:', errMsg);
+        return { error: errMsg };
       }
 
-      // Add owner as member of the channel
-      const { error: memberError } = await supabase
-        .from('channel_members')
-        .insert({
-          channel_id: channel.id,
-          user_id: user.user.id,
-          role: 'owner',
-        });
+      let spaceId = data.space_id as string;
+      let channelId = data.channel_id as string | null;
 
-      if (memberError) {
-        console.error('[RoomService] Add member error:', memberError.message);
-        // Continue even if member add fails - space and channel are created
+      // Fallback: ensure a default channel exists even if RPC returned null channel_id (edge cases)
+      if (!channelId) {
+        // Try to find an existing channel
+        const found = await supabase
+          .from('channels')
+          .select('id')
+          .eq('space_id', spaceId)
+          .limit(1)
+          .maybeSingle();
+        if (found.data?.id) {
+          channelId = found.data.id;
+        } else {
+          // Create default channel client-side, then add owner as member
+          const ins = await supabase
+            .from('channels')
+            .insert({ space_id: spaceId, name: 'general', description: 'General discussion channel' })
+            .select('id')
+            .single();
+          if (!ins.error && ins.data?.id) {
+            channelId = ins.data.id;
+            // Add owner as member (owner role)
+            await supabase.from('channel_members').insert({ channel_id: channelId, user_id: user.user.id, role: 'owner' });
+          }
+        }
       }
 
       return {
         success: true,
-        data: {
-          space_id: space.id,
-          channel_id: channel.id,
-        },
-        message: 'Space created successfully',
+        data: { space_id: spaceId, channel_id: channelId || '' },
+        message: data.message || 'Space created successfully',
       };
     } catch (error: any) {
       console.error('[RoomService] Create space exception:', error.message);
@@ -330,19 +321,42 @@ export class RoomService {
         return { error: 'Space is at capacity' };
       }
 
-      // Get the channel for this space
+      // Get the channel for this space (channels may be disabled)
       const { data: channel, error: channelError } = await supabase
         .from('channels')
         .select('id')
         .eq('space_id', spaceId)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
-      if (channelError || !channel) {
-        console.error(
-          '[RoomService] Channel not found:',
-          channelError?.message
-        );
-        return { error: 'Channel not found' };
+      if (channelError) {
+        console.error('[RoomService] Get channel error:', channelError.message);
+      }
+
+      if (!channel) {
+        // Channels are disabled. Record membership in space_members.
+        const { data: existing } = await supabase
+          .from('space_members')
+          .select('space_id')
+          .eq('space_id', spaceId)
+          .eq('user_id', user.user.id)
+          .maybeSingle();
+
+        if (!existing) {
+          const { error: smErr } = await supabase
+            .from('space_members')
+            .insert({ space_id: spaceId, user_id: user.user.id, role: 'member' });
+          if (smErr) {
+            console.error('[RoomService] Join space (space_members) error:', smErr.message);
+            return { error: smErr.message };
+          }
+        }
+
+        return {
+          success: true,
+          data: { channel_id: '' },
+          message: 'Joined space',
+        };
       }
 
       // Check if user is already a member
@@ -398,15 +412,26 @@ export class RoomService {
         return { error: 'Not authenticated' };
       }
 
-      // Get channel ID for the space
-      const { data: channel, error: channelError } = await supabase
+      // Get channel ID for the space (channels may be disabled)
+      const { data: channel } = await supabase
         .from('channels')
         .select('id')
         .eq('space_id', spaceId)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
-      if (channelError || !channel) {
-        return { error: 'Space not found' };
+      if (!channel) {
+        // Channels disabled: remove membership from space_members if exists
+        const { error: delErr } = await supabase
+          .from('space_members')
+          .delete()
+          .eq('space_id', spaceId)
+          .eq('user_id', user.user.id);
+        if (delErr) {
+          console.error('[RoomService] Leave space (space_members) error:', delErr.message);
+          return { error: 'Failed to leave space' };
+        }
+        return { success: true, message: 'Left space' };
       }
 
       // Remove user from channel members
@@ -438,7 +463,6 @@ export class RoomService {
     try {
       const supabase = getSupabaseClient();
       const { data: user } = await supabase.auth.getUser();
-
       if (!user.user) {
         return { error: 'Not authenticated' };
       }
@@ -493,8 +517,8 @@ export class RoomService {
         created_at: item.channels.created_at,
         space: item.channels.spaces,
         member_role: item.role,
-        has_new: false, // TODO: Calculate based on last_seen_at vs latest message
-        unread_count: 0, // TODO: Calculate unread messages
+        has_new: false, // TODO
+        unread_count: 0, // TODO
       }));
 
       return {
@@ -503,6 +527,84 @@ export class RoomService {
       };
     } catch (error: any) {
       console.error('[RoomService] Get user spaces exception:', error.message);
+      return { error: 'Failed to get user spaces' };
+    }
+  }
+
+  /**
+   * Delete a space (owner only). Cascades will remove channels, members, messages.
+   */
+  static async deleteSpace(spaceId: string): Promise<ApiResponse<void>> {
+    try {
+      const supabase = getSupabaseClient();
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return { error: 'Not authenticated' };
+
+      const { error } = await supabase.from('spaces').delete().eq('id', spaceId).eq('owner_id', user.user.id);
+      if (error) {
+        console.error('[RoomService] Delete space error:', error.message);
+        return { error: 'Failed to delete space' };
+      }
+      return { success: true };
+    } catch (e: any) {
+      console.error('[RoomService] Delete space exception:', e.message);
+      return { error: 'Failed to delete space' };
+    }
+  }
+
+  private static async getSpacesFromMembershipOrOwned(): Promise<ApiResponse<ChannelWithSpace[]>> {
+    try {
+      const supabase = getSupabaseClient();
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return { error: 'Not authenticated' };
+
+      // Owned spaces
+      const { data: owned } = await supabase
+        .from('spaces')
+        .select('*')
+        .eq('owner_id', user.user.id);
+
+      // space_members memberships
+      const { data: sm } = await supabase
+        .from('space_members')
+        .select('space_id')
+        .eq('user_id', user.user.id)
+        .eq('is_active', true);
+
+      let memberSpaces: any[] = [];
+      if (sm && sm.length > 0) {
+        const ids = sm.map((r: any) => r.space_id);
+        const { data: spaces } = await supabase
+          .from('spaces')
+          .select('*')
+          .in('id', ids);
+        memberSpaces = spaces || [];
+      }
+
+      const combine = [...(owned || []), ...memberSpaces];
+      const unique = new Map<string, any>();
+      for (const s of combine) unique.set(s.id, s);
+
+      const result: ChannelWithSpace[] = Array.from(unique.values()).map(
+        (s: any) => ({
+          // Channel is disabled; return placeholder channel object
+          id: '',
+          space_id: s.id,
+          name: 'general',
+          description: null,
+          channel_type: 'text',
+          is_active: true,
+          created_at: s.created_at,
+          space: s,
+          member_role: s.owner_id === user.user.id ? 'owner' : 'member',
+          has_new: false,
+          unread_count: 0,
+        })
+      );
+
+      return { success: true, data: result };
+    } catch (e: any) {
+      console.error('[RoomService] Fallback user spaces error:', e.message);
       return { error: 'Failed to get user spaces' };
     }
   }
@@ -872,54 +974,68 @@ export class RoomService {
    */
   static async getCurrentAnonymousRoom(): Promise<ApiResponse<AnonymousRoom>> {
     try {
-      const currentSlotId = getCurrentAnonymousSlotId();
       const supabase = getSupabaseClient();
-
-      // Try to get existing slot
-      let { data: slot, error } = await supabase
-        .from('anonymous_slots')
-        .select('*')
-        .eq('id', currentSlotId)
-        .single();
-
-      // If slot doesn't exist, create it
-      if (error && error.code === 'PGRST116') {
-        // No rows found
-        const now = new Date();
-        const closedAt = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
-
-        const { data: newSlot, error: createError } = await supabase
-          .from('anonymous_slots')
-          .insert({
-            id: currentSlotId,
-            opened_at: now.toISOString(),
-            closed_at: closedAt.toISOString(),
-          })
-          .select('*')
-          .single();
-
-        if (createError) {
-          console.error(
-            '[RoomService] Create anonymous slot error:',
-            createError.message
-          );
-          return { error: 'Failed to create anonymous room' };
-        }
-
-        slot = newSlot;
-      } else if (error) {
-        console.error('[RoomService] Get anonymous slot error:', error.message);
-        return { error: 'Failed to get anonymous room' };
+      // 明示的に認証チェック（未認証ならRPCも失敗するため）
+      const { data: authInfo } = await supabase.auth.getUser();
+      if (!authInfo?.user) {
+        return { error: 'Not authenticated' };
       }
 
-      return {
-        success: true,
-        data: {
-          room_id: slot!.id,
-          ephemeral_name: 'Anonymous Chat',
-          expires_at: slot!.closed_at,
-        },
-      };
+      // 1) Try SECURITY DEFINER RPC first (preferred)
+      // Some Supabase setups require an explicit empty params object
+      const rpc = await supabase.rpc('get_or_create_current_anon_room', {} as any);
+
+      if (!rpc.error && rpc.data && !rpc.data.error) {
+        return {
+          success: true,
+          data: {
+            room_id: rpc.data.room_id,
+            ephemeral_name: rpc.data.ephemeral_name,
+            expires_at: rpc.data.expires_at,
+          },
+        };
+      }
+
+      // 明示的にRPCがエラーJSONを返している場合（認証エラーなど）
+      if (!rpc.error && rpc.data?.error) {
+        const msg = typeof rpc.data.error === 'string' ? rpc.data.error : 'Failed to get anonymous room';
+        console.error('[RoomService] Get anonymous room error:', msg);
+        return { error: msg };
+      }
+
+      // 2) Fallback: if RPC is missing (schema cache / function not found),
+      // compute slot locally and avoid direct INSERT to satisfy RLS.
+      const likelyMissing = rpc.error?.message?.includes('schema cache') ||
+        rpc.error?.message?.includes('function') ||
+        rpc.error?.message?.includes('not found');
+
+      if (likelyMissing) {
+        const slotId = getCurrentAnonymousSlotId();
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
+
+        // Best-effort: attempt to SELECT existing slot (RLS allows SELECT)
+        // Do not INSERT here to avoid violating RLS.
+        await supabase
+          .from('anonymous_slots')
+          .select('id')
+          .eq('id', slotId)
+          .maybeSingle();
+
+        return {
+          success: true,
+          data: {
+            room_id: slotId,
+            ephemeral_name: RoomService.generateEphemeralName(),
+            expires_at: expiresAt.toISOString(),
+          },
+          message: 'Using local fallback (RPC not found).',
+        };
+      }
+
+      // Other errors（通信やサーバー例外）
+      console.error('[RoomService] Get anonymous room error:', rpc.error?.message || rpc.error);
+      return { error: rpc.error?.message || 'Failed to get anonymous room' };
     } catch (error: any) {
       console.error(
         '[RoomService] Get anonymous room exception:',
@@ -927,6 +1043,15 @@ export class RoomService {
       );
       return { error: 'Failed to get anonymous room' };
     }
+  }
+
+  private static generateEphemeralName(): string {
+    const animals = ['たぬき', 'うさぎ', 'きつね', 'ねこ', 'いぬ', 'くま', 'ぱんだ', 'こあら', 'ぺんぎん', 'ふくろう'];
+    const colors = ['あか', 'あお', 'きいろ', 'みどり', 'むらさき', 'ぴんく', 'おれんじ', 'しろ', 'くろ', 'はいいろ'];
+    const animal = animals[Math.floor(Math.random() * animals.length)];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const suffix = String.fromCharCode(65 + Math.floor(Math.random() * 26)) + Math.floor(Math.random() * 10).toString();
+    return `${animal}-${color}-${suffix}`;
   }
 
   /**
@@ -943,40 +1068,40 @@ export class RoomService {
         return { error: 'Not authenticated' };
       }
 
-      // Validate message content
+      // Validate message content (client-side guard)
       const validation = this.validateMessageContent(request.content);
       if (!validation.isValid) {
         return { error: validation.error || 'Invalid message content' };
       }
 
-      // Insert anonymous message with expiry
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+      // 正規化: room_id が期待形式でない場合は現在スロットIDに置換
+      const rawRoomId = (request.room_id || '').trim();
+      const pattern = /^anon_\d{8}_\d{2}$/;
+      const roomIdForRpc = pattern.test(rawRoomId)
+        ? rawRoomId
+        : getCurrentAnonymousSlotId();
 
-      const { data: message, error } = await supabase
-        .from('room_messages')
-        .insert({
-          channel_id: null, // 明示的にNULLを設定
-          anonymous_room_id: request.room_id,
-          sender_id: user.user.id,
-          display_name: request.display_name,
-          message_type: 'text',
-          content: request.content,
-          expires_at: expiresAt.toISOString(),
-        })
-        .select('id')
-        .single();
+      // Use SECURITY DEFINER RPC to enforce rate limiting and counters
+      const { data, error } = await supabase.rpc('send_anonymous_message', {
+        p_room_id: roomIdForRpc,
+        p_content: request.content,
+        p_display_name: request.display_name,
+      });
 
       if (error) {
-        console.error(
-          '[RoomService] Send anonymous message error:',
-          error.message
-        );
+        console.error('[RoomService] Send anonymous message error:', error.message);
         return { error: error.message };
+      }
+
+      if (!data || data.error) {
+        const errMsg = data?.error || 'Failed to send anonymous message';
+        console.error('[RoomService] Send anonymous message error:', errMsg);
+        return { error: errMsg };
       }
 
       return {
         success: true,
-        data: { message_id: message.id },
+        data: { message_id: data.message_id },
         message: 'Message sent successfully',
       };
     } catch (error: any) {

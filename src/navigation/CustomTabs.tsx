@@ -107,6 +107,13 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
   const { isAuthenticated, isLoading, user } = useAuth();
   const { handPreference } = useHandPreference();
   const [active, setActive] = useState<any>('home');
+  const [roomsListKey, setRoomsListKey] = useState<number>(0);
+
+  useEffect(() => {
+    if (active === 'roomsList') {
+      setRoomsListKey(k => k + 1);
+    }
+  }, [active]);
 
   // React to external navigation requests (e.g., notification tap)
   useEffect(() => {
@@ -289,7 +296,7 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
               }}
             />
           ) : active === 'roomsList' ? (
-            <RoomsListScreen onBack={() => setActive('me' as any)} />
+            <RoomsListScreen refreshKey={roomsListKey} onBack={() => setActive('me' as any)} />
           ) : active === 'comment' ? (
             activePostId ? (
               <CommentComposeScreen

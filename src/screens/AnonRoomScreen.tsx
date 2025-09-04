@@ -160,17 +160,7 @@ export default function AnonRoomScreen({ onBack }: AnonRoomScreenProps) {
             padding: theme.spacing(1.75),
           }}
         >
-          <View
-            style={{
-              marginBottom: 8,
-            }}
-          >
-            <Text
-              style={{ color: colors.pink, fontSize: 14, fontWeight: 'bold' }}
-            >
-              {item.display_name}
-            </Text>
-          </View>
+          {/* 匿名性を保つため、投稿カードの表示名は非表示にする */}
 
           <ExpandableText
             text={item.content || ''}
@@ -255,22 +245,9 @@ export default function AnonRoomScreen({ onBack }: AnonRoomScreenProps) {
 
           {room && (
             <View style={{ alignItems: 'center', marginTop: 8 }}>
-              <View
-                style={{
-                  backgroundColor: colors.pinkSoft,
-                  borderRadius: theme.radius.md,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                }}
-              >
-                <Text
-                  style={{ color: '#302126', fontSize: 12, fontWeight: 'bold' }}
-                >
-                  あなたの名前: {room.ephemeral_name}
-                </Text>
-              </View>
+              {/* 匿名名表示を削除し、残り時間のみ表示 */}
               <Text
-                style={{ color: colors.subtext, fontSize: 12, marginTop: 4 }}
+                style={{ color: colors.subtext, fontSize: 12 }}
               >
                 ルーム期限: {timeLeft}
               </Text>
