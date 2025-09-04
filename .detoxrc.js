@@ -9,6 +9,16 @@ module.exports = {
       setupFilesAfterEnv: ['<rootDir>/e2e/init.js']
     }
   },
+  artifacts: {
+    rootDir: 'screenshots',
+    plugins: {
+      screenshot: {
+        shouldTakeAutomaticSnapshots: 'manual'
+      },
+      video: 'none',
+      logs: 'none'
+    }
+  },
   apps: {
     'ios.debug': {
       type: 'ios.app',
@@ -38,6 +48,24 @@ module.exports = {
         type: 'iPhone 14'
       }
     },
+    ios67: {
+      type: 'ios.simulator',
+      device: {
+        type: 'iPhone 15 Pro Max'
+      }
+    },
+    ios55: {
+      type: 'ios.simulator',
+      device: {
+        type: 'iPhone 8 Plus'
+      }
+    },
+    iosIpad129: {
+      type: 'ios.simulator',
+      device: {
+        type: 'iPad Pro (12.9-inch) (6th generation)'
+      }
+    },
     attached: {
       type: 'android.attached',
       device: {
@@ -58,6 +86,18 @@ module.exports = {
     },
     'ios.sim.release': {
       device: 'simulator',
+      app: 'ios.release'
+    },
+    'ios.ss.67': {
+      device: 'ios67',
+      app: 'ios.release'
+    },
+    'ios.ss.55': {
+      device: 'ios55',
+      app: 'ios.release'
+    },
+    'ios.ss.ipad129': {
+      device: 'iosIpad129',
       app: 'ios.release'
     },
     'android.att.debug': {
