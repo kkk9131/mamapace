@@ -162,7 +162,12 @@ export default function ChannelScreen({
       }).start();
     }, 50);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // Clear pending scroll timers
+      if ((flatListRef as any)._csTimer) clearTimeout((flatListRef as any)._csTimer);
+      if ((flatListRef as any)._layoutTimer) clearTimeout((flatListRef as any)._layoutTimer);
+    };
   }, [fadeAnim]);
 
   // Animate members sidebar
@@ -551,12 +556,14 @@ export default function ChannelScreen({
           inverted={false}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => {
-            setTimeout(() => {
+            if ((flatListRef as any)._csTimer) clearTimeout((flatListRef as any)._csTimer);
+            (flatListRef as any)._csTimer = setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: false });
             }, 50);
           }}
           onLayout={() => {
-            setTimeout(() => {
+            if ((flatListRef as any)._layoutTimer) clearTimeout((flatListRef as any)._layoutTimer);
+            (flatListRef as any)._layoutTimer = setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: false });
             }, 50);
           }}

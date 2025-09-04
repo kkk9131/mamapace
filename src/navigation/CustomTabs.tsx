@@ -34,6 +34,13 @@ import CreateSpaceScreen from '../screens/CreateSpaceScreen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+type TabKey =
+  | 'me' | 'noti' | 'home' | 'rooms'
+  | 'compose' | 'anon' | 'chat' | 'settings'
+  | 'roomsList' | 'comment' | 'comments'
+  | 'followers' | 'following' | 'liked' | 'myPosts'
+  | 'profileEdit' | 'userProfile';
+
 const tabs = [
   { key: 'me', label: 'あなた', Component: ProfileScreen },
   { key: 'noti', label: '通知', Component: NotificationsScreen },
@@ -106,7 +113,7 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
   const insets = useSafeAreaInsets();
   const { isAuthenticated, isLoading, user } = useAuth();
   const { handPreference } = useHandPreference();
-  const [active, setActive] = useState<any>('home');
+  const [active, setActive] = useState<TabKey>('home');
   const [roomsListKey, setRoomsListKey] = useState<number>(0);
 
   useEffect(() => {
@@ -377,7 +384,7 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
             ) : null
           ) : (
             <ProfileScreen
-              onNavigate={(key: string) => setActive(key as any)}
+              onNavigate={(key: string) => setActive(key as TabKey)}
             />
           )}
         </View>

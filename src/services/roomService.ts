@@ -640,8 +640,9 @@ export class RoomService {
       }
 
       // Prepare content: ensure non-empty when attachments exist to satisfy DB constraint
-      const contentToInsert = (request.content && request.content.trim().length > 0)
-        ? request.content
+      const sanitized = request.content ? RoomService.sanitizeContent(request.content) : '';
+      const contentToInsert = (sanitized && sanitized.length > 0)
+        ? sanitized
         : ((request.attachments && request.attachments.length > 0) ? '[image]' : '');
 
       // Insert the message with sender_id
@@ -872,93 +873,14 @@ export class RoomService {
         return { error: 'Not authenticated' };
       }
 
-      // Get channels and spaces where user is a member, with latest message info
-      const { data, error } = await supabase
-        .from('channel_members')
-        .select(
-          `
-          channel_id,
-          role,
-          last_seen_at,
-          channels (
-            id,
-            space_id,
-            name,
-            spaces (
-              id,
-              name,
-              is_public
-            )
-          )
-        `
-        )
-        .eq('user_id', user.user.id)
-        .eq('is_active', true);
-
+      // Use SECURITY DEFINER RPC to avoid N+1 queries and compute NEW flags in SQL
+      const { data, error } = await supabase.rpc('get_chat_list_with_new', { p_limit: 50 });
       if (error) {
         console.error('[RoomService] Get chat list error:', error.message);
         return { error: 'Failed to get chat list' };
       }
 
-      if (!data || data.length === 0) {
-        return {
-          success: true,
-          data: [],
-        };
-      }
-
-      // Transform data to ChatListItem format
-      const chatList: ChatListItem[] = await Promise.all(
-        (data || []).map(async (item: any) => {
-          // Get latest message for this channel
-          const { data: latestMessage } = await supabase
-            .from('room_messages')
-            .select('created_at, content, sender_id')
-            .eq('channel_id', item.channel_id)
-            .is('deleted_at', null)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
-          // Get sender username separately if there's a latest message
-          let senderUsername = null;
-          if (latestMessage?.sender_id) {
-            const { data: senderProfile } = await supabase
-              .from('user_profiles')
-              .select('username')
-              .eq('id', latestMessage.sender_id)
-              .single();
-
-            senderUsername = senderProfile?.username || null;
-          }
-
-          // Calculate if there are new messages
-          const hasNew =
-            latestMessage &&
-            new Date(latestMessage.created_at) > new Date(item.last_seen_at);
-
-          return {
-            channel_id: item.channels.id,
-            space_id: item.channels.spaces.id,
-            space_name: item.channels.spaces.name,
-            space_is_public: item.channels.spaces.is_public,
-            channel_name: item.channels.name,
-            member_role: item.role,
-            last_seen_at: item.last_seen_at,
-            latest_message_at: latestMessage?.created_at || null,
-            latest_message_content: latestMessage?.content || null,
-            latest_message_sender_id: latestMessage?.sender_id || null,
-            latest_message_sender_username: senderUsername,
-            has_new: hasNew || false,
-            unread_count: 0, // TODO: Calculate actual unread count
-          };
-        })
-      );
-
-      return {
-        success: true,
-        data: chatList,
-      };
+      return { success: true, data: (data as any[]) || [] };
     } catch (error: any) {
       console.error('[RoomService] Get chat list exception:', error.message);
       return { error: 'Failed to get chat list' };
@@ -1074,6 +996,8 @@ export class RoomService {
         return { error: validation.error || 'Invalid message content' };
       }
 
+      const sanitized = RoomService.sanitizeContent(request.content);
+
       // 正規化: room_id が期待形式でない場合は現在スロットIDに置換
       const rawRoomId = (request.room_id || '').trim();
       const pattern = /^anon_\d{8}_\d{2}$/;
@@ -1084,7 +1008,7 @@ export class RoomService {
       // Use SECURITY DEFINER RPC to enforce rate limiting and counters
       const { data, error } = await supabase.rpc('send_anonymous_message', {
         p_room_id: roomIdForRpc,
-        p_content: request.content,
+        p_content: sanitized,
         p_display_name: request.display_name,
       });
 
@@ -1309,6 +1233,17 @@ export class RoomService {
     }
 
     return { isValid: true };
+  }
+
+  /**
+   * Sanitize message content to avoid control characters or unsafe strings
+   */
+  static sanitizeContent(input: string): string {
+    const trimmed = (input || '').trim();
+    // Remove null bytes and control chars except newline and tab
+    const cleaned = trimmed.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+    // Enforce length limit
+    return cleaned.slice(0, 2000);
   }
 
   /**
