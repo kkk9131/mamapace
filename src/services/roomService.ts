@@ -687,12 +687,10 @@ export class RoomService {
         data: { message_id: message.id },
         message: 'Message sent successfully',
       };
-    } catch (error: any) {
-      console.error(
-        '[RoomService] Send channel message exception:',
-        error.message
-      );
-      return { error: 'Failed to send message' };
+    } catch (error: unknown) {
+      const msg = this.normalizeError(error, 'Failed to send message');
+      console.error('[RoomService] Send channel message exception:', msg);
+      return { error: msg };
     }
   }
 
@@ -896,9 +894,10 @@ export class RoomService {
       }
 
       return { success: true, data: (data as any[]) || [] };
-    } catch (error: any) {
-      console.error('[RoomService] Get chat list exception:', error.message);
-      return { error: 'Failed to get chat list' };
+    } catch (error: unknown) {
+      const msg = this.normalizeError(error, 'Failed to get chat list');
+      console.error('[RoomService] Get chat list exception:', msg);
+      return { error: msg };
     }
   }
 
@@ -973,12 +972,10 @@ export class RoomService {
       // Other errors（通信やサーバー例外）
       console.error('[RoomService] Get anonymous room error:', rpc.error?.message || rpc.error);
       return { error: rpc.error?.message || 'Failed to get anonymous room' };
-    } catch (error: any) {
-      console.error(
-        '[RoomService] Get anonymous room exception:',
-        error.message
-      );
-      return { error: 'Failed to get anonymous room' };
+    } catch (error: unknown) {
+      const msg = this.normalizeError(error, 'Failed to get anonymous room');
+      console.error('[RoomService] Get anonymous room exception:', msg);
+      return { error: msg };
     }
   }
 
@@ -1043,12 +1040,10 @@ export class RoomService {
         data: { message_id: data.message_id },
         message: 'Message sent successfully',
       };
-    } catch (error: any) {
-      console.error(
-        '[RoomService] Send anonymous message exception:',
-        error.message
-      );
-      return { error: 'Failed to send anonymous message' };
+    } catch (error: unknown) {
+      const msg = this.normalizeError(error, 'Failed to send anonymous message');
+      console.error('[RoomService] Send anonymous message exception:', msg);
+      return { error: msg };
     }
   }
 
