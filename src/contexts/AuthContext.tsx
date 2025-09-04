@@ -197,26 +197,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           services: result.services.length,
         });
 
-        // E2E/App Store screenshots helper: optionally auto-login with a stub user
-        try {
-          const e2eAutoLogin = (Constants as any)?.expoConfig?.extra?.E2E_AUTO_LOGIN;
-          if (e2eAutoLogin) {
-            const now = new Date().toISOString();
-            const stubUser: PublicUserProfile = {
-              id: 'e2e-user',
-              username: 'mamapace_e2e',
-              display_name: 'Mamapace',
-              bio: '自動ログイン(スクショ用)',
-              avatar_emoji: '👩\u200d🍼',
-              created_at: now,
-              profile_visibility: 'public',
-              is_active: true,
-            };
-            dispatch({ type: 'SET_USER', payload: stubUser });
-            return; // Skip session restore when auto-login is enabled
-          }
-        } catch {}
-
         await restoreSession();
       } else {
         const errorMessage =

@@ -307,7 +307,6 @@ export default function RoomsListScreen({
         }
         renderItem={({ item }) => (
           <Pressable
-            testID={item.type === 'anonymous' ? 'anonymous-room-entry' : undefined}
             onPress={() => {
               if (item.type === 'anonymous') {
                 setCurrentView('anonymous');
