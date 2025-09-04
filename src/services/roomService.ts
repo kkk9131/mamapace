@@ -85,26 +85,20 @@ export class RoomService {
 
       // Fallback: ensure a default channel exists even if RPC returned null channel_id (edge cases)
       if (!channelId) {
-        // Try to find an existing channel
-        const found = await supabase
-          .from('channels')
-          .select('id')
-          .eq('space_id', spaceId)
-          .limit(1)
-          .maybeSingle();
-        if (found.data?.id) {
-          channelId = found.data.id;
+        // Server-side ensure via RPC (owner only)
+        const ensured = await supabase.rpc('ensure_default_channel_if_missing', { p_space_id: spaceId });
+        if (!ensured.error && ensured.data) {
+          channelId = ensured.data as any;
         } else {
-          // Create default channel client-side, then add owner as member
-          const ins = await supabase
+          // Fallback: Try to find an existing channel then
+          const found = await supabase
             .from('channels')
-            .insert({ space_id: spaceId, name: 'general', description: 'General discussion channel' })
             .select('id')
-            .single();
-          if (!ins.error && ins.data?.id) {
-            channelId = ins.data.id;
-            // Add owner as member (owner role)
-            await supabase.from('channel_members').insert({ channel_id: channelId, user_id: user.user.id, role: 'owner' });
+            .eq('space_id', spaceId)
+            .limit(1)
+            .maybeSingle();
+          if (found.data?.id) {
+            channelId = found.data.id;
           }
         }
       }
@@ -334,29 +328,26 @@ export class RoomService {
       }
 
       if (!channel) {
-        // Channels are disabled. Record membership in space_members.
-        const { data: existing } = await supabase
-          .from('space_members')
-          .select('space_id')
-          .eq('space_id', spaceId)
-          .eq('user_id', user.user.id)
-          .maybeSingle();
-
-        if (!existing) {
-          const { error: smErr } = await supabase
-            .from('space_members')
-            .insert({ space_id: spaceId, user_id: user.user.id, role: 'member' });
-          if (smErr) {
-            console.error('[RoomService] Join space (space_members) error:', smErr.message);
-            return { error: smErr.message };
+        // Ensure default channel exists (owner only RPC, but safe if caller is not owner; it just errors silently here)
+        const ensured = await supabase.rpc('ensure_default_channel_if_missing', { p_space_id: spaceId });
+        if (!ensured.error && ensured.data) {
+          channel = { id: ensured.data } as any;
+        } else {
+          // Try again to find channel (maybe created by someone else)
+          const found = await supabase
+            .from('channels')
+            .select('id')
+            .eq('space_id', spaceId)
+            .limit(1)
+            .maybeSingle();
+          if (found.data?.id) {
+            channel = { id: found.data.id } as any;
           }
         }
+      }
 
-        return {
-          success: true,
-          data: { channel_id: '' },
-          message: 'Joined space',
-        };
+      if (!channel) {
+        return { error: 'Channel not found' };
       }
 
       // Check if user is already a member
