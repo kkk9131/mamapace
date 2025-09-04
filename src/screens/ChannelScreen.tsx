@@ -191,6 +191,14 @@ export default function ChannelScreen({
     }
   }, [showMembers, membersSlide, refreshMembers]);
 
+  // Ensure scroll timers are cleared on unmount (safety net)
+  useEffect(() => {
+    return () => {
+      if (csTimerRef.current) clearTimeout(csTimerRef.current);
+      if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
+    };
+  }, []);
+
   // Mark channel as seen when screen loads
   useEffect(() => {
     if (channelId) {

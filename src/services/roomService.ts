@@ -42,6 +42,19 @@ import { PublicUserProfile } from '../types/auth';
  * Handles all room-related API operations
  */
 export class RoomService {
+  /**
+   * Normalize unknown error into readable string
+   */
+  static normalizeError(error: unknown, fallback = 'Unexpected error'): string {
+    if (!error) return fallback;
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'string') return error;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return fallback;
+    }
+  }
   // =====================================================
   // SPACE MANAGEMENT
   // =====================================================

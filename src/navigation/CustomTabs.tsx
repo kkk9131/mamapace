@@ -127,8 +127,9 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
   useEffect(() => {
     if (!navigateTo) return;
     try {
-      let parsed: any = undefined;
-      try { parsed = JSON.parse(navigateTo); } catch {}
+      let parsedUnknown: unknown = undefined;
+      try { parsedUnknown = JSON.parse(navigateTo); } catch {}
+      const parsed = parsedUnknown as { screen?: string; chat_id?: string; post_id?: string; user_id?: string } | undefined;
       if (parsed && parsed.screen) {
         const s = String(parsed.screen);
         if (s === 'chat' && parsed.chat_id) {
