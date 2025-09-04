@@ -60,7 +60,9 @@ export class RoomService {
   // =====================================================
 
   /**
-   * Create a new space (via RPC) and its default channel, add owner as member
+   * Create a new space and its default channel.
+   * - Uses SECURITY DEFINER RPC `create_space` on DB side
+   * - DB側で `ensure_default_channel_if_missing` を呼び、default channel と owner membership を最終保証
    */
   static async createSpace(
     request: CreateSpaceRequest
@@ -129,7 +131,8 @@ export class RoomService {
   }
 
   /**
-   * Get channel members with user profiles
+   * Get channel members with attached user profiles.
+   * Sort order: owner -> moderator -> member, then by display/username
    */
   static async getChannelMembers(
     channelId: string
@@ -306,7 +309,9 @@ export class RoomService {
   }
 
   /**
-   * Join a public space using direct table operations
+   * Join a public space.
+   * - Ensures default channel exists (RPC)
+   * - Adds current user to channel_members (role: member)
    */
   static async joinPublicSpace(
     spaceId: string
@@ -893,7 +898,8 @@ export class RoomService {
   }
 
   /**
-   * Get chat list with NEW badge information using direct table operations
+   * Get chat list with NEW badges computed on DB side.
+   * - Uses SECURITY DEFINER RPC `get_chat_list_with_new`
    */
   static async getChatListWithNew(): Promise<ApiResponse<ChatListItem[]>> {
     try {
@@ -1007,7 +1013,7 @@ export class RoomService {
   }
 
   /**
-   * Send a message to anonymous room using direct table operations
+   * Send a message to anonymous room with rate limits enforced by RPC.
    */
   static async sendAnonymousMessage(
     request: SendAnonymousMessageRequest
