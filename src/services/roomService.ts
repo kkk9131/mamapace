@@ -508,7 +508,21 @@ export class RoomService {
       }
 
       // Transform data to match ChannelWithSpace type
-      const spaces: ChannelWithSpace[] = (data || []).map((item: any) => ({
+      const spaces: ChannelWithSpace[] = (data || []).map((item: {
+        channel_id: string;
+        role: 'owner' | 'moderator' | 'member';
+        last_seen_at: string;
+        channels: {
+          id: string;
+          space_id: string;
+          name: string;
+          description: string | null;
+          channel_type: 'text' | 'voice' | 'announcement';
+          is_active: boolean;
+          created_at: string;
+          spaces: Space;
+        };
+      }) => ({
         id: item.channels.id,
         space_id: item.channels.space_id,
         name: item.channels.name,
