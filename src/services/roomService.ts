@@ -136,7 +136,9 @@ export class RoomService {
         return { error: 'Failed to get channel members' };
       }
 
-      const members: ChannelMemberWithUser[] = (data || []).map((m: any) => ({
+      const members: ChannelMemberWithUser[] = (data || []).map((m: {
+        channel_id: string; user_id: string; role: 'owner' | 'moderator' | 'member'; last_seen_at: string; joined_at: string; is_active: boolean; user: PublicUserProfile;
+      }) => ({
         channel_id: m.channel_id,
         user_id: m.user_id,
         role: m.role,

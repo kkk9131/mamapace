@@ -133,21 +133,21 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
         const s = String(parsed.screen);
         if (s === 'chat' && parsed.chat_id) {
           setActiveChatId(String(parsed.chat_id));
-          setActive('chat' as any);
+          setActive('chat');
         } else if (s === 'comments' && parsed.post_id) {
           setActivePostId(String(parsed.post_id));
-          setActive('comments' as any);
+          setActive('comments');
         } else if (s === 'userProfile' && parsed.user_id) {
           setActiveUserId(String(parsed.user_id));
-          setActive('userProfile' as any);
+          setActive('userProfile');
         } else if (s === 'rooms') {
-          setActive('rooms' as any);
+          setActive('rooms');
         } else {
-          setActive(s as any);
+          setActive(s as TabKey);
         }
       } else {
         // Simple tab name
-        setActive(navigateTo as any);
+        setActive(navigateTo as TabKey);
       }
     } finally {
       onNavigateConsumed && onNavigateConsumed();
@@ -167,9 +167,9 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
   // Authentication flow - show login/signup screens when not authenticated
   if (!isLoading && !isAuthenticated) {
     if (active === 'signup') {
-      return <SignUpScreen onLogin={() => setActive('login' as any)} />;
+      return <SignUpScreen onLogin={() => setActive('login')} />;
     } else {
-      return <LoginScreen onSignup={() => setActive('signup' as any)} />;
+      return <LoginScreen onSignup={() => setActive('signup')} />;
     }
   }
 
@@ -178,10 +178,10 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
     return (
       <ComposeScreen
         onPosted={() => {
-          setActive('home' as any);
+              setActive('home');
           setHomeRefreshKey((k: number) => k + 1);
         }}
-        onClose={() => setActive('home' as any)}
+        onClose={() => setActive('home')}
       />
     );
 
@@ -192,7 +192,7 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
           onNavigate={key => {
-            setActive(key as any);
+            setActive(key as TabKey);
             setSidebarOpen(false);
           }}
         />
@@ -200,15 +200,15 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
           {active === 'home' ? (
             <HomeScreen
               refreshKey={homeRefreshKey}
-              onCompose={() => setActive('compose' as any)}
+              onCompose={() => setActive('compose')}
               onOpenPost={postId => {
                 setActivePostId(postId);
-                setActive('comments' as any);
+                setActive('comments');
               }}
-              onOpenProfileEdit={() => setActive('profileEdit' as any)}
+              onOpenProfileEdit={() => setActive('profileEdit')}
               onOpenUser={userId => {
                 setActiveUserId(userId);
-                setActive('userProfile' as any);
+                setActive('userProfile');
               }}
             />
           ) : active === 'search' ? (
@@ -218,15 +218,15 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
               return (
                 <HomeScreen
                   refreshKey={homeRefreshKey}
-                  onCompose={() => setActive('compose' as any)}
+                  onCompose={() => setActive('compose')}
                   onOpenPost={postId => {
                     setActivePostId(postId);
-                    setActive('comments' as any);
+                    setActive('comments');
                   }}
-                  onOpenProfileEdit={() => setActive('profileEdit' as any)}
+                  onOpenProfileEdit={() => setActive('profileEdit')}
                   onOpenUser={userId => {
                     setActiveUserId(userId);
-                    setActive('userProfile' as any);
+                    setActive('userProfile');
                   }}
                 />
               );
@@ -238,9 +238,9 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
           ) : active === 'createRoom' ? (
             <CreateSpaceScreen
               onSuccess={() => {
-                setActive('rooms' as any);
+                setActive('rooms');
               }}
-              onCancel={() => setActive('rooms' as any)}
+              onCancel={() => setActive('rooms')}
             />
           ) : active === 'chats' ? (
             <ErrorBoundary>
@@ -249,7 +249,7 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
                 setActiveChatId(chatId);
                 setActiveChatUserName(userName);
                 setChatReturnTo('chats');
-                setActive('chat' as any);
+                setActive('chat');
               }}
               />
             </ErrorBoundary>
@@ -260,15 +260,15 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
               return (
                 <HomeScreen
                   refreshKey={homeRefreshKey}
-                  onCompose={() => setActive('compose' as any)}
+                  onCompose={() => setActive('compose')}
                   onOpenPost={postId => {
                     setActivePostId(postId);
-                    setActive('comments' as any);
+                    setActive('comments');
                   }}
-                  onOpenProfileEdit={() => setActive('profileEdit' as any)}
+                  onOpenProfileEdit={() => setActive('profileEdit')}
                   onOpenUser={userId => {
                     setActiveUserId(userId);
-                    setActive('userProfile' as any);
+                    setActive('userProfile');
                   }}
                 />
               );
@@ -281,11 +281,11 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
                 onBack={() => {
                   setActiveChatId(null);
                   setActiveChatUserName(null);
-                  setActive(chatReturnTo as any);
+                  setActive(chatReturnTo as TabKey);
                 }}
                 onNavigateToUser={(userId: string) => {
                   setActiveUserId(userId);
-                  setActive('userProfile' as any);
+                  setActive('userProfile');
                 }}
               />
             ) : (
@@ -294,7 +294,7 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
                   setActiveChatId(chatId);
                   setActiveChatUserName(userName);
                   setChatReturnTo('chats');
-                  setActive('chat' as any);
+                  setActive('chat');
                 }}
               />
             )
@@ -309,17 +309,17 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
             />
           ) : active === 'roomsList' ? (
             <ErrorBoundary>
-              <RoomsListScreen refreshKey={roomsListKey} onBack={() => setActive('me' as any)} />
+            <RoomsListScreen refreshKey={roomsListKey} onBack={() => setActive('me')} />
             </ErrorBoundary>
           ) : active === 'comment' ? (
             activePostId ? (
               <CommentComposeScreen
                 postId={activePostId}
                 onPosted={() => {
-                  setActive('comments' as any);
+                  setActive('comments');
                   setCommentsRefreshKey((k: number) => k + 1);
                 }}
-                onClose={() => setActive('comments' as any)}
+                onClose={() => setActive('comments')}
               />
             ) : null
           ) : active === 'comments' ? (
@@ -327,10 +327,10 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
               <CommentsListScreen
                 refreshKey={commentsRefreshKey}
                 postId={activePostId}
-                onCompose={() => setActive('comment' as any)}
+                onCompose={() => setActive('comment')}
                 onOpenUser={(userId: string) => {
                   setActiveUserId(userId);
-                  setActive('userProfile' as any);
+                  setActive('userProfile');
                 }}
               />
             ) : null
@@ -340,11 +340,11 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
                 setActiveChatId(chatId);
                 setActiveChatUserName(userName);
                 setChatReturnTo('followers');
-                setActive('chat' as any);
+                setActive('chat');
               }}
               onOpenUser={(userId: string) => {
                 setActiveUserId(userId);
-                setActive('userProfile' as any);
+                setActive('userProfile');
               }}
             />
           ) : active === 'following' ? (
@@ -353,25 +353,25 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
                 setActiveChatId(chatId);
                 setActiveChatUserName(userName);
                 setChatReturnTo('following');
-                setActive('chat' as any);
+                setActive('chat');
               }}
               onOpenUser={(userId: string) => {
                 setActiveUserId(userId);
-                setActive('userProfile' as any);
+                setActive('userProfile');
               }}
             />
           ) : active === 'liked' ? (
             <LikedPostsListScreen
               onOpen={postId => {
                 setActivePostId(postId);
-                setActive('comments' as any);
+                setActive('comments');
               }}
             />
           ) : active === 'myPosts' ? (
             <MyPostsListScreen />
           ) : active === 'profileEdit' ? (
             <ProfileEditScreen
-              navigation={{ goBack: () => setActive('me' as any) }}
+              navigation={{ goBack: () => setActive('me') }}
             />
           ) : active === 'userProfile' ? (
             activeUserId ? (
@@ -379,13 +379,13 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
                 userId={activeUserId}
                 onBack={() => {
                   setActiveUserId(null);
-                  setActive('home' as any);
+                  setActive('home');
                 }}
                 onNavigateToChat={(chatId: string, userName: string) => {
                   setActiveChatId(chatId);
                   setActiveChatUserName(userName);
                   setChatReturnTo('userProfile');
-                  setActive('chat' as any);
+                  setActive('chat');
                 }}
               />
             ) : null
@@ -420,7 +420,7 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
                 iconOutline={k === 'me' ? 'person-outline' : k === 'noti' ? 'notifications-outline' : 'home-outline'}
                 accessibilityLabel={k === 'me' ? 'あなた' : k === 'noti' ? '通知' : 'ホーム'}
                 active={active === k}
-                onPress={() => setActive(k as any)}
+                onPress={() => setActive(k as TabKey)}
                 onLongPress={
                   (handPreference === 'right' && k === 'home') ||
                   (handPreference === 'left' && k === 'me')
