@@ -109,7 +109,7 @@ function IconTab({
 }
 
 export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigateTo?: string | null; onNavigateConsumed?: () => void }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const insets = useSafeAreaInsets();
   const { isAuthenticated, isLoading, user } = useAuth();

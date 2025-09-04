@@ -31,7 +31,7 @@ export default function CreateSpaceScreen({
   onSuccess,
   onCancel,
 }: CreateSpaceScreenProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
 
   // State
