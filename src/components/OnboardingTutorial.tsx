@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Modal } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/theme';
 
@@ -26,20 +26,20 @@ export default function OnboardingTutorial({ onClose }: { onClose: () => void })
   );
 
   return (
-    <View
-      accessible
-      accessibilityLabel="アプリの使い方"
-      style={{
-        position: 'absolute',
-        inset: 0,
-        backgroundColor: colors.overlay,
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: theme.spacing(2),
-      }}
-    >
-      <BlurView intensity={30} tint="dark" style={{ width: '100%', borderRadius: theme.radius.lg, overflow: 'hidden' }}>
-        <View style={{ padding: theme.spacing(2) }}>
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable
+        accessibilityLabel="アプリの使い方"
+        onPress={onClose}
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.35)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: theme.spacing(2),
+        }}
+      >
+        <BlurView intensity={30} tint="dark" style={{ width: '100%', maxWidth: 560, borderRadius: theme.radius.lg, overflow: 'hidden' }}>
+          <View style={{ padding: theme.spacing(2) }}>
           <View style={{ marginBottom: theme.spacing(1.5), alignItems: 'center' }}>
             <Text style={{ color: colors.pink, fontWeight: '800', fontSize: 18 }}>Mamapace へようこそ</Text>
             <Text style={{ color: colors.subtext, fontSize: 12, marginTop: 6 }}>安心・安全のためのポイント（1分で読めます）</Text>
@@ -78,9 +78,15 @@ export default function OnboardingTutorial({ onClose }: { onClose: () => void })
               <Text style={{ color: '#1C1F25', fontWeight: '800' }}>はじめる</Text>
             </Pressable>
           </View>
-        </View>
-      </BlurView>
-    </View>
+          <Pressable
+            accessibilityLabel="閉じる"
+            onPress={onClose}
+            style={{ position: 'absolute', top: 8, right: 8, padding: 8 }}
+          >
+            <Text style={{ color: colors.subtext, fontSize: 18 }}>✕</Text>
+          </Pressable>
+        </BlurView>
+      </Pressable>
+    </Modal>
   );
 }
-
