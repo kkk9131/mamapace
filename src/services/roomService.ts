@@ -108,9 +108,10 @@ export class RoomService {
         data: { space_id: spaceId, channel_id: channelId || '' },
         message: data.message || 'Space created successfully',
       };
-    } catch (error: any) {
-      console.error('[RoomService] Create space exception:', error.message);
-      return { error: 'Failed to create space' };
+    } catch (error: unknown) {
+      const msg = RoomService.normalizeError(error, 'Failed to create space');
+      console.error('[RoomService] Create space exception:', msg);
+      return { error: msg };
     }
   }
 
@@ -165,9 +166,10 @@ export class RoomService {
       });
 
       return { success: true, data: members };
-    } catch (error: any) {
-      console.error('[RoomService] Get channel members exception:', error.message);
-      return { error: 'Failed to get channel members' };
+    } catch (error: unknown) {
+      const msg = RoomService.normalizeError(error, 'Failed to get channel members');
+      console.error('[RoomService] Get channel members exception:', msg);
+      return { error: msg };
     }
   }
 
@@ -283,9 +285,10 @@ export class RoomService {
         success: true,
         data: spacesWithOwner,
       };
-    } catch (error: any) {
-      console.error('[RoomService] Search spaces exception:', error.message);
-      return { error: 'Failed to search spaces' };
+    } catch (error: unknown) {
+      const msg = RoomService.normalizeError(error, 'Failed to search spaces');
+      console.error('[RoomService] Search spaces exception:', msg);
+      return { error: msg };
     }
   }
 
@@ -458,7 +461,8 @@ export class RoomService {
   }
 
   /**
-   * Get user's spaces (spaces they are members of) using direct table operations
+   * Get user's joined channels with their parent spaces.
+   * Returns list suitable for chat list and room navigation.
    */
   static async getUserSpaces(): Promise<ApiResponse<ChannelWithSpace[]>> {
     try {
@@ -892,7 +896,7 @@ export class RoomService {
         return { error: 'Failed to get chat list' };
       }
 
-      return { success: true, data: (data as any[]) || [] };
+      return { success: true, data: (data as ChatListItem[]) || [] };
     } catch (error: unknown) {
       const msg = this.normalizeError(error, 'Failed to get chat list');
       console.error('[RoomService] Get chat list exception:', msg);
