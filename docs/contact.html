@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>お問い合わせ | Mamapace</title>
+    <meta name="description" content="Mamapace（ママペース）へのお問い合わせページ。サポート宛のご連絡方法、対応時間、注意事項をご案内します。" />
+    <meta name="theme-color" content="#0E0F12" />
+    <link rel="icon" href="../mamapace-logo.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="bg-gradient"></div>
+
+    <header class="site-header">
+      <div class="container header-inner">
+        <div class="brand">
+          <img src="../mamapace-logo.png" alt="Mamapace" class="brand-logo" />
+          <span class="brand-name">Mamapace</span>
+        </div>
+        <nav class="nav">
+          <a href="./index.html#features">特徴</a>
+          <a href="./index.html#safety">安心・安全</a>
+          <a href="./index.html#faq">FAQ</a>
+          <a href="./index.html#cta" class="nav-cta">無料ではじめる</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="section" aria-label="お問い合わせ">
+        <div class="container" style="max-width:860px">
+          <h1>お問い合わせ</h1>
+          <p class="note">対応時間の目安: 平日 10:00-18:00（祝日除く）</p>
+
+          <article class="card" style="margin-top:16px">
+            <h2>1. 連絡方法</h2>
+            <p>
+              サポート窓口: <a id="mailto" href="mailto:support@mama-pace.com">support@mama-pace.com</a>
+              <button id="copy" class="btn ghost" style="margin-left:8px">コピー</button>
+            </p>
+            <p>返信には数営業日いただく場合があります。順次対応いたします。</p>
+          </article>
+
+          <article class="card" style="margin-top:12px">
+            <h2>2. お問い合わせフォーム（メール起動）</h2>
+            <p>以下のフォームを送信すると、メール作成画面が起動します。</p>
+            <form id="f" style="display:grid; gap:10px">
+              <div style="display:grid; gap:6px">
+                <label for="cat">カテゴリ</label>
+                <select id="cat" required>
+                  <option value="サポート">サポート</option>
+                  <option value="フィードバック">フィードバック</option>
+                  <option value="不具合の報告">不具合の報告</option>
+                  <option value="その他">その他</option>
+                </select>
+              </div>
+              <div style="display:grid; gap:6px">
+                <label for="sub">件名</label>
+                <input id="sub" type="text" placeholder="例: 投稿画面でのエラーについて" required />
+              </div>
+              <div style="display:grid; gap:6px">
+                <label for="body">内容</label>
+                <textarea id="body" rows="6" placeholder="状況/手順、端末名、OS/アプリのバージョンなどをご記載ください" required></textarea>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center">
+                <button type="submit" class="btn primary">メールを作成</button>
+                <a class="btn ghost" href="./index.html">トップへ戻る</a>
+              </div>
+            </form>
+          </article>
+
+          <article class="card" style="margin-top:12px">
+            <h2>3. 記載のお願い</h2>
+            <ul class="tick">
+              <li>発生した事象・手順（可能ならスクリーンショット）</li>
+              <li>ご利用端末・OS・アプリのバージョン</li>
+              <li>再現に必要な条件（特定のルーム/投稿など）</li>
+              <li>個人情報やセンシティブ情報は記載しないでください</li>
+            </ul>
+          </article>
+
+          <article class="card" style="margin-top:12px">
+            <h2>4. 注意事項</h2>
+            <p>
+              通報・ブロック機能は近日実装予定です。緊急の対応が必要な場合は、詳細を添えてサポート宛にご連絡ください。
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="brand mini">
+          <img src="../mamapace-logo.png" alt="Mamapace" class="brand-logo" />
+          <span class="brand-name">Mamapace</span>
+        </div>
+        <div class="links">
+          <a href="./terms.html">利用規約</a>
+          <a href="./privacy.html">プライバシー</a>
+          <a href="./contact.html">お問い合わせ</a>
+        </div>
+        <div class="copy">© <span id="y"></span> Mamapace</div>
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById('y').textContent = new Date().getFullYear();
+      document.getElementById('copy').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText('support@mama-pace.com');
+          document.getElementById('copy').textContent = 'コピーしました';
+          setTimeout(() => (document.getElementById('copy').textContent = 'コピー'), 2000);
+        } catch {}
+      });
+      document.getElementById('f').addEventListener('submit', e => {
+        e.preventDefault();
+        const cat = (document.getElementById('cat') as HTMLSelectElement).value;
+        const sub = (document.getElementById('sub') as HTMLInputElement).value.trim();
+        const body = (document.getElementById('body') as HTMLTextAreaElement).value.trim();
+        const subject = encodeURIComponent(`[${cat}] ${sub || 'お問い合わせ'}`);
+        const content = encodeURIComponent(`${body}\n\n---\n送信元: Mamapace LP`);
+        window.location.href = `mailto:support@mama-pace.com?subject=${subject}&body=${content}`;
+      });
+    </script>
+  </body>
+  </html>
