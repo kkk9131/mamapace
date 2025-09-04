@@ -196,6 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           totalTime: result.totalTime,
           services: result.services.length,
         });
+
         await restoreSession();
       } else {
         const errorMessage =
