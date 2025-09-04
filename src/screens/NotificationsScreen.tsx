@@ -27,19 +27,8 @@ const iconOf = (t: string) => {
 };
 
 export default function NotificationsScreen() {
-  const themeRaw = useTheme() as any | undefined;
-  const theme = useMemo(() => ({
-    spacing: themeRaw?.spacing ?? ((v: number) => v * 8),
-    radius: themeRaw?.radius ?? { lg: 12, md: 8 },
-    shadow: themeRaw?.shadow ?? { card: {} },
-    colors: themeRaw?.colors ?? {
-      text: '#ffffff',
-      subtext: '#aaaaaa',
-      surface: '#ffffff10',
-      pink: '#ff6ea9',
-    },
-  }), [themeRaw]);
-  const { colors } = theme as any;
+  const theme = useTheme();
+  const { colors } = theme;
   const { user } = useAuth();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);

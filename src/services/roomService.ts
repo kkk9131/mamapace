@@ -88,7 +88,7 @@ export class RoomService {
         // Server-side ensure via RPC (owner only)
         const ensured = await supabase.rpc('ensure_default_channel_if_missing', { p_space_id: spaceId });
         if (!ensured.error && ensured.data) {
-          channelId = ensured.data as any;
+          channelId = String(ensured.data);
         } else {
           // Fallback: Try to find an existing channel then
           const found = await supabase

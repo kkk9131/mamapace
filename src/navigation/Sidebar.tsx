@@ -17,7 +17,7 @@ export default function Sidebar({
 }) {
   const { colors, radius } = useTheme();
   const { handPreference } = useHandPreference();
-  const theme = { radius } as any;
+  const theme = { radius } as { radius: { sm?: number; md?: number; lg?: number } };
   const isLeft = handPreference === 'left';
   // 左手モード時は左端に表示、右手モード時は右端に表示
   const translate = useRef(new Animated.Value(isLeft ? -W : W)).current;
@@ -56,7 +56,7 @@ export default function Sidebar({
         pointerEvents={open ? 'auto' : 'none'}
         style={{
           position: 'absolute',
-          inset: 0 as any,
+          inset: 0 as number,
           backgroundColor: colors.overlay,
           opacity: fade,
           zIndex: 10,

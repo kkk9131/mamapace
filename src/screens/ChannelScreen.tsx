@@ -89,6 +89,8 @@ export default function ChannelScreen({
   const flatListRef = useRef<FlatList>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const membersSlide = useRef(new Animated.Value(0)).current; // 0: hidden, 1: shown
+  const csTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const layoutTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Hooks
   const {
@@ -165,8 +167,8 @@ export default function ChannelScreen({
     return () => {
       clearTimeout(timer);
       // Clear pending scroll timers
-      if ((flatListRef as any)._csTimer) clearTimeout((flatListRef as any)._csTimer);
-      if ((flatListRef as any)._layoutTimer) clearTimeout((flatListRef as any)._layoutTimer);
+      if (csTimerRef.current) clearTimeout(csTimerRef.current);
+      if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
     };
   }, [fadeAnim]);
 
@@ -556,14 +558,14 @@ export default function ChannelScreen({
           inverted={false}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => {
-            if ((flatListRef as any)._csTimer) clearTimeout((flatListRef as any)._csTimer);
-            (flatListRef as any)._csTimer = setTimeout(() => {
+            if (csTimerRef.current) clearTimeout(csTimerRef.current);
+            csTimerRef.current = setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: false });
             }, 50);
           }}
           onLayout={() => {
-            if ((flatListRef as any)._layoutTimer) clearTimeout((flatListRef as any)._layoutTimer);
-            (flatListRef as any)._layoutTimer = setTimeout(() => {
+            if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
+            layoutTimerRef.current = setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: false });
             }, 50);
           }}
