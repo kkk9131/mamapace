@@ -5,7 +5,7 @@
     "slug": "mamapace",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/mamapace-logo.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -14,6 +14,7 @@
       "backgroundColor": "#0E0F12"
     },
     "ios": {
+      "icon": "./assets/mamapace-logo.png",
       "supportsTablet": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "プロフィール画像を選択するためにフォトライブラリへアクセスします。",
@@ -24,7 +25,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/mamapace-logo.png",
         "backgroundColor": "#0E0F12"
       },
       "edgeToEdgeEnabled": true,
