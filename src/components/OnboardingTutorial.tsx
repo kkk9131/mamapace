@@ -78,6 +78,7 @@ export default function OnboardingTutorial({ onClose }: { onClose: () => void })
               <Text style={{ color: '#1C1F25', fontWeight: '800' }}>はじめる</Text>
             </Pressable>
           </View>
+          </View>
           <Pressable
             accessibilityLabel="閉じる"
             onPress={onClose}
