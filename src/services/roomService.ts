@@ -315,8 +315,8 @@ export class RoomService {
         return { error: 'Space is at capacity' };
       }
 
-      // Get the channel for this space (channels may be disabled)
-      const { data: channel, error: channelError } = await supabase
+      // Get the channel for this space
+      const { data: channelRow, error: channelError } = await supabase
         .from('channels')
         .select('id')
         .eq('space_id', spaceId)
@@ -327,11 +327,13 @@ export class RoomService {
         console.error('[RoomService] Get channel error:', channelError.message);
       }
 
+      let channel: { id: string } | null = channelRow ? { id: channelRow.id } : null;
+
       if (!channel) {
         // Ensure default channel exists (owner only RPC, but safe if caller is not owner; it just errors silently here)
         const ensured = await supabase.rpc('ensure_default_channel_if_missing', { p_space_id: spaceId });
         if (!ensured.error && ensured.data) {
-          channel = { id: ensured.data } as any;
+          channel = { id: ensured.data as string };
         } else {
           // Try again to find channel (maybe created by someone else)
           const found = await supabase
@@ -341,7 +343,7 @@ export class RoomService {
             .limit(1)
             .maybeSingle();
           if (found.data?.id) {
-            channel = { id: found.data.id } as any;
+            channel = { id: found.data.id };
           }
         }
       }
