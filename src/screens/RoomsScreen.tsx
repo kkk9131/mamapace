@@ -30,7 +30,7 @@ interface RoomsScreenProps {
 }
 
 export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const fade = useRef(new Animated.Value(0)).current;
 

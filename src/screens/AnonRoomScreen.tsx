@@ -31,7 +31,7 @@ interface AnonRoomScreenProps {
 }
 
 export default function AnonRoomScreen({ onBack }: AnonRoomScreenProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const { handPreference } = useHandPreference();
 
@@ -42,6 +42,7 @@ export default function AnonRoomScreen({ onBack }: AnonRoomScreenProps) {
   // Refs
   const flatListRef = useRef<FlatList>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const sendScrollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Hooks
   const {
@@ -112,11 +113,19 @@ export default function AnonRoomScreen({ onBack }: AnonRoomScreenProps) {
     const result = await sendMessage(content);
     if (result) {
       // Scroll to bottom after sending
-      setTimeout(() => {
+      if (sendScrollTimerRef.current) clearTimeout(sendScrollTimerRef.current);
+      sendScrollTimerRef.current = setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
   };
+
+  // Cleanup pending send scroll timer on unmount
+  useEffect(() => {
+    return () => {
+      if (sendScrollTimerRef.current) clearTimeout(sendScrollTimerRef.current);
+    };
+  }, []);
 
   // Handle message report
   const handleReportMessage = async (messageId: string) => {
