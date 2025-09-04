@@ -730,9 +730,10 @@ export class RoomService {
       }
 
       return { success: true, data: true };
-    } catch (error: any) {
-      console.error('[RoomService] Delete message exception:', error.message);
-      return { error: 'Failed to delete message' };
+    } catch (error: unknown) {
+      const msg = this.normalizeError(error, 'Failed to delete message');
+      console.error('[RoomService] Delete message exception:', msg);
+      return { error: msg };
     }
   }
 
@@ -828,12 +829,10 @@ export class RoomService {
         success: true,
         data: messagesWithSender,
       };
-    } catch (error: any) {
-      console.error(
-        '[RoomService] Get channel messages exception:',
-        error.message
-      );
-      return { error: 'Failed to get messages' };
+    } catch (error: unknown) {
+      const msg = this.normalizeError(error, 'Failed to get messages');
+      console.error('[RoomService] Get channel messages exception:', msg);
+      return { error: msg };
     }
   }
 
