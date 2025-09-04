@@ -17,7 +17,7 @@ import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
 import EmojiPicker from '../components/EmojiPicker';
 
 export default function SignUpScreen({ onLogin }: { onLogin?: () => void }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const { registerWithEmail, isLoading, error, clearError } = useAuth();
 

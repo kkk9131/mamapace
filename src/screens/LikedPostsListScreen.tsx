@@ -22,7 +22,7 @@ export default function LikedPostsListScreen({
   commentDeltas?: Record<string, number>;
   onOpen?: (postId: string) => void;
 }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const fade = useRef(new Animated.Value(0)).current;
   useEffect(() => {

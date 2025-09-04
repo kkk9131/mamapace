@@ -16,7 +16,7 @@ import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function MyPostsListScreen() {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const fade = new Animated.Value(0);
   Animated.timing(fade, {

@@ -13,7 +13,7 @@ export default function SettingsScreen({
 }: {
   onLogoutNavigate?: () => void;
 }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const fade = useRef(new Animated.Value(1)).current; // 初期値を1に設定してフラッシュを防ぐ
   const { logout, refreshToken, user } = useAuth();
@@ -229,7 +229,7 @@ export default function SettingsScreen({
 }
 
 function Toggle({ label, active, onPress }: { label: string; active?: boolean; onPress?: () => void }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   return (
     <Pressable
@@ -254,7 +254,7 @@ function Toggle({ label, active, onPress }: { label: string; active?: boolean; o
 }
 
 function ToggleRow({ label, value, onValueChange }: { label: string; value: boolean; onValueChange: (v: boolean) => void }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: theme.radius.md, paddingVertical: 10, paddingHorizontal: 12 }}>

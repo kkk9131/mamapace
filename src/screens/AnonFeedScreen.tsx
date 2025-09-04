@@ -21,7 +21,7 @@ export default function AnonFeedScreen({
   onComment?: () => void;
   onOpenPost?: () => void;
 }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const fade = new Animated.Value(0);
   Animated.timing(fade, {
@@ -209,7 +209,7 @@ export default function AnonFeedScreen({
 }
 
 function Pill({ children }: { children: any }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   return (
     <View

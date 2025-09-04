@@ -16,7 +16,7 @@ import { secureLogger } from '../utils/privacyProtection';
 import SecureInput from '../components/SecureInput';
 
 export default function LoginScreen({ onSignup }: { onSignup?: () => void }) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const { loginWithEmail, isLoading, error, clearError } = useAuth();
 

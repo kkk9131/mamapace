@@ -34,7 +34,7 @@ export default function AuthGuard({
   unauthenticatedComponent,
   showDebugInfo = false,
 }: AuthGuardProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme();
   const { colors } = theme;
   const { isAuthenticated, isLoading, user, error } = useAuth();
 
