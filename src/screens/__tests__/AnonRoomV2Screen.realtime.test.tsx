@@ -17,7 +17,7 @@ jest.mock('../../services/supabaseClient', () => ({
 }));
 
 describe('AnonRoomV2Screen realtime subscription', () => {
-  it('subscribes with server-side filter for anonymous rows only', async () => {
+  it('subscribes with server-side filter scoped to current slot', async () => {
     render(<AnonRoomV2Screen onBack={() => {}} />);
     const call = mockOn.mock.calls.find(
       (c: any[]) => c[0] === 'postgres_changes'
@@ -25,7 +25,11 @@ describe('AnonRoomV2Screen realtime subscription', () => {
     expect(call).toBeTruthy();
     const opts = call?.[1];
     expect(opts?.table).toBe('room_messages');
-    expect(opts?.filter).toBe('anonymous_room_id=not.is.null');
+    expect(String(opts?.filter)).toBe('anonymous_room_id=eq.anon_20250101_10');
   });
 });
-
+jest.mock('../../services/anonV2Service', () => ({
+  fetchLiveMessages: jest.fn().mockResolvedValue([]),
+  sendAnonMessage: jest.fn(),
+  getCurrentAnonSlotId: jest.fn().mockResolvedValue('anon_20250101_10'),
+}));

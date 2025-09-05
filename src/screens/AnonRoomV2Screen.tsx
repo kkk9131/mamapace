@@ -15,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 
 import { useTheme } from '../theme/theme';
 import BubbleField from '../ui/anonymousRoomV2/BubbleField';
-import { fetchLiveMessages, sendAnonMessage } from '../services/anonV2Service';
+import { fetchLiveMessages, sendAnonMessage, getCurrentAnonSlotId } from '../services/anonV2Service';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { notifyError } from '../utils/notify';
 
@@ -46,6 +46,7 @@ export default function AnonRoomV2Screen({
   const realtimeRef = useRef<ReturnType<
     ReturnType<typeof getSupabaseClient>['channel']
   > | null>(null);
+  const [slotId, setSlotId] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -57,6 +58,10 @@ export default function AnonRoomV2Screen({
       setLiveMessages(rows);
     };
     load();
+    (async () => {
+      const id = await getCurrentAnonSlotId();
+      if (mounted) setSlotId(id);
+    })();
     const t = setInterval(load, 15000);
     Animated.timing(fade, {
       toValue: 1,
@@ -69,67 +74,49 @@ export default function AnonRoomV2Screen({
     };
   }, []);
 
-  // Realtime subscription to all anonymous inserts; filter client-side by TTL
+  // Secure realtime subscription scoped to current slot id
   useEffect(() => {
-    // Clean up previous channel
+    if (!slotId) return;
     if (realtimeRef.current) {
-      try {
-        getSupabaseClient().removeChannel(realtimeRef.current);
-      } catch {}
+      try { getSupabaseClient().removeChannel(realtimeRef.current); } catch {}
       realtimeRef.current = null;
     }
-
     const channel = getSupabaseClient()
-      .channel('anonymous_messages')
+      .channel(`anonymous_room:${slotId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'room_messages',
-          filter: 'anonymous_room_id=not.is.null',
+          filter: `anonymous_room_id=eq.${slotId}`,
         },
         payload => {
-          const row: any = payload.new;
-          if (!row.anonymous_room_id) {
-            return;
-          }
-          if (row.deleted_at) {
-            return;
-          }
-          if (row.expires_at && new Date(row.expires_at) <= new Date()) {
-            return;
-          }
+          const row = payload.new as any;
           const msg = {
-            id: row.id,
-            content: row.content,
-            display_name: row.display_name,
-            created_at: row.created_at,
-            expires_at: row.expires_at,
+            id: String(row.id),
+            content: String(row.content ?? ''),
+            display_name: String(row.display_name ?? ''),
+            created_at: String(row.created_at ?? ''),
+            expires_at: row.expires_at ? String(row.expires_at) : undefined,
           } as const;
           setLiveMessages(prev => {
-            const byId: Record<string, any> = {};
-            for (const m of prev) {
-              byId[String(m.id)] = m;
-            }
-            byId[String(msg.id)] = msg as any;
-            return Object.values(byId) as any;
+            const byId: Record<string, typeof prev[number]> = {};
+            for (const m of prev) byId[String(m.id)] = m;
+            byId[String(msg.id)] = msg;
+            return Object.values(byId);
           });
         }
       )
       .subscribe();
-
     realtimeRef.current = channel;
-
     return () => {
       if (realtimeRef.current) {
-        try {
-          getSupabaseClient().removeChannel(realtimeRef.current);
-        } catch {}
+        try { getSupabaseClient().removeChannel(realtimeRef.current); } catch {}
         realtimeRef.current = null;
       }
     };
-  }, []);
+  }, [slotId]);
 
   const showForm = () => {
     setInputFocused(true);

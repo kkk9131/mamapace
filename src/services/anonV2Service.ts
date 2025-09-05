@@ -57,6 +57,14 @@ export async function fetchLiveMessages(): Promise<AnonV2Message[]> {
   }
 }
 
+// Get current anonymous slot id from server (creates if missing)
+export async function getCurrentAnonSlotId(): Promise<string | null> {
+  const client = getSupabaseClient();
+  const { data, error } = await client.rpc('get_or_create_current_anon_room');
+  if (error || !data || (data as any).error) return null;
+  return (data as any).room_id as string;
+}
+
 export type SendAnonResult =
   | { ok: true; data: AnonV2Message }
   | { ok: false; retryAfterSeconds?: number; message?: string };
