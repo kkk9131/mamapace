@@ -3,7 +3,7 @@
     "scheme": "mamapace",
     "name": "Mamapace",
     "slug": "mamapace",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/mamapace-logo.png",
     "userInterfaceStyle": "dark",
@@ -14,6 +14,7 @@
       "backgroundColor": "#0E0F12"
     },
     "ios": {
+      "buildNumber": "2",
       "icon": "./assets/mamapace-logo.png",
       "supportsTablet": true,
       "infoPlist": {
