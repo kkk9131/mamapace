@@ -24,29 +24,34 @@ import { secureLogger, sanitizeObject } from '../utils/privacyProtection';
 // CONFIGURATION AND CONSTANTS
 // =====================================================
 
-// Helpers to read Supabase credentials from various Expo sources
+// Helpers to read Supabase credentials from environment and Expo extras.
+// Prefer EXPO_PUBLIC_* envs (inlined at build time) to work reliably in production,
+// then fallback to expo.extra configured in app.json.
 function readSupabaseCredentials(): { url?: string; anonKey?: string } {
   try {
+    // 1) Build-time inlined envs (Expo): safest for production bundles
+    const envUrl =
+      process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const envAnon =
+      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_ANON_KEY;
+
+    if (envUrl && envAnon) {
+      return { url: envUrl, anonKey: envAnon };
+    }
+
+    // 2) Runtime extras from app.json
     const fromExpoExtra =
       (Constants as any)?.expoConfig?.extra ||
       (Constants as any)?.manifestExtra ||
       {};
-    const fromAppJson = {}; // Disabled app.json access
-    const env = (global as any)?.process?.env || {};
-    const url =
-      fromExpoExtra.SUPABASE_URL ||
-      fromAppJson.SUPABASE_URL ||
-      env.EXPO_PUBLIC_SUPABASE_URL ||
-      env.SUPABASE_URL;
-    const anonKey =
-      fromExpoExtra.SUPABASE_ANON_KEY ||
-      fromAppJson.SUPABASE_ANON_KEY ||
-      env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-      env.SUPABASE_ANON_KEY;
+
+    const url = fromExpoExtra.SUPABASE_URL || envUrl;
+    const anonKey = fromExpoExtra.SUPABASE_ANON_KEY || envAnon;
     return { url, anonKey };
   } catch (e) {
     secureLogger.warn(
-      'Failed to read Supabase credentials from Expo constants',
+      'Failed to read Supabase credentials from environment/expo extras',
       { error: String(e) }
     );
     return {};
