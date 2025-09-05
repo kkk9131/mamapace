@@ -30,6 +30,24 @@ import { getSupabaseClient } from '../../services/supabaseClient';
 
 import Bubble from './Bubble';
 
+// Safely read current number from Animated.Value across RN runtimes
+function getAnimatedValue(v: any): number {
+  try {
+    if (v && typeof v.__getValue === 'function') {
+      return v.__getValue();
+    }
+    if (v && typeof v.getValue === 'function') {
+      // Some implementations expose getValue
+      return v.getValue();
+    }
+    if (v && typeof v._value === 'number') {
+      return v._value;
+    }
+  } catch {}
+  const n = Number((v && v.value) ?? v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 const withAlpha = (hex: string, alpha: number) => {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!m) {
