@@ -160,11 +160,13 @@ export async function toggleAnonReaction(
   };
 }
 
-export async function getAnonMessageMeta(messageId: string): Promise<{
+export interface AnonMessageMeta {
   reaction_count: number;
   comment_count: number;
   reacted: boolean;
-} | null> {
+}
+
+export async function getAnonMessageMeta(messageId: string): Promise<AnonMessageMeta | null> {
   const client = getSupabaseClient();
   const { data, error } = await client.rpc('get_anonymous_message_meta', {
     p_message_id: messageId,
@@ -200,7 +202,13 @@ export async function addAnonComment(
   if (error || !data) {
     return null;
   }
-  return data as AnonComment;
+  return {
+    id: String((data as any).id),
+    message_id: String((data as any).message_id),
+    display_name: String((data as any).display_name ?? ''),
+    content: String((data as any).content ?? ''),
+    created_at: String((data as any).created_at ?? ''),
+  } as AnonComment;
 }
 
 export async function getAnonComments(
@@ -215,5 +223,11 @@ export async function getAnonComments(
   if (error || !data) {
     return [];
   }
-  return data as AnonComment[];
+  return (data as any[]).map(row => ({
+    id: String(row.id),
+    message_id: String(row.message_id),
+    display_name: String(row.display_name ?? ''),
+    content: String(row.content ?? ''),
+    created_at: String(row.created_at ?? ''),
+  }));
 }

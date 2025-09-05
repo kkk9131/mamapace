@@ -255,7 +255,7 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
     if (toHide.length === 0) {
       return;
     }
-    const timers: any[] = [];
+    const timers: Array<ReturnType<typeof setTimeout>> = [];
     toHide.forEach(p => {
       const t = setTimeout(() => {
         setHiddenIds(prev => ({ ...prev, [p.id]: now }));
@@ -366,8 +366,8 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
       }
 
       const centers = bubbles.map(b => ({
-        x: (b.x as any).__getValue() + b.size / 2,
-        y: (b.y as any).__getValue() + b.size / 2,
+        x: getAnimatedValue(b.x) + b.size / 2,
+        y: getAnimatedValue(b.y) + b.size / 2,
         r: b.size / 2,
       }));
 
@@ -390,8 +390,8 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
       // 位置を更新
       for (let i = 0; i < bubbles.length; i++) {
         const b = bubbles[i];
-        let nx = (b.x as any).__getValue() + vel[i].vx * dt;
-        let ny = (b.y as any).__getValue() + vel[i].vy * dt;
+        let nx = getAnimatedValue(b.x) + vel[i].vx * dt;
+        let ny = getAnimatedValue(b.y) + vel[i].vy * dt;
 
         // コンテンツ境界で反射（画面枠ではない）
         if (nx < 0) {
@@ -484,8 +484,8 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
         onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 8,
         onPanResponderGrant: () => {
           draggingRef.current = true;
-          panStartRef.current.base = (scrollOffset as any).__getValue?.() || 0;
-          (scrollOffset as any).stopAnimation?.();
+          panStartRef.current.base = getAnimatedValue(scrollOffset);
+          (scrollOffset as unknown as { stopAnimation?: () => void }).stopAnimation?.();
         },
         onPanResponderMove: (
           _e: GestureResponderEvent,
@@ -500,7 +500,7 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
         },
         onPanResponderRelease: (_e, g) => {
           draggingRef.current = false;
-          panStartRef.current.base = (scrollOffset as any).__getValue?.() || 0;
+          panStartRef.current.base = getAnimatedValue(scrollOffset);
           const v = -(g.vy || 0);
           if (Math.abs(v) > 0.01) {
             Animated.decay(scrollOffset, {
@@ -512,7 +512,7 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
         },
         onPanResponderTerminate: () => {
           draggingRef.current = false;
-          panStartRef.current.base = (scrollOffset as any).__getValue?.() || 0;
+      panStartRef.current.base = getAnimatedValue(scrollOffset);
         },
       }),
     [contentHeight, scrollOffset]
@@ -534,7 +534,7 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
 
   // Wrap offset to avoid overflow while keeping seamless view
   useEffect(() => {
-    const id = scrollOffset.addListener(({ value }: any) => {
+    const id = scrollOffset.addListener(({ value }: { value: number }) => {
       const m = contentHeight;
       if (value < 0 || value >= m) {
         const wrapped = ((value % m) + m) % m;
@@ -590,7 +590,7 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
           }}
         >
           {bubbles.map((b, i) => {
-            const keyStr = (tileOffset as any).__getValue?.() ?? 0;
+            const keyStr = getAnimatedValue(tileOffset);
             const bubbleKey = `${keyStr}:${b.id}`;
             // バブル数は表示中postと一致
             const post = displayed[i];
