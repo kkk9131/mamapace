@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+
 import RoomsListScreen from '../RoomsListScreen';
 
 jest.mock('../../hooks/useRooms', () => ({
@@ -33,4 +34,3 @@ describe('RoomsListScreen', () => {
     expect(screen.getByText('テストルーム')).toBeTruthy();
   });
 });
-

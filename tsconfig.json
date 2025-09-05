@@ -58,6 +58,12 @@
     ".expo-shared",
     "dist",
     "build",
-    "coverage"
+    "coverage",
+    "src/__tests__/**",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
   ]
 }

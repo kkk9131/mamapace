@@ -10,9 +10,11 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { PublicUserProfile, AuthSession, DeviceInfo } from '../types/auth';
-import { encryptionService, EncryptedData } from './encryptionService';
 import { secureLogger, sanitizeObject } from '../utils/privacyProtection';
+
+import { encryptionService, EncryptedData } from './encryptionService';
 
 // =====================================================
 // TYPES AND INTERFACES

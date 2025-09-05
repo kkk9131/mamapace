@@ -10,8 +10,6 @@
  * 6. Handle errors without exposing system details
  */
 
-import { getSupabaseClient } from './supabaseClient';
-import { authService } from './authService';
 import { secureLogger } from '../utils/privacyProtection';
 import {
   Chat,
@@ -44,6 +42,9 @@ import {
   sanitizeMessageForLogging,
 } from '../types/chat';
 import { PublicUserProfile } from '../types/auth';
+
+import { authService } from './authService';
+import { getSupabaseClient } from './supabaseClient';
 
 // =====================================================
 // CONFIGURATION
@@ -308,11 +309,10 @@ class ChatService {
     hasAttachments: boolean = false
   ): MessageValidation {
     const checks = {
-      length:
-        hasAttachments
-          ? content.length <= CHAT_CONFIG.MAX_MESSAGE_LENGTH // allow empty, still enforce max
-          : content.length >= CHAT_CONFIG.MIN_MESSAGE_LENGTH &&
-            content.length <= CHAT_CONFIG.MAX_MESSAGE_LENGTH,
+      length: hasAttachments
+        ? content.length <= CHAT_CONFIG.MAX_MESSAGE_LENGTH // allow empty, still enforce max
+        : content.length >= CHAT_CONFIG.MIN_MESSAGE_LENGTH &&
+          content.length <= CHAT_CONFIG.MAX_MESSAGE_LENGTH,
       content_type:
         messageType === MessageType.TEXT ||
         messageType === MessageType.IMAGE ||
@@ -704,7 +704,11 @@ class ChatService {
       const validation = this.validateMessage(
         request.content,
         request.message_type,
-        !!(request.metadata && Array.isArray(request.metadata.attachments) && request.metadata.attachments.length > 0)
+        !!(
+          request.metadata &&
+          Array.isArray(request.metadata.attachments) &&
+          request.metadata.attachments.length > 0
+        ),
       );
       if (!validation.isValid) {
         return {
@@ -746,10 +750,17 @@ class ChatService {
       }
 
       // If content is empty but attachments exist, send placeholder to satisfy DB constraints
-      const hasAttachments = !!(request.metadata && Array.isArray(request.metadata.attachments) && request.metadata.attachments.length > 0);
-      const contentToSend = (request.content && request.content.trim().length > 0)
-        ? request.content.trim()
-        : (hasAttachments ? '[image]' : request.content);
+      const hasAttachments = !!(
+        request.metadata &&
+        Array.isArray(request.metadata.attachments) &&
+        request.metadata.attachments.length > 0
+      );
+      const contentToSend =
+        request.content && request.content.trim().length > 0
+          ? request.content.trim()
+          : hasAttachments
+            ? '[image]'
+            : request.content;
 
       const { data, error } = await client.rpc('send_message', {
         p_sender_id: user.id,
@@ -784,7 +795,9 @@ class ChatService {
       try {
         const { data: profile } = await client
           .from('user_profiles')
-          .select('id, username, display_name, avatar_emoji, avatar_url, profile_visibility, is_active, created_at, updated_at')
+          .select(
+            'id, username, display_name, avatar_emoji, avatar_url, profile_visibility, is_active, created_at, updated_at',
+          )
           .eq('id', user.id)
           .single();
         senderProfile = profile;
@@ -956,7 +969,9 @@ class ChatService {
       // 補完: avatar_url が欠けている送信者のプロフィールをまとめて取得
       {
         const missing = Array.from(
-          new Set(messages.filter(m => !m.sender?.avatar_url).map(m => m.sender_id))
+          new Set(
+            messages.filter(m => !m.sender?.avatar_url).map(m => m.sender_id),
+          )
         );
         if (missing.length > 0) {
           const { data: profiles } = await client
@@ -1684,16 +1699,18 @@ class ChatService {
         try {
           // Create or get conversation with this user
           console.log('🔍 Creating/getting conversation with user:', userId);
-          
+
           // First try to find existing conversation
           const { data: existingConv, error: findError } = await client
             .from('conversations')
             .select('id')
-            .or(`and(participant_1_id.eq.${user.id},participant_2_id.eq.${userId}),and(participant_1_id.eq.${userId},participant_2_id.eq.${user.id})`)
+            .or(
+              `and(participant_1_id.eq.${user.id},participant_2_id.eq.${userId}),and(participant_1_id.eq.${userId},participant_2_id.eq.${user.id})`,
+            )
             .single();
-          
+
           let conversationId;
-          
+
           if (existingConv) {
             conversationId = existingConv.id;
             console.log('🔍 Found existing conversation:', conversationId);
@@ -1707,46 +1724,59 @@ class ChatService {
               })
               .select('id')
               .single();
-            
+
             if (createError || !newConv) {
-              secureLogger.error('Failed to create conversation for invitation', {
-                error: createError,
-                userId,
-              });
+              secureLogger.error(
+                'Failed to create conversation for invitation',
+                {
+                  error: createError,
+                  userId,
+                },
+              );
               console.log('❌ Failed to create conversation:', createError);
               failed.push(userId);
               continue;
             }
-            
+
             conversationId = newConv.id;
             console.log('🔍 Created new conversation:', conversationId);
           }
 
           // Create database invitation record first (skip for development/testing)
           let invitationId = null;
-          const isDevelopment = __DEV__ || process.env.NODE_ENV === 'development';
-          
+          const isDevelopment =
+            __DEV__ || process.env.NODE_ENV === 'development';
+
           if (!isDevelopment) {
             try {
-              const { data: inviteData, error: inviteError } = await client.rpc('create_room_invitation', {
-                p_space_id: request.spaceId,
-                p_invitee_id: userId,
-              });
+              const { data: inviteData, error: inviteError } = await client.rpc(
+                'create_room_invitation',
+                {
+                  p_space_id: request.spaceId,
+                  p_invitee_id: userId,
+                },
+              );
 
               if (inviteData?.success) {
                 invitationId = inviteData.invitation_id;
               } else {
-                secureLogger.warn('Failed to create database invitation record', {
-                  error: inviteError || inviteData?.error,
-                  userId,
-                });
+                secureLogger.warn(
+                  'Failed to create database invitation record',
+                  {
+                    error: inviteError || inviteData?.error,
+                    userId,
+                  },
+                );
                 // Continue with message sending even if DB record fails
               }
             } catch (error) {
-              secureLogger.warn('Exception creating database invitation record', {
-                error,
-                userId,
-              });
+              secureLogger.warn(
+                'Exception creating database invitation record',
+                {
+                  error,
+                  userId,
+                },
+              );
               // Continue with message sending even if DB record fails
             }
           }
@@ -1755,11 +1785,11 @@ class ChatService {
           const timestamp = new Date().toLocaleString('ja-JP');
           const inviteId = Math.random().toString(36).substr(2, 9);
           const invitationMessage = `${request.inviterName}さんから非公開ルーム「${request.spaceName}」への招待が届きました。\n\n参加しますか？\n\n✅ 参加する\n❌ 参加しない\n\n送信時刻: ${timestamp}\nID: ${inviteId}`;
-          
+
           // Debug log for invitation message sending
           console.log('🔍 Sending invitation to user:', userId);
           console.log('🔍 Conversation ID:', conversationId);
-          
+
           // Direct database insertion instead of RPC
           const { data: messageData, error: messageError } = await client
             .from('messages')
@@ -1780,8 +1810,11 @@ class ChatService {
             })
             .select()
             .single();
-          
-          console.log('🔍 Message sending result:', { data: messageData, error: messageError });
+
+          console.log('🔍 Message sending result:', {
+            data: messageData,
+            error: messageError,
+          });
 
           // Update invitation record with message ID if both succeeded
           if (!messageError && messageData?.id && invitationId) {

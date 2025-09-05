@@ -1,19 +1,25 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Pressable,
+  Animated,
+} from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+
 import HomeScreen from '../screens/HomeScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import Sidebar from './Sidebar';
 import RoomsScreen from '../screens/RoomsScreen';
 import ChatsListScreen from '../screens/ChatsListScreen';
 import ChatScreen from '../screens/ChatScreen';
-import { Pressable, Animated } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import AuthGuard from '../components/AuthGuard';
-
 import ComposeScreen from '../screens/ComposeScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 // import AnonFeedScreen from '../screens/AnonFeedScreen'; // Removed - now handled within RoomsScreen
@@ -32,15 +38,29 @@ import ProfileEditScreen from '../screens/ProfileEditScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import ChannelScreen from '../screens/ChannelScreen';
 import CreateSpaceScreen from '../screens/CreateSpaceScreen';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import AnonRoomV2Screen from '../screens/AnonRoomV2Screen';
+
+import Sidebar from './Sidebar';
 
 type TabKey =
-  | 'me' | 'noti' | 'home' | 'rooms'
-  | 'compose' | 'anon' | 'chat' | 'settings'
-  | 'roomsList' | 'comment' | 'comments'
-  | 'followers' | 'following' | 'liked' | 'myPosts'
-  | 'profileEdit' | 'userProfile';
+  | 'me'
+  | 'noti'
+  | 'home'
+  | 'rooms'
+  | 'compose'
+  | 'anon'
+  | 'chat'
+  | 'settings'
+  | 'roomsList'
+  | 'comment'
+  | 'comments'
+  | 'followers'
+  | 'following'
+  | 'liked'
+  | 'myPosts'
+  | 'profileEdit'
+  | 'userProfile'
+  | 'devAnonV2';
 
 const tabs = [
   { key: 'me', label: 'あなた', Component: ProfileScreen },
@@ -94,7 +114,12 @@ function IconTab({
         onPress();
       }}
       onLongPress={onLongPress}
-      style={{ flex: 1, alignItems: 'center', justifyContent: 'center', height: 56 }}
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 56,
+      }}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
       <Animated.View style={{ transform: [{ scale }] }}>
@@ -108,7 +133,13 @@ function IconTab({
   );
 }
 
-export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigateTo?: string | null; onNavigateConsumed?: () => void }) {
+export default function CustomTabs({
+  navigateTo,
+  onNavigateConsumed,
+}: {
+  navigateTo?: string | null;
+  onNavigateConsumed?: () => void;
+}) {
   const theme = useTheme();
   const { colors } = theme;
   const insets = useSafeAreaInsets();
@@ -125,11 +156,22 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
 
   // React to external navigation requests (e.g., notification tap)
   useEffect(() => {
-    if (!navigateTo) return;
+    if (!navigateTo) {
+      return;
+    }
     try {
-      let parsedUnknown: unknown = undefined;
-      try { parsedUnknown = JSON.parse(navigateTo); } catch {}
-      const parsed = parsedUnknown as { screen?: string; chat_id?: string; post_id?: string; user_id?: string } | undefined;
+      let parsedUnknown: unknown;
+      try {
+        parsedUnknown = JSON.parse(navigateTo);
+      } catch {}
+      const parsed = parsedUnknown as
+        | {
+            screen?: string;
+            chat_id?: string;
+            post_id?: string;
+            user_id?: string;
+          }
+        | undefined;
       if (parsed && parsed.screen) {
         const s = String(parsed.screen);
         if (s === 'chat' && parsed.chat_id) {
@@ -175,16 +217,17 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
   }
 
   // Handle compose screen (no auth guard needed as it's already protected by the above check)
-  if (active === 'compose')
+  if (active === 'compose') {
     return (
       <ComposeScreen
         onPosted={() => {
-              setActive('home');
+          setActive('home');
           setHomeRefreshKey((k: number) => k + 1);
         }}
         onClose={() => setActive('home')}
       />
     );
+  }
 
   return (
     <AuthGuard>
@@ -246,12 +289,12 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
           ) : active === 'chats' ? (
             <ErrorBoundary>
               <ChatsListScreen
-              onOpen={(chatId: string, userName: string) => {
-                setActiveChatId(chatId);
-                setActiveChatUserName(userName);
-                setChatReturnTo('chats');
-                setActive('chat');
-              }}
+                onOpen={(chatId: string, userName: string) => {
+                  setActiveChatId(chatId);
+                  setActiveChatUserName(userName);
+                  setChatReturnTo('chats');
+                  setActive('chat');
+                }}
               />
             </ErrorBoundary>
           ) : active === 'anon' ? (
@@ -299,6 +342,12 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
                 }}
               />
             )
+          ) : active === 'devAnonV2' ? (
+            __DEV__ ? (
+              <AnonRoomV2Screen onCompose={() => setActive('compose')} />
+            ) : (
+              <HomeScreen />
+            )
           ) : active === 'noti' ? (
             <NotificationsScreen />
           ) : active === 'settings' ? (
@@ -310,7 +359,10 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
             />
           ) : active === 'roomsList' ? (
             <ErrorBoundary>
-            <RoomsListScreen refreshKey={roomsListKey} onBack={() => setActive('me')} />
+              <RoomsListScreen
+                refreshKey={roomsListKey}
+                onBack={() => setActive('me')}
+              />
             </ErrorBoundary>
           ) : active === 'comment' ? (
             activePostId ? (
@@ -371,9 +423,7 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
           ) : active === 'myPosts' ? (
             <MyPostsListScreen />
           ) : active === 'profileEdit' ? (
-            <ProfileEditScreen
-              navigation={{ goBack: () => setActive('me') }}
-            />
+            <ProfileEditScreen navigation={{ goBack: () => setActive('me') }} />
           ) : active === 'userProfile' ? (
             activeUserId ? (
               <UserProfileScreen
@@ -417,16 +467,32 @@ export default function CustomTabs({ navigateTo, onNavigateConsumed }: { navigat
             {(['me', 'noti', 'home'] as const).map(k => (
               <IconTab
                 key={k}
-                icon={k === 'me' ? 'person' : k === 'noti' ? 'notifications' : 'home'}
-                iconOutline={k === 'me' ? 'person-outline' : k === 'noti' ? 'notifications-outline' : 'home-outline'}
-                accessibilityLabel={k === 'me' ? 'あなた' : k === 'noti' ? '通知' : 'ホーム'}
+                icon={
+                  k === 'me'
+                    ? 'person'
+                    : k === 'noti'
+                      ? 'notifications'
+                      : 'home'
+                }
+                iconOutline={
+                  k === 'me'
+                    ? 'person-outline'
+                    : k === 'noti'
+                      ? 'notifications-outline'
+                      : 'home-outline'
+                }
+                accessibilityLabel={
+                  k === 'me' ? 'あなた' : k === 'noti' ? '通知' : 'ホーム'
+                }
                 active={active === k}
                 onPress={() => setActive(k as TabKey)}
                 onLongPress={
                   (handPreference === 'right' && k === 'home') ||
                   (handPreference === 'left' && k === 'me')
                     ? () => setSidebarOpen(true)
-                    : undefined
+                    : __DEV__ && k === 'noti'
+                      ? () => setActive('devAnonV2')
+                      : undefined
                 }
               />
             ))}

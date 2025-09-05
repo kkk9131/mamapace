@@ -1,13 +1,23 @@
-import { View, Text, Switch, Pressable, Animated, Alert, Image, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  Switch,
+  Pressable,
+  Animated,
+  Alert,
+  Image,
+  ScrollView,
+} from 'react-native';
 import { useEffect, useRef, useState } from 'react';
-import { useTheme } from '../theme/theme';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import OnboardingTutorial from '../components/OnboardingTutorial';
 import { notificationPreferencesService } from '../services/notificationPreferencesService';
 import { createBatchUpdater } from '../utils/batchUpdate';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SettingsScreen({
   onLogoutNavigate,
@@ -29,14 +39,19 @@ export default function SettingsScreen({
   });
   const updaterRef = useRef(
     createBatchUpdater<typeof prefs>(
-      (patch) => (user?.id ? notificationPreferencesService.update(user.id, patch as any) : Promise.resolve(false)),
+      patch =>
+        user?.id
+          ? notificationPreferencesService.update(user.id, patch as any)
+          : Promise.resolve(false),
       300
-    )
+    ),
   );
 
   useEffect(() => {
     (async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        return;
+      }
       const p = await notificationPreferencesService.get(user.id);
       setPrefs(p as any);
     })();
@@ -56,7 +71,12 @@ export default function SettingsScreen({
   const { handPreference, setHandPreference } = useHandPreference();
   const insets = useSafeAreaInsets();
 
-  const Section = ({ title, children, collapsible = false, initialOpen = true }: any) => {
+  const Section = ({
+    title,
+    children,
+    collapsible = false,
+    initialOpen = true,
+  }: any) => {
     const [open, setOpen] = useState(initialOpen);
     return (
       <View
@@ -73,7 +93,12 @@ export default function SettingsScreen({
         >
           <Pressable
             onPress={() => collapsible && setOpen(o => !o)}
-            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing(1) }}
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: theme.spacing(1),
+            }}
           >
             <Text
               style={{
@@ -86,7 +111,9 @@ export default function SettingsScreen({
               {title}
             </Text>
             {collapsible && (
-              <Text style={{ color: colors.subtext, fontSize: 16 }}>{open ? '▾' : '▸'}</Text>
+              <Text style={{ color: colors.subtext, fontSize: 16 }}>
+                {open ? '▾' : '▸'}
+              </Text>
             )}
           </Pressable>
           {(!collapsible || open) && children}
@@ -105,12 +132,12 @@ export default function SettingsScreen({
         opacity: fade,
       }}
     >
-      {showHelp && (
-        <OnboardingTutorial onClose={() => setShowHelp(false)} />
-      )}
+      {showHelp && <OnboardingTutorial onClose={() => setShowHelp(false)} />}
       {/* Header with Mamapace Icon */}
       <ScrollView
-        contentContainerStyle={{ paddingBottom: (insets.bottom || 0) + 56 + theme.spacing(6) }}
+        contentContainerStyle={{
+          paddingBottom: (insets.bottom || 0) + 56 + theme.spacing(6),
+        }}
         showsVerticalScrollIndicator={false}
       >
         <View
@@ -137,7 +164,7 @@ export default function SettingsScreen({
                 alignItems: 'center',
               }}
             >
-              <Image 
+              <Image
                 source={require('../../assets/mamapace-logo.png')}
                 style={{
                   width: 80,
@@ -147,50 +174,76 @@ export default function SettingsScreen({
                 }}
                 resizeMode="contain"
               />
-              <Text style={{ 
-                color: colors.text, 
-                fontSize: 20, 
-                fontWeight: '700',
-                letterSpacing: 0.5
-              }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: 20,
+                  fontWeight: '700',
+                  letterSpacing: 0.5,
+                }}
+              >
                 Mamapace
               </Text>
-              <Text style={{ 
-                color: colors.subtext, 
-                fontSize: 14,
-                textAlign: 'center',
-                marginTop: 4
-              }}>
+              <Text
+                style={{
+                  color: colors.subtext,
+                  fontSize: 14,
+                  textAlign: 'center',
+                  marginTop: 4,
+                }}
+              >
                 設定
               </Text>
             </BlurView>
           </View>
         </View>
 
-        <View
-          style={{ gap: theme.spacing(1.25) }}
-        >
+        <View style={{ gap: theme.spacing(1.25) }}>
           <Section title="通知" collapsible initialOpen>
             <View style={{ gap: 8 }}>
-              <ToggleRow label="メッセージ" value={prefs.allow_message} onValueChange={(v: boolean) => setPref('allow_message', v)} />
-              <ToggleRow label="ルーム投稿" value={prefs.allow_room} onValueChange={(v: boolean) => setPref('allow_room', v)} />
-              <ToggleRow label="コメント" value={prefs.allow_comment} onValueChange={(v: boolean) => setPref('allow_comment', v)} />
-              <ToggleRow label="共感" value={prefs.allow_like} onValueChange={(v: boolean) => setPref('allow_like', v)} />
-              <ToggleRow label="フォロー" value={prefs.allow_follow} onValueChange={(v: boolean) => setPref('allow_follow', v)} />
-              <ToggleRow label="システム" value={prefs.allow_system} onValueChange={(v: boolean) => setPref('allow_system', v)} />
+              <ToggleRow
+                label="メッセージ"
+                value={prefs.allow_message}
+                onValueChange={(v: boolean) => setPref('allow_message', v)}
+              />
+              <ToggleRow
+                label="ルーム投稿"
+                value={prefs.allow_room}
+                onValueChange={(v: boolean) => setPref('allow_room', v)}
+              />
+              <ToggleRow
+                label="コメント"
+                value={prefs.allow_comment}
+                onValueChange={(v: boolean) => setPref('allow_comment', v)}
+              />
+              <ToggleRow
+                label="共感"
+                value={prefs.allow_like}
+                onValueChange={(v: boolean) => setPref('allow_like', v)}
+              />
+              <ToggleRow
+                label="フォロー"
+                value={prefs.allow_follow}
+                onValueChange={(v: boolean) => setPref('allow_follow', v)}
+              />
+              <ToggleRow
+                label="システム"
+                value={prefs.allow_system}
+                onValueChange={(v: boolean) => setPref('allow_system', v)}
+              />
             </View>
           </Section>
           <View style={{ height: theme.spacing(2) }} />
 
           <Section title="空き手">
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Toggle 
-                label="左" 
+              <Toggle
+                label="左"
                 active={handPreference === 'left'}
                 onPress={() => setHandPreference('left')}
               />
-              <Toggle 
-                label="右" 
+              <Toggle
+                label="右"
                 active={handPreference === 'right'}
                 onPress={() => setHandPreference('right')}
               />
@@ -201,14 +254,16 @@ export default function SettingsScreen({
           <Section title="ヘルプ">
             <Pressable
               onPress={() => setShowHelp(true)}
-              style={({ pressed }) => [{
-                backgroundColor: colors.surface,
-                borderRadius: theme.radius.md,
-                paddingVertical: 12,
-                alignItems: 'center',
-                transform: [{ scale: pressed ? 0.98 : 1 }],
-                ...theme.shadow.card,
-              }]}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: colors.surface,
+                  borderRadius: theme.radius.md,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  ...theme.shadow.card,
+                },
+              ]}
             >
               <Text style={{ color: colors.text, fontWeight: '700' }}>
                 使い方を見る（チュートリアル）
@@ -243,7 +298,9 @@ export default function SettingsScreen({
               },
             ]}
           >
-            <Text style={{ color: colors.danger, fontWeight: '700' }}>ログアウト</Text>
+            <Text style={{ color: colors.danger, fontWeight: '700' }}>
+              ログアウト
+            </Text>
           </Pressable>
           <View style={{ height: theme.spacing(2) }} />
         </View>
@@ -252,7 +309,15 @@ export default function SettingsScreen({
   );
 }
 
-function Toggle({ label, active, onPress }: { label: string; active?: boolean; onPress?: () => void }) {
+function Toggle({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active?: boolean;
+  onPress?: () => void;
+}) {
   const theme = useTheme();
   const { colors } = theme;
   return (
@@ -277,13 +342,35 @@ function Toggle({ label, active, onPress }: { label: string; active?: boolean; o
   );
 }
 
-function ToggleRow({ label, value, onValueChange }: { label: string; value: boolean; onValueChange: (v: boolean) => void }) {
+function ToggleRow({
+  label,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+}) {
   const theme = useTheme();
   const { colors } = theme;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: theme.radius.md, paddingVertical: 10, paddingHorizontal: 12 }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: colors.surface,
+        borderRadius: theme.radius.md,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+      }}
+    >
       <Text style={{ color: colors.text, fontWeight: '600' }}>{label}</Text>
-      <Switch value={value} onValueChange={onValueChange} thumbColor={value ? colors.pink : '#888'} />
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        thumbColor={value ? colors.pink : '#888'}
+      />
     </View>
   );
 }

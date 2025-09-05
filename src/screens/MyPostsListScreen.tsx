@@ -7,11 +7,16 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { useTheme } from '../theme/theme';
 import { useEffect, useRef, useState } from 'react';
+
+import { useTheme } from '../theme/theme';
 import PostCard from '../components/PostCard';
 import { PostWithMeta } from '../types/post';
-import { fetchMyPosts, toggleReaction, deletePost } from '../services/postService';
+import {
+  fetchMyPosts,
+  toggleReaction,
+  deletePost,
+} from '../services/postService';
 import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -32,10 +37,14 @@ export default function MyPostsListScreen() {
   const endReached = useRef(false);
 
   const load = async (opts?: { refresh?: boolean }) => {
-    if (loading) return;
+    if (loading) {
+      return;
+    }
     setLoading(true);
     try {
-      if (!user?.id) return;
+      if (!user?.id) {
+        return;
+      }
       const res = await fetchMyPosts({ before: opts?.refresh ? null : cursor });
       setItems(prev => (opts?.refresh ? res.items : [...prev, ...res.items]));
       setCursor(res.nextCursor);
@@ -49,7 +58,9 @@ export default function MyPostsListScreen() {
   }, []);
 
   const onEndReached = () => {
-    if (endReached.current || loading || !cursor) return;
+    if (endReached.current || loading || !cursor) {
+      return;
+    }
     endReached.current = true;
     load().finally(() => {
       endReached.current = false;
@@ -65,7 +76,9 @@ export default function MyPostsListScreen() {
   const handleToggleLike = async (postId: string, current: boolean) => {
     setItems(prev =>
       prev.map(p => {
-        if (p.id !== postId) return p;
+        if (p.id !== postId) {
+          return p;
+        }
         const base = p.reaction_summary || { reactedByMe: false, count: 0 };
         return {
           ...p,
@@ -81,7 +94,9 @@ export default function MyPostsListScreen() {
     } catch (e) {
       setItems(prev =>
         prev.map(p => {
-          if (p.id !== postId) return p;
+          if (p.id !== postId) {
+            return p;
+          }
           const base = p.reaction_summary || { reactedByMe: false, count: 0 };
           return {
             ...p,
@@ -103,7 +118,9 @@ export default function MyPostsListScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            if (!user?.id) return;
+            if (!user?.id) {
+              return;
+            }
             await deletePost(postId);
             setItems(prev => prev.filter(p => p.id !== postId));
           } catch (e: any) {

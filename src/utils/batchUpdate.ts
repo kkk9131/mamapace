@@ -18,7 +18,9 @@ export function createBatchUpdater<T extends Record<string, any>>(
   };
 
   const schedule = () => {
-    if (timer) clearTimeout(timer);
+    if (timer) {
+      clearTimeout(timer);
+    }
     timer = setTimeout(flushNow, delayMs);
   };
 
@@ -29,4 +31,3 @@ export function createBatchUpdater<T extends Record<string, any>>(
 
   return { set, flushNow };
 }
-

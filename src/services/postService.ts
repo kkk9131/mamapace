@@ -1,12 +1,21 @@
+import {
+  Post,
+  PostWithMeta,
+  PaginatedResult,
+  Comment,
+  Attachment,
+} from '../types/post';
+
 import { getSupabaseClient } from './supabaseClient';
-import { Post, PostWithMeta, PaginatedResult, Comment, Attachment } from '../types/post';
 
 const PAGE_SIZE_DEFAULT = 20;
 
 function computeNextCursor<T extends { created_at: string }>(
   items: T[]
 ): string | null {
-  if (!items || items.length === 0) return null;
+  if (!items || items.length === 0) {
+    return null;
+  }
   const last = items[items.length - 1];
   return last.created_at;
 }
@@ -21,7 +30,9 @@ export async function fetchHomeFeed(
     p_offset_time: before,
     p_limit: limit,
   });
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   const rows = (data ?? []) as any[];
   let items: PostWithMeta[] = rows.map(row => ({
     id: row.id,
@@ -56,7 +67,13 @@ export async function fetchHomeFeed(
     const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
     items = items.map(it =>
       it.user
-        ? { ...it, user: { ...it.user, avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null } }
+        ? {
+            ...it,
+            user: {
+              ...it.user,
+              avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null,
+            },
+          }
         : it
     );
   }
@@ -74,7 +91,9 @@ export async function fetchMyPosts(options?: {
     p_offset_time: before,
     p_limit: limit,
   });
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   const rows = (data ?? []) as any[];
   let items: PostWithMeta[] = rows.map(row => ({
     id: row.id,
@@ -107,7 +126,13 @@ export async function fetchMyPosts(options?: {
       const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
       items = items.map(it =>
         it.user
-          ? { ...it, user: { ...it.user, avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null } }
+          ? {
+              ...it,
+              user: {
+                ...it.user,
+                avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null,
+              },
+            }
           : it
       );
     }
@@ -126,7 +151,9 @@ export async function fetchLikedPosts(options: {
     p_offset_time: before,
     p_limit: limit,
   });
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   const rows = (data ?? []) as any[];
   let items: PostWithMeta[] = rows.map(row => ({
     id: row.id,
@@ -159,7 +186,13 @@ export async function fetchLikedPosts(options: {
       const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
       items = items.map(it =>
         it.user
-          ? { ...it, user: { ...it.user, avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null } }
+          ? {
+              ...it,
+              user: {
+                ...it.user,
+                avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null,
+              },
+            }
           : it
       );
     }
@@ -167,20 +200,33 @@ export async function fetchLikedPosts(options: {
   return { items, nextCursor: computeNextCursor(items) };
 }
 
-export async function createPost(body: string, attachments?: Attachment[]): Promise<Post> {
-  if ((!body || body.trim().length === 0) && (!attachments || attachments.length === 0)) {
+export async function createPost(
+  body: string,
+  attachments?: Attachment[],
+): Promise<Post> {
+  if (
+    (!body || body.trim().length === 0) &&
+    (!attachments || attachments.length === 0)
+  ) {
     throw new Error('投稿内容または画像を追加してください');
   }
-  if (body && body.length > 300) throw new Error('投稿は300文字以内にしてください');
+  if (body && body.length > 300) {
+    throw new Error('投稿は300文字以内にしてください');
+  }
   const client = getSupabaseClient();
-  const bodyToSend = (body && body.trim().length > 0)
-    ? body.trim()
-    : ((attachments && attachments.length > 0) ? '[image]' : '');
+  const bodyToSend =
+    body && body.trim().length > 0
+      ? body.trim()
+      : attachments && attachments.length > 0
+        ? '[image]'
+        : '';
   const { data, error } = await client.rpc('create_post_v2', {
     p_body: bodyToSend,
     p_attachments: attachments && attachments.length ? attachments : [],
   });
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return data as Post;
 }
 
@@ -194,13 +240,17 @@ export async function toggleReaction(
     const { error } = await client.rpc('remove_reaction_v2', {
       p_post_id: postId,
     });
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return { reacted: false, countDelta: -1 };
   } else {
     const { data, error } = await client.rpc('add_reaction_v2', {
       p_post_id: postId,
     });
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     if (data === false) {
       return { reacted: true, countDelta: 0 };
     }
@@ -220,7 +270,9 @@ export async function fetchComments(
     p_offset_time: before,
     p_limit: limit,
   });
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   let items = (data ?? []).map((row: any) => ({
     id: row.id,
     post_id: row.post_id,
@@ -248,7 +300,13 @@ export async function fetchComments(
       const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
       items = items.map(it =>
         it.user
-          ? { ...it, user: { ...it.user, avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null } }
+          ? {
+              ...it,
+              user: {
+                ...it.user,
+                avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null,
+              },
+            }
           : it
       ) as Comment[];
     }
@@ -261,14 +319,22 @@ export async function createComment(
   body: string,
   attachments?: Attachment[]
 ): Promise<Comment> {
-  if ((!body || body.trim().length === 0) && (!attachments || attachments.length === 0)) {
+  if (
+    (!body || body.trim().length === 0) &&
+    (!attachments || attachments.length === 0)
+  ) {
     throw new Error('コメント内容または画像を追加してください');
   }
-  if (body && body.length > 300) throw new Error('コメントは300文字以内にしてください');
+  if (body && body.length > 300) {
+    throw new Error('コメントは300文字以内にしてください');
+  }
   const client = getSupabaseClient();
-  const bodyToSend = (body && body.trim().length > 0)
-    ? body.trim()
-    : ((attachments && attachments.length > 0) ? '[image]' : '');
+  const bodyToSend =
+    body && body.trim().length > 0
+      ? body.trim()
+      : attachments && attachments.length > 0
+        ? '[image]'
+        : '';
   // まずは新シグネチャ (uuid, text, jsonb) を試す。存在しない環境ではフォールバックする。
   const tryAttachments = async () =>
     await client.rpc('create_comment_v2', {
@@ -286,11 +352,18 @@ export async function createComment(
   if (res.error) {
     const msg = String(res.error?.message || '');
     // 代表的なエラー: 関数が無い/引数数が合わない/attachments列が無い
-    if (/does not exist|No function matches the given name|argument|attachments/i.test(msg) || (res as any).code === '42883') {
+    if (
+      /does not exist|No function matches the given name|argument|attachments/i.test(
+        msg,
+      ) ||
+      (res as any).code === '42883'
+    ) {
       res = await tryLegacy();
     }
   }
-  if (res.error) throw res.error;
+  if (res.error) {
+    throw res.error;
+  }
   return res.data as Comment;
 }
 
@@ -299,7 +372,9 @@ export async function deletePost(postId: string): Promise<boolean> {
   const { data, error } = await client.rpc('delete_post_v2', {
     p_post_id: postId,
   });
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return !!data;
 }
 
@@ -308,6 +383,8 @@ export async function deleteComment(commentId: string): Promise<boolean> {
   const { data, error } = await client.rpc('delete_comment_v2', {
     p_comment_id: commentId,
   });
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return !!data;
 }

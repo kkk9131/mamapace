@@ -10,7 +10,6 @@ type StorageProvider = {
 
 let provider: StorageProvider;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const SecureStore = require('expo-secure-store');
   if (SecureStore && typeof SecureStore.getItemAsync === 'function') {
     provider = {
@@ -131,13 +130,17 @@ export const secureSessionStore = {
 
   async isSessionValid(): Promise<boolean> {
     const { expiresAt } = await this.getSession();
-    if (!expiresAt) return false;
+    if (!expiresAt) {
+      return false;
+    }
     return new Date(expiresAt).getTime() > Date.now();
   },
 
   async needsRefresh(thresholdMinutes = 60): Promise<boolean> {
     const { expiresAt } = await this.getSession();
-    if (!expiresAt) return false;
+    if (!expiresAt) {
+      return false;
+    }
     const msLeft = new Date(expiresAt).getTime() - Date.now();
     return msLeft < thresholdMinutes * 60 * 1000;
   },

@@ -53,7 +53,11 @@ jest.mock('expo-blur', () => ({
 
 // Mock Expo Image Manipulator
 jest.mock('expo-image-manipulator', () => ({
-  manipulateAsync: jest.fn(async (uri: string) => ({ uri, width: 800, height: 600 })),
+  manipulateAsync: jest.fn(async (uri: string) => ({
+    uri,
+    width: 800,
+    height: 600,
+  })),
   SaveFormat: { JPEG: 'jpeg', PNG: 'png' },
 }));
 
@@ -65,19 +69,37 @@ jest.mock('expo-file-system', () => ({
 
 jest.mock('@supabase/supabase-js', () => {
   const chain = {
-    select: jest.fn(function () { return this; }),
-    insert: jest.fn(function () { return this; }),
-    update: jest.fn(function () { return this; }),
-    delete: jest.fn(function () { return this; }),
-    eq: jest.fn(function () { return this; }),
-    order: jest.fn(function () { return this; }),
-    lt: jest.fn(function () { return this; }),
-    limit: jest.fn(function () { return this; }),
+    select: jest.fn(function () {
+      return this;
+    }),
+    insert: jest.fn(function () {
+      return this;
+    }),
+    update: jest.fn(function () {
+      return this;
+    }),
+    delete: jest.fn(function () {
+      return this;
+    }),
+    eq: jest.fn(function () {
+      return this;
+    }),
+    order: jest.fn(function () {
+      return this;
+    }),
+    lt: jest.fn(function () {
+      return this;
+    }),
+    limit: jest.fn(function () {
+      return this;
+    }),
     single: jest.fn(),
     maybeSingle: jest.fn(),
-    upsert: jest.fn(function () { return this; }),
+    upsert: jest.fn(function () {
+      return this;
+    }),
   } as any;
-  return ({
+  return {
     createClient: jest.fn(() => ({
       auth: {
         signInWithPassword: jest.fn(),
@@ -91,12 +113,14 @@ jest.mock('@supabase/supabase-js', () => {
       from: jest.fn(() => ({ ...chain })),
       storage: {
         from: jest.fn(() => ({
-          getPublicUrl: jest.fn((path: string) => ({ data: { publicUrl: `https://cdn.example.com/${path}` } })),
+          getPublicUrl: jest.fn((path: string) => ({
+            data: { publicUrl: `https://cdn.example.com/${path}` },
+          })),
         })),
       },
       rpc: jest.fn(),
     })),
-  });
+  };
 });
 
 // Mock React Navigation

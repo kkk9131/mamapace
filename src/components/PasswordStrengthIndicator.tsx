@@ -10,6 +10,7 @@
 
 import React from 'react';
 import { View, Text, Animated } from 'react-native';
+
 import { useTheme } from '../theme/theme';
 import { PasswordValidation } from '../types/auth';
 import { ValidationMessages } from '../utils/formValidation';

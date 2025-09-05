@@ -2,8 +2,12 @@ import { jest } from '@jest/globals';
 
 // Helpers to create mocks per test
 function mockSupabaseClient() {
-  const getSession = jest.fn(async () => ({ data: { session: { access_token: 'token' } } }));
-  const getPublicUrl = jest.fn((path: string) => ({ data: { publicUrl: `https://public.cdn/${path}` } }));
+  const getSession = jest.fn(async () => ({
+    data: { session: { access_token: 'token' } },
+  }));
+  const getPublicUrl = jest.fn((path: string) => ({
+    data: { publicUrl: `https://public.cdn/${path}` },
+  }));
   jest.doMock('../supabaseClient', () => ({
     getSupabaseClient: () => ({
       auth: { getSession },
@@ -15,7 +19,10 @@ function mockSupabaseClient() {
 
 function mockFileSystem(captor: { urls: string[] }) {
   jest.doMock('expo-file-system', () => ({
-    uploadAsync: jest.fn(async (url: string) => { captor.urls.push(url); return { status: 200, body: '' }; }),
+    uploadAsync: jest.fn(async (url: string) => {
+      captor.urls.push(url);
+      return { status: 200, body: '' };
+    }),
     FileSystemUploadType: { BINARY_CONTENT: 'binary' },
   }));
 }
@@ -50,6 +57,8 @@ describe('storageService upload URL resolution', () => {
       p = uploadAvatarImage('user4', 'file:///avatar.jpg');
     });
     await p;
-    expect(captor.urls[0]).toMatch(/^https:\/\/from-supabase-url\.example\.com\//);
+    expect(captor.urls[0]).toMatch(
+      /^https:\/\/from-supabase-url\.example\.com\//,
+    );
   });
 });

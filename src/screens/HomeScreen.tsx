@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { useTheme } from '../theme/theme';
 import PostCard from '../components/PostCard';
 import { PostSkeletonCard } from '../components/Skeleton';
@@ -17,7 +19,6 @@ import { getSupabaseClient } from '../services/supabaseClient';
 import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen({
   refreshKey,
@@ -55,7 +56,9 @@ export default function HomeScreen({
   const insets = useSafeAreaInsets();
 
   const load = async (opts?: { refresh?: boolean }) => {
-    if (loading) return;
+    if (loading) {
+      return;
+    }
     setLoading(true);
     try {
       const before = opts?.refresh ? null : cursor;
@@ -84,7 +87,9 @@ export default function HomeScreen({
             { event: 'INSERT', schema: 'public', table: 'post_comments' },
             (payload: any) => {
               const postId = payload?.new?.post_id;
-              if (!postId) return;
+              if (!postId) {
+                return;
+              }
               setItems(prev =>
                 prev.map(p =>
                   p.id === postId
@@ -95,7 +100,7 @@ export default function HomeScreen({
                         },
                       }
                     : p
-                )
+                ),
               );
             }
           )
@@ -104,7 +109,9 @@ export default function HomeScreen({
             { event: 'DELETE', schema: 'public', table: 'post_comments' },
             (payload: any) => {
               const postId = payload?.old?.post_id;
-              if (!postId) return;
+              if (!postId) {
+                return;
+              }
               setItems(prev =>
                 prev.map(p =>
                   p.id === postId
@@ -118,7 +125,7 @@ export default function HomeScreen({
                         },
                       }
                     : p
-                )
+                ),
               );
             }
           )
@@ -127,19 +134,24 @@ export default function HomeScreen({
             { event: 'INSERT', schema: 'public', table: 'post_reactions' },
             (payload: any) => {
               const postId = payload?.new?.post_id;
-              if (!postId) return;
+              if (!postId) {
+                return;
+              }
               setItems(prev =>
                 prev.map(p =>
                   p.id === postId
                     ? {
                         ...p,
                         reaction_summary: (() => {
-                          const base = p.reaction_summary || { reactedByMe: false, count: 0 };
+                          const base = p.reaction_summary || {
+                            reactedByMe: false,
+                            count: 0,
+                          };
                           return { ...base, count: (base.count || 0) + 1 };
                         })(),
                       }
                     : p
-                )
+                ),
               );
             }
           )
@@ -148,14 +160,19 @@ export default function HomeScreen({
             { event: 'DELETE', schema: 'public', table: 'post_reactions' },
             (payload: any) => {
               const postId = payload?.old?.post_id;
-              if (!postId) return;
+              if (!postId) {
+                return;
+              }
               setItems(prev =>
                 prev.map(p =>
                   p.id === postId
                     ? {
                         ...p,
                         reaction_summary: (() => {
-                          const base = p.reaction_summary || { reactedByMe: false, count: 0 };
+                          const base = p.reaction_summary || {
+                            reactedByMe: false,
+                            count: 0,
+                          };
                           return {
                             ...base,
                             count: Math.max(0, (base.count || 0) - 1),
@@ -163,7 +180,7 @@ export default function HomeScreen({
                         })(),
                       }
                     : p
-                )
+                ),
               );
             }
           )
@@ -178,7 +195,9 @@ export default function HomeScreen({
   }, []);
 
   const onEndReached = () => {
-    if (endReached.current || loading || !cursor) return;
+    if (endReached.current || loading || !cursor) {
+      return;
+    }
     endReached.current = true;
     load().finally(() => {
       endReached.current = false;
@@ -195,7 +214,9 @@ export default function HomeScreen({
     // optimistic update
     setItems(prev =>
       prev.map(p => {
-        if (p.id !== postId) return p;
+        if (p.id !== postId) {
+          return p;
+        }
         const base = p.reaction_summary || { reactedByMe: false, count: 0 };
         return {
           ...p,
@@ -207,13 +228,17 @@ export default function HomeScreen({
       })
     );
     try {
-      if (!user?.id) throw new Error('not logged in');
+      if (!user?.id) {
+        throw new Error('not logged in');
+      }
       await toggleReaction(postId, current);
     } catch (e) {
       // rollback on error
       setItems(prev =>
         prev.map(p => {
-          if (p.id !== postId) return p;
+          if (p.id !== postId) {
+            return p;
+          }
           const base = p.reaction_summary || { reactedByMe: false, count: 0 };
           return {
             ...p,

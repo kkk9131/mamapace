@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { secureLogger } from '../utils/privacyProtection';

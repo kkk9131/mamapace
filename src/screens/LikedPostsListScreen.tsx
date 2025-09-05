@@ -7,8 +7,9 @@ import {
   RefreshControl,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useTheme } from '../theme/theme';
 import { useEffect, useRef, useState } from 'react';
+
+import { useTheme } from '../theme/theme';
 import PostCard from '../components/PostCard';
 import { PostWithMeta } from '../types/post';
 import { fetchLikedPosts, toggleReaction } from '../services/postService';
@@ -40,11 +41,15 @@ export default function LikedPostsListScreen({
   const endReached = useRef(false);
 
   const load = async (opts?: { refresh?: boolean }) => {
-    if (loading) return;
+    if (loading) {
+      return;
+    }
     setLoading(true);
     try {
       const before = opts?.refresh ? null : cursor;
-      if (!user?.id) return;
+      if (!user?.id) {
+        return;
+      }
       const res = await fetchLikedPosts({ before });
       setItems(prev => (opts?.refresh ? res.items : [...prev, ...res.items]));
       setCursor(res.nextCursor);
@@ -58,7 +63,9 @@ export default function LikedPostsListScreen({
   }, []);
 
   const onEndReached = () => {
-    if (endReached.current || loading || !cursor) return;
+    if (endReached.current || loading || !cursor) {
+      return;
+    }
     endReached.current = true;
     load().finally(() => {
       endReached.current = false;
@@ -87,11 +94,13 @@ export default function LikedPostsListScreen({
                 },
               }
             : p
-        )
+        ),
       );
     }
     try {
-      if (user?.id) await toggleReaction(postId, current);
+      if (user?.id) {
+        await toggleReaction(postId, current);
+      }
     } catch (e) {
       notifyError('操作に失敗しました。時間をおいて再度お試しください');
     }

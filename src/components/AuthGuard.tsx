@@ -10,6 +10,7 @@
 
 import React from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
+
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { secureLogger } from '../utils/privacyProtection';

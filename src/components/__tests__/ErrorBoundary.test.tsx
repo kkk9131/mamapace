@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+
 import ErrorBoundary from '../ErrorBoundary';
 
 function Boom() {
@@ -18,4 +19,3 @@ describe('ErrorBoundary', () => {
     expect(true).toBe(true);
   });
 });
-

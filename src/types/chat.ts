@@ -133,7 +133,12 @@ export interface MessageMetadata {
   image_width?: number;
   image_height?: number;
   // Multiple attachments (e.g., images) bundled with a message
-  attachments?: { url: string; width?: number; height?: number; mime?: string }[];
+  attachments?: {
+    url: string;
+    width?: number;
+    height?: number;
+    mime?: string;
+  }[];
   system_event?: SystemEventType;
   mentions?: string[]; // User IDs mentioned in message
 }

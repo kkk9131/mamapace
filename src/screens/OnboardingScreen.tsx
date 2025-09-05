@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, Animated } from 'react-native';
-import { useTheme } from '../theme/theme';
 import { BlurView } from 'expo-blur';
+
+import { useTheme } from '../theme/theme';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 
 interface OnboardingScreenProps {
   onComplete: () => void;
 }
 
-export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
+export default function OnboardingScreen({
+  onComplete,
+}: OnboardingScreenProps) {
   const theme = useTheme() as any;
   const { colors } = theme;
   const { setHandPreference } = useHandPreference();
@@ -17,7 +20,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
 
   const handleHandSelection = (hand: 'left' | 'right') => {
     setHandPreference(hand);
-    
+
     // フェードアウト後に完了
     Animated.timing(fade, {
       toValue: 0,
@@ -46,19 +49,23 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
           marginBottom: theme.spacing(6),
         }}
       >
-        <Text style={{ 
-          color: colors.pink, 
-          fontSize: 32, 
-          fontWeight: '800',
-          marginBottom: theme.spacing(1),
-        }}>
+        <Text
+          style={{
+            color: colors.pink,
+            fontSize: 32,
+            fontWeight: '800',
+            marginBottom: theme.spacing(1),
+          }}
+        >
           Mamapace
         </Text>
-        <Text style={{ 
-          color: colors.subtext, 
-          fontSize: 16,
-          textAlign: 'center',
-        }}>
+        <Text
+          style={{
+            color: colors.subtext,
+            fontSize: 16,
+            textAlign: 'center',
+          }}
+        >
           育児中のママのための{'\n'}安心・安全なSNS
         </Text>
       </View>
@@ -75,9 +82,9 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
         <BlurView
           intensity={30}
           tint="dark"
-          style={{ 
-            padding: theme.spacing(3), 
-            backgroundColor: '#ffffff10' 
+          style={{
+            padding: theme.spacing(3),
+            backgroundColor: '#ffffff10',
           }}
         >
           <Text
@@ -101,7 +108,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
           >
             よく使う手に合わせてボタンの配置を{'\n'}最適化します
           </Text>
-          
+
           <View style={{ flexDirection: 'row', gap: theme.spacing(2) }}>
             <Pressable
               onPress={() => handleHandSelection('left')}
@@ -119,23 +126,27 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
               ]}
             >
               <Text style={{ fontSize: 32, marginBottom: 8 }}>🤚</Text>
-              <Text style={{ 
-                color: colors.text, 
-                fontWeight: '700',
-                fontSize: 16,
-              }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontWeight: '700',
+                  fontSize: 16,
+                }}
+              >
                 左手
               </Text>
-              <Text style={{ 
-                color: colors.subtext, 
-                fontSize: 12,
-                textAlign: 'center',
-                marginTop: 4,
-              }}>
+              <Text
+                style={{
+                  color: colors.subtext,
+                  fontSize: 12,
+                  textAlign: 'center',
+                  marginTop: 4,
+                }}
+              >
                 右手で抱っこ
               </Text>
             </Pressable>
-            
+
             <Pressable
               onPress={() => handleHandSelection('right')}
               style={({ pressed }) => [
@@ -152,19 +163,23 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
               ]}
             >
               <Text style={{ fontSize: 32, marginBottom: 8 }}>✋</Text>
-              <Text style={{ 
-                color: colors.text, 
-                fontWeight: '700',
-                fontSize: 16,
-              }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontWeight: '700',
+                  fontSize: 16,
+                }}
+              >
                 右手
               </Text>
-              <Text style={{ 
-                color: colors.subtext, 
-                fontSize: 12,
-                textAlign: 'center',
-                marginTop: 4,
-              }}>
+              <Text
+                style={{
+                  color: colors.subtext,
+                  fontSize: 12,
+                  textAlign: 'center',
+                  marginTop: 4,
+                }}
+              >
                 左手で抱っこ
               </Text>
             </Pressable>

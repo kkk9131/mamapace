@@ -8,9 +8,11 @@ import {
   RefreshControl,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+
 import { useTheme } from '../theme/theme';
 import { useChatList } from '../hooks/useRooms';
-import AnonRoomScreen from './AnonRoomScreen';
+
+import AnonRoomV2Screen from './AnonRoomV2Screen';
 import ChannelScreen from './ChannelScreen';
 import InviteFollowersScreen from './InviteFollowersScreen';
 
@@ -28,12 +30,15 @@ export default function RoomsListScreen({
   const theme = useTheme();
   const { colors } = theme;
   const fade = useRef(new Animated.Value(0)).current;
+  // V2 is default; V1 has been removed
 
   // State management
   const [currentView, setCurrentView] = useState<
     'list' | 'anonymous' | 'channel' | 'space' | 'invite' | 'directChat'
   >('list');
-  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(
+    null,
+  );
   const [selectedSpaceName, setSelectedSpaceName] = useState<string>('');
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [selectedSpace, setSelectedSpace] = useState<any>(null);
@@ -80,7 +85,9 @@ export default function RoomsListScreen({
     setSelectedChannelId(channelId);
     setSelectedSpaceName(spaceName);
     setSelectedSpaceId(spaceId);
-    setSelectedSpace(space || { id: spaceId, name: spaceName, is_public: false }); // Default to private for testing
+    setSelectedSpace(
+      space || { id: spaceId, name: spaceName, is_public: false },
+    ); // Default to private for testing
     if (onNavigateToChannel) {
       onNavigateToChannel(channelId, spaceName);
     } else {
@@ -99,9 +106,8 @@ export default function RoomsListScreen({
   // Different views
   if (currentView === 'anonymous') {
     return (
-      <AnonRoomScreen
+      <AnonRoomV2Screen
         onBack={() => {
-          // Ensure immediate display when returning to list view
           fade.setValue(1);
           setCurrentView('list');
         }}
@@ -155,7 +161,9 @@ export default function RoomsListScreen({
         }}
       >
         <View style={{ paddingHorizontal: theme.spacing(2), marginBottom: 16 }}>
-          <Text style={{ color: colors.text, fontSize: 24, fontWeight: 'bold' }}>
+          <Text
+            style={{ color: colors.text, fontSize: 24, fontWeight: 'bold' }}
+          >
             {selectedSpaceName}
           </Text>
           <Text style={{ color: colors.subtext, fontSize: 14, marginTop: 8 }}>
@@ -166,13 +174,15 @@ export default function RoomsListScreen({
         <View style={{ paddingHorizontal: theme.spacing(2) }}>
           <Pressable
             onPress={() => setCurrentView('list')}
-            style={({ pressed }) => [{
-              backgroundColor: colors.surface,
-              paddingVertical: 12,
-              borderRadius: theme.radius.md,
-              alignItems: 'center',
-              transform: [{ scale: pressed ? 0.97 : 1 }],
-            }]}
+            style={({ pressed }) => [
+              {
+                backgroundColor: colors.surface,
+                paddingVertical: 12,
+                borderRadius: theme.radius.md,
+                alignItems: 'center',
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+              },
+            ]}
           >
             <Text style={{ color: colors.text, fontWeight: 'bold' }}>戻る</Text>
           </Pressable>
@@ -192,7 +202,9 @@ export default function RoomsListScreen({
         }}
         onInviteSent={(selectedUsers, spaceName) => {
           // Handle successful invite sending
-          console.log(`Sent invites to ${selectedUsers.length} users for space: ${spaceName}`);
+          console.log(
+            `Sent invites to ${selectedUsers.length} users for space: ${spaceName}`,
+          );
           fade.setValue(1);
           setCurrentView('channel');
         }}

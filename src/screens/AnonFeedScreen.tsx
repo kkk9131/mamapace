@@ -7,6 +7,7 @@ import {
   TextInput,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+
 import { useTheme } from '../theme/theme';
 
 const items = [
@@ -91,7 +92,9 @@ export default function AnonFeedScreen({
                     const scale = new Animated.Value(1);
                     const float = new Animated.Value(0);
                     const onPress = () => {
-                      if (icon === '💬' && onComment) onComment();
+                      if (icon === '💬' && onComment) {
+                        onComment();
+                      }
                       Animated.sequence([
                         Animated.spring(scale, {
                           toValue: 0.9,

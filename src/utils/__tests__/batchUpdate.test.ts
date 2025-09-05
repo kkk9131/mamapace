@@ -5,10 +5,13 @@ jest.useFakeTimers();
 describe('createBatchUpdater', () => {
   it('バッチで更新をまとめて1回だけflushする', async () => {
     const calls: any[] = [];
-    const updater = createBatchUpdater<{ a: boolean; b: boolean; c: boolean }>(async (patch) => {
-      calls.push(patch);
-      return true;
-    }, 300);
+    const updater = createBatchUpdater<{ a: boolean; b: boolean; c: boolean }>(
+      async patch => {
+        calls.push(patch);
+        return true;
+      },
+      300,
+    );
 
     updater.set('a', false);
     updater.set('b', false);
@@ -23,7 +26,7 @@ describe('createBatchUpdater', () => {
 
   it('flushNowで即時反映され、ペンディングはクリアされる', async () => {
     const calls: any[] = [];
-    const updater = createBatchUpdater<{ x: boolean }>(async (patch) => {
+    const updater = createBatchUpdater<{ x: boolean }>(async patch => {
       calls.push(patch);
       return true;
     }, 300);
@@ -38,4 +41,3 @@ describe('createBatchUpdater', () => {
     expect(calls).toHaveLength(1);
   });
 });
-

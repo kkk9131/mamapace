@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Alert } from 'react-native';
+
 import ChannelScreen from '../ChannelScreen';
 
 jest.mock('../../hooks/useRooms', () => ({
@@ -14,12 +15,27 @@ jest.mock('../../hooks/useRooms', () => ({
     markSeen: jest.fn(),
     refresh: jest.fn(),
   }),
-  useModeration: () => ({ loading: false, error: null, reportMessage: jest.fn() }),
-  useSpaceOperations: () => ({ loading: false, error: null, leaveSpace: jest.fn() }),
-  useChannelMembers: () => ({ members: [], loading: false, error: null, refresh: jest.fn() }),
+  useModeration: () => ({
+    loading: false,
+    error: null,
+    reportMessage: jest.fn(),
+  }),
+  useSpaceOperations: () => ({
+    loading: false,
+    error: null,
+    leaveSpace: jest.fn(),
+  }),
+  useChannelMembers: () => ({
+    members: [],
+    loading: false,
+    error: null,
+    refresh: jest.fn(),
+  }),
 }));
 
-jest.mock('../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
+jest.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => ({ user: { id: 'u1' } }),
+}));
 
 describe('ChannelScreen error handling', () => {
   it('shows alert when error occurs', () => {
@@ -28,4 +44,3 @@ describe('ChannelScreen error handling', () => {
     expect(spy).toHaveBeenCalled();
   });
 });
-

@@ -1,6 +1,7 @@
-import { getSupabaseClient } from './supabaseClient';
 import { PublicUserProfile } from '../types/auth';
 import { secureLogger } from '../utils/privacyProtection';
+
+import { getSupabaseClient } from './supabaseClient';
 
 // Types for follow features
 export interface FollowUser {
@@ -107,14 +108,18 @@ export async function updateMyAvatarUrl(url: string | null): Promise<boolean> {
     const { data, error } = await client.rpc('update_my_avatar_url', {
       p_avatar_url: url,
     });
-    if (!error) return !!data || url === null;
+    if (!error) {
+      return !!data || url === null;
+    }
   } catch {}
 
   // Fallback: direct update to user_profiles
   const {
     data: { user },
   } = await client.auth.getUser();
-  if (!user) throw new Error('ログインが必要です');
+  if (!user) {
+    throw new Error('ログインが必要です');
+  }
 
   const { error } = await client
     .from('user_profiles')
@@ -254,9 +259,10 @@ export async function getFollowList(
   type: 'followers' | 'following'
 ): Promise<PublicUserProfile[]> {
   try {
-    const result = type === 'followers' 
-      ? await getFollowers(userId, { limit: 100 }) 
-      : await getFollowing(userId, { limit: 100 });
+    const result =
+      type === 'followers'
+        ? await getFollowers(userId, { limit: 100 })
+        : await getFollowing(userId, { limit: 100 });
 
     // Convert FollowUser[] to PublicUserProfile[]
     return result.items.map(item => ({
@@ -268,6 +274,8 @@ export async function getFollowList(
     }));
   } catch (error) {
     secureLogger.error(`Failed to get ${type}:`, error);
-    throw new Error(`${type === 'followers' ? 'フォロワー' : 'フォロー中'}の取得に失敗しました`);
+    throw new Error(
+      `${type === 'followers' ? 'フォロワー' : 'フォロー中'}の取得に失敗しました`,
+    );
   }
 }

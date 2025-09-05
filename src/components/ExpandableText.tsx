@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable, TextStyle, ViewStyle } from 'react-native';
+
 import { useTheme } from '../theme/theme';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 
@@ -65,7 +66,7 @@ export default function ExpandableText({
 
   // Handle null or undefined text
   const safeText = text || '';
-  
+
   // Determine if text is long enough to show expand button
   const isLongText = safeText.length > minLengthToExpand;
 
