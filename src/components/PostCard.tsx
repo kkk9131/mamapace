@@ -2,9 +2,11 @@ import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, Animated, Image, Modal } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
+
 import { useTheme } from '../theme/theme';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { PostWithMeta } from '../types/post';
+
 import ExpandableText from './ExpandableText';
 
 export default function PostCard({
@@ -33,10 +35,19 @@ export default function PostCard({
   const float = useRef(new Animated.Value(0)).current;
   const commentScale = useRef(new Animated.Value(1)).current;
 
-  const baseReaction = post.reaction_summary || { reactedByMe: false, count: 0 };
+  const baseReaction = post.reaction_summary || {
+    reactedByMe: false,
+    count: 0,
+  };
   const baseComment = post.comment_summary || { count: 0 };
-  const likeCount = Math.max(0, (baseReaction.count || 0) + (reactionDelta || 0));
-  const commentCount = Math.max(0, (baseComment.count || 0) + (commentDelta || 0));
+  const likeCount = Math.max(
+    0,
+    (baseReaction.count || 0) + (reactionDelta || 0),
+  );
+  const commentCount = Math.max(
+    0,
+    (baseComment.count || 0) + (commentDelta || 0),
+  );
   const likeText = useMemo(
     () => (likeCount > 0 ? `${likeCount}` : ''),
     [likeCount]
@@ -47,11 +58,14 @@ export default function PostCard({
   );
 
   const [likeBusy, setLikeBusy] = React.useState(false as boolean);
-  const [viewer, setViewer] = useState<{ visible: boolean; index: number }>(
-    { visible: false, index: 0 }
-  );
+  const [viewer, setViewer] = useState<{ visible: boolean; index: number }>({
+    visible: false,
+    index: 0,
+  });
   const handleLike = async () => {
-    if (likeBusy) return;
+    if (likeBusy) {
+      return;
+    }
     setLikeBusy(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Animated.sequence([
@@ -101,7 +115,12 @@ export default function PostCard({
             {post.user?.avatar_url ? (
               <Image
                 source={{ uri: post.user.avatar_url }}
-                style={{ width: 28, height: 28, borderRadius: 14, marginRight: 8 }}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  marginRight: 8,
+                }}
               />
             ) : (
               <Text
@@ -164,12 +183,27 @@ export default function PostCard({
                 <Pressable
                   key={idx}
                   onPress={() => setViewer({ visible: true, index: idx })}
-                  style={{ width: '48%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: '#ffffff12' }}
+                  style={{
+                    width: '48%',
+                    aspectRatio: 1,
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    backgroundColor: '#ffffff12',
+                  }}
                 >
                   {att.url ? (
-                    <Image source={{ uri: att.url }} style={{ width: '100%', height: '100%' }} />
+                    <Image
+                      source={{ uri: att.url }}
+                      style={{ width: '100%', height: '100%' }}
+                    />
                   ) : (
-                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <View
+                      style={{
+                        flex: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
                       <Text style={{ color: colors.subtext }}>画像</Text>
                     </View>
                   )}
@@ -188,11 +222,16 @@ export default function PostCard({
           }}
         >
           {/* Like and Comment buttons - positioned based on hand preference */}
-          <View style={{ 
-            flexDirection: 'row', 
-            gap: theme.spacing(2),
-            ...(handPreference === 'right' && { marginLeft: 'auto', marginRight: isOwner ? theme.spacing(2) : 0 })
-          }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: theme.spacing(2),
+              ...(handPreference === 'right' && {
+                marginLeft: 'auto',
+                marginRight: isOwner ? theme.spacing(2) : 0,
+              }),
+            }}
+          >
             {/* Like Button */}
             <Pressable
               disabled={likeBusy}
@@ -325,10 +364,26 @@ export default function PostCard({
       </BlurView>
 
       {/* Simple viewer */}
-      <Modal visible={viewer.visible} transparent animationType="fade" onRequestClose={() => setViewer({ visible: false, index: 0 })}>
-        <Pressable style={{ flex: 1, backgroundColor: '#000000CC', alignItems: 'center', justifyContent: 'center' }} onPress={() => setViewer({ visible: false, index: 0 })}>
+      <Modal
+        visible={viewer.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewer({ visible: false, index: 0 })}
+      >
+        <Pressable
+          style={{
+            flex: 1,
+            backgroundColor: '#000000CC',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onPress={() => setViewer({ visible: false, index: 0 })}
+        >
           {post.attachments?.[viewer.index]?.url ? (
-            <Image source={{ uri: post.attachments[viewer.index].url }} style={{ width: '90%', height: '70%', resizeMode: 'contain' }} />
+            <Image
+              source={{ uri: post.attachments[viewer.index].url }}
+              style={{ width: '90%', height: '70%', resizeMode: 'contain' }}
+            />
           ) : null}
         </Pressable>
       </Modal>

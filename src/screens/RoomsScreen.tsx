@@ -10,9 +10,10 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
-import { useTheme } from '../theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+
+import { useTheme } from '../theme/theme';
 import {
   useSpaceSearch,
   useSpaceOperations,
@@ -20,7 +21,8 @@ import {
   usePopularSpaces,
 } from '../hooks/useRooms';
 import { SpaceWithOwner } from '../types/room';
-import AnonRoomScreen from './AnonRoomScreen';
+
+import AnonRoomV2Screen from './AnonRoomV2Screen';
 import ChannelScreen from './ChannelScreen';
 import CreateSpaceScreen from './CreateSpaceScreen';
 import InviteFollowersScreen from './InviteFollowersScreen';
@@ -33,10 +35,19 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
   const theme = useTheme();
   const { colors } = theme;
   const fade = useRef(new Animated.Value(0)).current;
+  // V2 is default; V1 has been removed
 
   // State management
   const [currentView, setCurrentView] = useState<
-    'list' | 'search' | 'anonymous' | 'channel' | 'space' | 'create' | 'invite' | 'directChat' | 'userProfile'
+    | 'list'
+    | 'search'
+    | 'anonymous'
+    | 'channel'
+    | 'space'
+    | 'create'
+    | 'invite'
+    | 'directChat'
+    | 'userProfile'
   >('list');
   const [selectedFilter, setSelectedFilter] = useState<string>('すべて');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -156,7 +167,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
   // Render different views
   if (currentView === 'anonymous') {
     return (
-      <AnonRoomScreen
+      <AnonRoomV2Screen
         onBack={() => {
           fade.setValue(1);
           setCurrentView('list');
@@ -203,14 +214,25 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
   if (currentView === 'space' && selectedSpaceId) {
     return (
       <Animated.View
-        style={{ flex: 1, backgroundColor: colors.bg || '#000000', opacity: fade }}
+        style={{
+          flex: 1,
+          backgroundColor: colors.bg || '#000000',
+          opacity: fade,
+        }}
       >
         <View style={{ paddingTop: 48, paddingHorizontal: theme.spacing(2) }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Pressable onPress={() => setCurrentView('list')}>
               <Ionicons name="chevron-back" size={20} color={colors.text} />
             </Pressable>
-            <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginLeft: 12 }}>
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: 18,
+                fontWeight: 'bold',
+                marginLeft: 12,
+              }}
+            >
               {selectedSpaceName}
             </Text>
           </View>
@@ -227,18 +249,25 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                   Alert.alert('退出', 'ルームから退出しました');
                   setCurrentView('list');
                 } else {
-                  Alert.alert('エラー', (res as any).error || '退出に失敗しました');
+                  Alert.alert(
+                    'エラー',
+                    (res as any).error || '退出に失敗しました',
+                  );
                 }
               }}
-              style={({ pressed }) => [{
-                backgroundColor: colors.pink,
-                paddingVertical: 12,
-                borderRadius: theme.radius.md,
-                alignItems: 'center',
-                transform: [{ scale: pressed ? 0.97 : 1 }],
-              }]}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: colors.pink,
+                  paddingVertical: 12,
+                  borderRadius: theme.radius.md,
+                  alignItems: 'center',
+                  transform: [{ scale: pressed ? 0.97 : 1 }],
+                },
+              ]}
             >
-              <Text style={{ color: 'white', fontWeight: 'bold' }}>このルームから退出</Text>
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>
+                このルームから退出
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -273,7 +302,9 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
         }}
         onInviteSent={(selectedUsers, spaceName) => {
           // Handle successful invite sending
-          console.log(`Sent invites to ${selectedUsers.length} users for space: ${spaceName}`);
+          console.log(
+            `Sent invites to ${selectedUsers.length} users for space: ${spaceName}`,
+          );
           fade.setValue(1);
           setCurrentView('channel');
         }}
@@ -320,7 +351,9 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
 
   // Filter popular spaces based on selected filter
   const filteredPopularSpaces = popularSpaces.filter(space => {
-    if (selectedFilter === 'すべて') return true;
+    if (selectedFilter === 'すべて') {
+      return true;
+    }
     return (
       space.name.includes(selectedFilter) ||
       space.description?.includes(selectedFilter) ||
@@ -705,7 +738,9 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                           {item.description}
                         </Text>
                       )}
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View
+                        style={{ flexDirection: 'row', alignItems: 'center' }}
+                      >
                         <Text
                           style={{
                             color: colors.subtext,

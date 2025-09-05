@@ -11,4 +11,3 @@ export function getExpoProjectId(): string | undefined {
   const fromExtra = (Constants as any)?.expoConfig?.extra?.eas?.projectId;
   return (fromEnv as string) || (fromExtra as string) || undefined;
 }
-

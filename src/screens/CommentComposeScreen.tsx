@@ -9,20 +9,24 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useTheme } from '../theme/theme';
-import { createComment } from '../services/postService';
 import * as ImagePicker from 'expo-image-picker';
-import { imagesOnlyMediaTypes, imageOnlyMediaTypeSingle } from '../utils/imagePickerCompat';
-import { uploadPostImages } from '../services/storageService';
-import { Image } from 'react-native';
-import { notifyError } from '../utils/notify';
-import { useAuth } from '../contexts/AuthContext';
-import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { useRef, useState, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+
+import { useTheme } from '../theme/theme';
+import { createComment } from '../services/postService';
+import {
+  imagesOnlyMediaTypes,
+  imageOnlyMediaTypeSingle,
+} from '../utils/imagePickerCompat';
+import { uploadPostImages } from '../services/storageService';
+import { notifyError } from '../utils/notify';
+import { useAuth } from '../contexts/AuthContext';
+import { useHandPreference } from '../contexts/HandPreferenceContext';
 
 export default function CommentComposeScreen({
   postId,
@@ -112,53 +116,116 @@ export default function CommentComposeScreen({
                   }}
                 >
                   {/* 添付ツールバー */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginBottom: 8,
+                    }}
+                  >
                     {/* ギャラリー */}
                     <Pressable
                       disabled={images.length >= 4}
                       onPress={async () => {
                         try {
-                          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                          if (!perm.granted) { notifyError('写真ライブラリへのアクセスが必要です'); return; }
-                          const res = await ImagePicker.launchImageLibraryAsync({
-                            allowsMultipleSelection: true,
-                            mediaTypes: imagesOnlyMediaTypes(),
-                            selectionLimit: 4,
-                            quality: 1,
-                          });
-                          if (res.canceled) return;
-                          const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
+                          const perm =
+                            await ImagePicker.requestMediaLibraryPermissionsAsync();
+                          if (!perm.granted) {
+                            notifyError('写真ライブラリへのアクセスが必要です');
+                            return;
+                          }
+                          const res = await ImagePicker.launchImageLibraryAsync(
+                            {
+                              allowsMultipleSelection: true,
+                              mediaTypes: imagesOnlyMediaTypes(),
+                              selectionLimit: 4,
+                              quality: 1,
+                            },
+                          );
+                          if (res.canceled) {
+                            return;
+                          }
+                          const picked =
+                            res.assets?.map(a => ({ uri: a.uri })) || [];
                           setImages(prev => [...prev, ...picked].slice(0, 4));
-                        } catch (e: any) { notifyError(e?.message || '画像の選択に失敗しました'); }
+                        } catch (e: any) {
+                          notifyError(e?.message || '画像の選択に失敗しました');
+                        }
                       }}
                       style={({ pressed }) => ({
-                        width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8,
-                        backgroundColor: images.length >= 4 ? '#ffffff08' : pressed ? '#ffffff20' : '#ffffff14', borderWidth: 1, borderColor: '#ffffff22',
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 8,
+                        backgroundColor:
+                          images.length >= 4
+                            ? '#ffffff08'
+                            : pressed
+                              ? '#ffffff20'
+                              : '#ffffff14',
+                        borderWidth: 1,
+                        borderColor: '#ffffff22',
                       })}
                     >
-                      <Ionicons name="images-outline" size={18} color={colors.text} />
+                      <Ionicons
+                        name="images-outline"
+                        size={18}
+                        color={colors.text}
+                      />
                     </Pressable>
                     {/* カメラ */}
                     <Pressable
                       disabled={images.length >= 4}
                       onPress={async () => {
                         try {
-                          const perm = await ImagePicker.requestCameraPermissionsAsync();
-                          if (!perm.granted) { notifyError('カメラへのアクセスが必要です'); return; }
-                          const res = await ImagePicker.launchCameraAsync({ mediaTypes: imageOnlyMediaTypeSingle(), quality: 1 });
-                          if (res.canceled) return;
-                          const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
+                          const perm =
+                            await ImagePicker.requestCameraPermissionsAsync();
+                          if (!perm.granted) {
+                            notifyError('カメラへのアクセスが必要です');
+                            return;
+                          }
+                          const res = await ImagePicker.launchCameraAsync({
+                            mediaTypes: imageOnlyMediaTypeSingle(),
+                            quality: 1,
+                          });
+                          if (res.canceled) {
+                            return;
+                          }
+                          const picked =
+                            res.assets?.map(a => ({ uri: a.uri })) || [];
                           setImages(prev => [...prev, ...picked].slice(0, 4));
-                        } catch (e: any) { notifyError(e?.message || '撮影に失敗しました'); }
+                        } catch (e: any) {
+                          notifyError(e?.message || '撮影に失敗しました');
+                        }
                       }}
                       style={({ pressed }) => ({
-                        width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8,
-                        backgroundColor: images.length >= 4 ? '#ffffff08' : pressed ? '#ffffff20' : '#ffffff14', borderWidth: 1, borderColor: '#ffffff22',
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 8,
+                        backgroundColor:
+                          images.length >= 4
+                            ? '#ffffff08'
+                            : pressed
+                              ? '#ffffff20'
+                              : '#ffffff14',
+                        borderWidth: 1,
+                        borderColor: '#ffffff22',
                       })}
                     >
-                      <Ionicons name="camera-outline" size={18} color={colors.text} />
+                      <Ionicons
+                        name="camera-outline"
+                        size={18}
+                        color={colors.text}
+                      />
                     </Pressable>
-                    <Text style={{ color: colors.subtext, fontSize: 12 }}>{images.length}/4</Text>
+                    <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                      {images.length}/4
+                    </Text>
                   </View>
                   <TextInput
                     placeholder="気持ちをそっと届けよう…"
@@ -178,10 +245,32 @@ export default function CommentComposeScreen({
                   />
                   {/* サムネイル */}
                   {images.length > 0 && (
-                    <View style={{ marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    <View
+                      style={{
+                        marginTop: 10,
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        gap: 8,
+                      }}
+                    >
                       {images.map((img, idx) => (
-                        <Pressable key={idx} onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))} style={{ width: '23%', aspectRatio: 1, borderRadius: 8, overflow: 'hidden', backgroundColor: '#ffffff12' }}>
-                          <Image source={{ uri: img.uri }} style={{ width: '100%', height: '100%' }} />
+                        <Pressable
+                          key={idx}
+                          onPress={() =>
+                            setImages(prev => prev.filter((_, i) => i !== idx))
+                          }
+                          style={{
+                            width: '23%',
+                            aspectRatio: 1,
+                            borderRadius: 8,
+                            overflow: 'hidden',
+                            backgroundColor: '#ffffff12',
+                          }}
+                        >
+                          <Image
+                            source={{ uri: img.uri }}
+                            style={{ width: '100%', height: '100%' }}
+                          />
                         </Pressable>
                       ))}
                     </View>
@@ -217,26 +306,47 @@ export default function CommentComposeScreen({
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="コメントを送信"
-                    disabled={submitting || (!body.trim() && images.length === 0)}
+                    disabled={
+                      submitting || (!body.trim() && images.length === 0)
+                    }
                     onPress={async () => {
-                      if (!body.trim() && images.length === 0) return;
-                      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      if (!body.trim() && images.length === 0) {
+                        return;
+                      }
+                      await Haptics.impactAsync(
+                        Haptics.ImpactFeedbackStyle.Light,
+                      );
                       setSubmitting(true);
                       try {
-                        if (!user?.id) throw new Error('ログインが必要です');
-                        let attachments: { url: string; width?: number; height?: number; mime?: string }[] = [];
+                        if (!user?.id) {
+                          throw new Error('ログインが必要です');
+                        }
+                        let attachments: {
+                          url: string;
+                          width?: number;
+                          height?: number;
+                          mime?: string;
+                        }[] = [];
                         if (images.length > 0) {
-                          attachments = await uploadPostImages(user.id, images.map(i => i.uri));
+                          attachments = await uploadPostImages(
+                            user.id,
+                            images.map(i => i.uri),
+                          );
                         }
                         await createComment(postId, body.trim(), attachments);
                         Keyboard.dismiss();
                         // 入力リセット
                         setBody('');
                         setImages([]);
-                        if (onPosted) onPosted();
-                        else onClose && onClose();
+                        if (onPosted) {
+                          onPosted();
+                        } else {
+                          onClose && onClose();
+                        }
                       } catch (e: any) {
-                        notifyError(e?.message || 'コメントの送信に失敗しました');
+                        notifyError(
+                          e?.message || 'コメントの送信に失敗しました',
+                        );
                       } finally {
                         setSubmitting(false);
                       }
@@ -254,7 +364,9 @@ export default function CommentComposeScreen({
                     ]}
                   >
                     {submitting ? (
-                      <Text style={{ color: '#23181D', fontWeight: '700' }}>…</Text>
+                      <Text style={{ color: '#23181D', fontWeight: '700' }}>
+                        …
+                      </Text>
                     ) : (
                       <Ionicons name="send" size={18} color={'#23181D'} />
                     )}
@@ -305,25 +417,46 @@ export default function CommentComposeScreen({
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="コメントを送信"
-                    disabled={submitting || (!body.trim() && images.length === 0)}
+                    disabled={
+                      submitting || (!body.trim() && images.length === 0)
+                    }
                     onPress={async () => {
-                      if (!body.trim() && images.length === 0) return;
-                      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      if (!body.trim() && images.length === 0) {
+                        return;
+                      }
+                      await Haptics.impactAsync(
+                        Haptics.ImpactFeedbackStyle.Light,
+                      );
                       setSubmitting(true);
                       try {
-                        if (!user?.id) throw new Error('ログインが必要です');
-                        let attachments: { url: string; width?: number; height?: number; mime?: string }[] = [];
+                        if (!user?.id) {
+                          throw new Error('ログインが必要です');
+                        }
+                        let attachments: {
+                          url: string;
+                          width?: number;
+                          height?: number;
+                          mime?: string;
+                        }[] = [];
                         if (images.length > 0) {
-                          attachments = await uploadPostImages(user.id, images.map(i => i.uri));
+                          attachments = await uploadPostImages(
+                            user.id,
+                            images.map(i => i.uri),
+                          );
                         }
                         await createComment(postId, body.trim(), attachments);
                         Keyboard.dismiss();
                         setBody('');
                         setImages([]);
-                        if (onPosted) onPosted();
-                        else onClose && onClose();
+                        if (onPosted) {
+                          onPosted();
+                        } else {
+                          onClose && onClose();
+                        }
                       } catch (e: any) {
-                        notifyError(e?.message || 'コメントの送信に失敗しました');
+                        notifyError(
+                          e?.message || 'コメントの送信に失敗しました',
+                        );
                       } finally {
                         setSubmitting(false);
                       }
@@ -341,7 +474,9 @@ export default function CommentComposeScreen({
                     ]}
                   >
                     {submitting ? (
-                      <Text style={{ color: '#23181D', fontWeight: '700' }}>…</Text>
+                      <Text style={{ color: '#23181D', fontWeight: '700' }}>
+                        …
+                      </Text>
                     ) : (
                       <Ionicons name="send" size={18} color={'#23181D'} />
                     )}

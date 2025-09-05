@@ -22,7 +22,7 @@ module.exports = {
   extends: [
     'eslint:recommended',
     '@react-native-community',
-    '@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
     'plugin:react-native/all',
@@ -40,6 +40,8 @@ module.exports = {
     'import',
   ],
   rules: {
+    // Disable rule not available in current plugin set
+    '@typescript-eslint/func-call-spacing': 'off',
     // Prevent console usage in production
     'no-console': 'error',
     
@@ -47,7 +49,8 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/explicit-function-return-type': 'warn',
     '@typescript-eslint/no-explicit-any': 'warn',
-    '@typescript-eslint/prefer-const': 'error',
+    // Use base rule for prefer-const to avoid plugin mismatch
+    'prefer-const': 'error',
     
     // React specific rules
     'react/react-in-jsx-scope': 'off', // Not needed in React 17+
@@ -71,6 +74,8 @@ module.exports = {
       },
     ],
     'import/no-unresolved': 'error',
+    // Avoid parsing node_modules/react-native for namespace resolution
+    'import/namespace': 'off',
     'import/no-unused-modules': 'warn',
     
     // Code quality rules
@@ -88,6 +93,8 @@ module.exports = {
     // Performance rules
     'react-native/no-inline-styles': 'warn',
     'react-native/split-platform-components': 'error',
+    // Downgrade color literal to warning for RN styles
+    'react-native/no-color-literals': 'warn',
     
     // Accessibility
     'jsx-a11y/accessible-emoji': 'off', // React Native doesn't support this

@@ -16,6 +16,7 @@ import {
 } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+
 // import appManifest from '../../app.json'; // Disabled due to path issue
 import { secureLogger, sanitizeObject } from '../utils/privacyProtection';
 
@@ -32,12 +33,12 @@ function readSupabaseCredentials(): { url?: string; anonKey?: string } {
       {};
     const fromAppJson = {}; // Disabled app.json access
     const env = (global as any)?.process?.env || {};
-    let url =
+    const url =
       fromExpoExtra.SUPABASE_URL ||
       fromAppJson.SUPABASE_URL ||
       env.EXPO_PUBLIC_SUPABASE_URL ||
       env.SUPABASE_URL;
-    let anonKey =
+    const anonKey =
       fromExpoExtra.SUPABASE_ANON_KEY ||
       fromAppJson.SUPABASE_ANON_KEY ||
       env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||

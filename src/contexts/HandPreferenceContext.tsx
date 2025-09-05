@@ -9,12 +9,19 @@ interface HandPreferenceContextType {
   isLoading: boolean;
 }
 
-const HandPreferenceContext = createContext<HandPreferenceContextType | undefined>(undefined);
+const HandPreferenceContext = createContext<
+  HandPreferenceContextType | undefined
+>(undefined);
 
 const HAND_PREFERENCE_KEY = '@mamapace_hand_preference';
 
-export function HandPreferenceProvider({ children }: { children: React.ReactNode }) {
-  const [handPreference, setHandPreferenceState] = useState<HandPreference>('right');
+export function HandPreferenceProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [handPreference, setHandPreferenceState] =
+    useState<HandPreference>('right');
   const [isLoading, setIsLoading] = useState(true);
 
   // アプリ起動時に保存された設定を読み込み
@@ -61,7 +68,9 @@ export function HandPreferenceProvider({ children }: { children: React.ReactNode
 export function useHandPreference() {
   const context = useContext(HandPreferenceContext);
   if (context === undefined) {
-    throw new Error('useHandPreference must be used within a HandPreferenceProvider');
+    throw new Error(
+      'useHandPreference must be used within a HandPreferenceProvider',
+    );
   }
   return context;
 }

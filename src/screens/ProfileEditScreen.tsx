@@ -10,9 +10,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import * as ImagePicker from 'expo-image-picker';
+
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
-import * as ImagePicker from 'expo-image-picker';
 import { imagesOnlyMediaTypes } from '../utils/imagePickerCompat';
 import { updateMyProfile, updateMyAvatarUrl } from '../services/profileService';
 import { uploadAvatarImage } from '../services/storageService';
@@ -237,7 +238,10 @@ export default function ProfileEditScreen({ navigation }: any) {
             <BlurView
               intensity={20}
               tint="dark"
-              style={{ padding: theme.spacing(2), backgroundColor: '#ffffff10' }}
+              style={{
+                padding: theme.spacing(2),
+                backgroundColor: '#ffffff10',
+              }}
             >
               <Text
                 style={{
@@ -249,7 +253,9 @@ export default function ProfileEditScreen({ navigation }: any) {
               >
                 アイコン画像（任意）
               </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
+              >
                 <View
                   style={{
                     width: 72,
@@ -273,13 +279,15 @@ export default function ProfileEditScreen({ navigation }: any) {
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable
                     onPress={handlePickImage}
-                    style={({ pressed }) => [{
-                      paddingHorizontal: theme.spacing(2),
-                      paddingVertical: theme.spacing(1),
-                      borderRadius: 999,
-                      backgroundColor: colors.pink,
-                      transform: [{ scale: pressed ? 0.97 : 1 }],
-                    }]}
+                    style={({ pressed }) => [
+                      {
+                        paddingHorizontal: theme.spacing(2),
+                        paddingVertical: theme.spacing(1),
+                        borderRadius: 999,
+                        backgroundColor: colors.pink,
+                        transform: [{ scale: pressed ? 0.97 : 1 }],
+                      },
+                    ]}
                   >
                     <Text style={{ color: 'white', fontWeight: '700' }}>
                       画像を選択
@@ -288,15 +296,17 @@ export default function ProfileEditScreen({ navigation }: any) {
                   {avatarImageUri && (
                     <Pressable
                       onPress={() => setAvatarImageUri(null)}
-                      style={({ pressed }) => [{
-                        paddingHorizontal: theme.spacing(2),
-                        paddingVertical: theme.spacing(1),
-                        borderRadius: 999,
-                        backgroundColor: 'transparent',
-                        borderWidth: 1,
-                        borderColor: colors.subtext + '40',
-                        transform: [{ scale: pressed ? 0.97 : 1 }],
-                      }]}
+                      style={({ pressed }) => [
+                        {
+                          paddingHorizontal: theme.spacing(2),
+                          paddingVertical: theme.spacing(1),
+                          borderRadius: 999,
+                          backgroundColor: 'transparent',
+                          borderWidth: 1,
+                          borderColor: colors.subtext + '40',
+                          transform: [{ scale: pressed ? 0.97 : 1 }],
+                        },
+                      ]}
                     >
                       <Text style={{ color: colors.text, fontWeight: '700' }}>
                         画像を削除
@@ -305,7 +315,9 @@ export default function ProfileEditScreen({ navigation }: any) {
                   )}
                 </View>
               </View>
-              <Text style={{ color: colors.subtext, fontSize: 12, marginTop: 8 }}>
+              <Text
+                style={{ color: colors.subtext, fontSize: 12, marginTop: 8 }}
+              >
                 円形にトリミングされて表示されます。未設定時は絵文字を使用します。
               </Text>
             </BlurView>
@@ -338,7 +350,7 @@ export default function ProfileEditScreen({ navigation }: any) {
               >
                 アバター絵文字
               </Text>
-              
+
               <View
                 style={{
                   flexDirection: 'row',

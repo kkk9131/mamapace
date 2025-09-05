@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, Animated, Dimensions, Image } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  Animated,
+  Dimensions,
+  Image,
+} from 'react-native';
+import { BlurView } from 'expo-blur';
+
 import { useTheme } from '../theme/theme';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
-import { BlurView } from 'expo-blur';
 
 const W = Math.floor(Dimensions.get('window').width * 0.65);
 
@@ -17,13 +25,15 @@ export default function Sidebar({
 }) {
   const { colors, radius } = useTheme();
   const { handPreference } = useHandPreference();
-  const theme = { radius } as { radius: { sm?: number; md?: number; lg?: number } };
+  const theme = { radius } as {
+    radius: { sm?: number; md?: number; lg?: number };
+  };
   const isLeft = handPreference === 'left';
   // 左手モード時は左端に表示、右手モード時は右端に表示
   const translate = useRef(new Animated.Value(isLeft ? -W : W)).current;
   const fade = useRef(new Animated.Value(0)).current;
   const [active, setActive] = useState<string | null>(null);
-  
+
   // handPreferenceが変更された時にアニメーション値をリセット
   useEffect(() => {
     translate.setValue(isLeft ? -W : W);
@@ -31,7 +41,7 @@ export default function Sidebar({
   useEffect(() => {
     Animated.parallel([
       Animated.timing(translate, {
-        toValue: open ? 0 : (isLeft ? -W : W),
+        toValue: open ? 0 : isLeft ? -W : W,
         duration: 260,
         useNativeDriver: true,
       }),
@@ -83,13 +93,15 @@ export default function Sidebar({
             paddingTop: 60,
             paddingHorizontal: 20,
             backgroundColor: colors.surfaceAlpha,
-            ...(isLeft ? {
-              borderRightColor: colors.border,
-              borderRightWidth: 1,
-            } : {
-              borderLeftColor: colors.border,
-              borderLeftWidth: 1,
-            }),
+            ...(isLeft
+              ? {
+                  borderRightColor: colors.border,
+                  borderRightWidth: 1,
+                }
+              : {
+                  borderLeftColor: colors.border,
+                  borderLeftWidth: 1,
+                }),
           }}
         >
           {/* App Icon Header - Clickable to go home */}
@@ -99,7 +111,7 @@ export default function Sidebar({
               onNavigate('home');
             }}
             style={({ pressed }) => ({
-              alignItems: 'center', 
+              alignItems: 'center',
               marginBottom: 32,
               paddingBottom: 20,
               borderBottomWidth: 1,
@@ -107,7 +119,7 @@ export default function Sidebar({
               opacity: pressed ? 0.7 : 1,
             })}
           >
-            <Image 
+            <Image
               source={require('../../assets/mamapace-logo.png')}
               style={{
                 width: 60,
@@ -117,12 +129,14 @@ export default function Sidebar({
               }}
               resizeMode="contain"
             />
-            <Text style={{ 
-              color: colors.text, 
-              fontSize: 18, 
-              fontWeight: '700',
-              letterSpacing: 0.5
-            }}>
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: 18,
+                fontWeight: '700',
+                letterSpacing: 0.5,
+              }}
+            >
               Mamapace
             </Text>
           </Pressable>
@@ -143,21 +157,23 @@ export default function Sidebar({
                     paddingVertical: 14,
                     paddingHorizontal: 16,
                     borderRadius: 12,
-                backgroundColor:
-                  active === it.key
-                    ? colors.surfaceAlpha
-                    : pressed
-                      ? colors.surface
-                      : 'transparent',
-                marginBottom: 8,
-              },
-            ]}
-          >
-                <Text style={{ 
-                  color: active === it.key ? colors.text : colors.subtext, 
-                  fontSize: 15,
-                  fontWeight: active === it.key ? '600' : '400'
-                }}>
+                    backgroundColor:
+                      active === it.key
+                        ? colors.surfaceAlpha
+                        : pressed
+                          ? colors.surface
+                          : 'transparent',
+                    marginBottom: 8,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    color: active === it.key ? colors.text : colors.subtext,
+                    fontSize: 15,
+                    fontWeight: active === it.key ? '600' : '400',
+                  }}
+                >
                   {it.label}
                 </Text>
               </Pressable>
@@ -167,14 +183,14 @@ export default function Sidebar({
             {channels.length > 0 && (
               <>
                 <Text
-                  style={{ 
-                    color: colors.subtext, 
-                    fontSize: 12, 
+                  style={{
+                    color: colors.subtext,
+                    fontSize: 12,
                     marginTop: 24,
                     marginBottom: 12,
                     paddingHorizontal: 16,
                     textTransform: 'uppercase',
-                    letterSpacing: 0.5
+                    letterSpacing: 0.5,
                   }}
                 >
                   チャンネル
@@ -193,7 +209,9 @@ export default function Sidebar({
                       },
                     ]}
                   >
-                    <Text style={{ color: colors.text, fontSize: 14 }}>{ch.label}</Text>
+                    <Text style={{ color: colors.text, fontSize: 14 }}>
+                      {ch.label}
+                    </Text>
                   </Pressable>
                 ))}
               </>
@@ -215,7 +233,9 @@ export default function Sidebar({
               },
             ]}
           >
-            <Text style={{ color: colors.pink, fontWeight: '700', fontSize: 15 }}>
+            <Text
+              style={{ color: colors.pink, fontWeight: '700', fontSize: 15 }}
+            >
               閉じる
             </Text>
           </Pressable>

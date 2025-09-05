@@ -18,12 +18,13 @@ import {
   LoginFormValidation,
   sanitizeForLogging,
 } from '../types/auth';
-import { supabaseClient } from './supabaseClient';
 import {
   secureLogger,
   sanitizeObject,
   validatePrivacyCompliance,
 } from '../utils/privacyProtection';
+
+import { supabaseClient } from './supabaseClient';
 
 // =====================================================
 // TYPES AND INTERFACES

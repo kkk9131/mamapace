@@ -14,9 +14,10 @@ import {
   Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { imagesOnlyMediaTypes, imageOnlyMediaTypeSingle } from '../utils/imagePickerCompat';
 import { uploadChatImages } from '../services/storageService';
-import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
@@ -24,6 +25,7 @@ import { useChat } from '../hooks/useChat';
 import { MessageType, OptimisticMessage } from '../types/chat';
 import { chatService } from '../services/chatService';
 import { getSupabaseClient } from '../services/supabaseClient';
+
 import { Ionicons } from '@expo/vector-icons';
 
 interface ChatScreenProps {
@@ -50,7 +52,11 @@ export default function ChatScreen({
   const { handPreference } = useHandPreference();
   const [inputMessage, setInputMessage] = useState('');
   const [images, setImages] = useState<{ uri: string }[]>([]);
-  const [viewer, setViewer] = useState<{ visible: boolean; index: number; urls: string[] }>({ visible: false, index: 0, urls: [] });
+  const [viewer, setViewer] = useState<{
+    visible: boolean;
+    index: number;
+    urls: string[];
+  }>({ visible: false, index: 0, urls: [] });
   const flatListRef = useRef<FlatList>(null);
   const csTimerRef = useRef<NodeJS.Timeout | null>(null);
   const layoutTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -81,7 +87,9 @@ export default function ChatScreen({
   // Header user info (chat partner)
   const [headerName, setHeaderName] = useState<string | null>(userName || null);
   const [headerAvatarUrl, setHeaderAvatarUrl] = useState<string | null>(null);
-  const [headerAvatarEmoji, setHeaderAvatarEmoji] = useState<string | null>(null);
+  const [headerAvatarEmoji, setHeaderAvatarEmoji] = useState<string | null>(
+    null
+  );
 
   const otherUserId = chat?.participant_ids?.[0] || null;
 
@@ -99,7 +107,9 @@ export default function ChatScreen({
             .eq('id', otherId)
             .single();
           if (!cancelled && data) {
-            setHeaderName(data.display_name || data.username || headerName || 'チャット');
+            setHeaderName(
+              data.display_name || data.username || headerName || 'チャット'
+            );
             setHeaderAvatarUrl(data.avatar_url || null);
             setHeaderAvatarEmoji(data.avatar_emoji || null);
           }
@@ -108,7 +118,9 @@ export default function ChatScreen({
         }
       } catch {}
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [otherUserId, userName]);
 
   // Handle send message
@@ -122,16 +134,29 @@ export default function ChatScreen({
 
     try {
       // Upload selected images (if any) and bundle as attachments
-      let attachments: { url: string; width?: number; height?: number; mime?: string }[] = [];
+      let attachments: {
+        url: string;
+        width?: number;
+        height?: number;
+        mime?: string;
+      }[] = [];
       if (images.length > 0) {
         const client = getSupabaseClient();
-        const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error('ログインが必要です');
-        attachments = await uploadChatImages(user.id, images.map(i => i.uri));
+        const {
+          data: { user },
+        } = await client.auth.getUser();
+        if (!user) {throw new Error('ログインが必要です');}
+        attachments = await uploadChatImages(
+          user.id,
+          images.map(i => i.uri)
+        );
         setImages([]);
       }
 
-      const type = (!messageToSend && attachments.length > 0) ? MessageType.IMAGE : MessageType.TEXT;
+      const type =
+        !messageToSend && attachments.length > 0
+          ? MessageType.IMAGE
+          : MessageType.TEXT;
       const metadata = attachments.length > 0 ? { attachments } : undefined;
       await sendMessage(messageToSend, type, undefined, metadata);
       Keyboard.dismiss();
@@ -144,12 +169,12 @@ export default function ChatScreen({
   // Auto-scroll to bottom on new messages (LINE style)
   useEffect(() => {
     if (messages.length > 0) {
-      if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+      if (msgTimerRef.current) {clearTimeout(msgTimerRef.current);}
       msgTimerRef.current = setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-    }, [messages]);
+  }, [messages]);
 
   // Handle input change with typing indicators
   const handleInputChange = useCallback(
@@ -163,7 +188,7 @@ export default function ChatScreen({
         updateTypingStatus(false);
       }
     },
-    [updateTypingStatus]
+    [updateTypingStatus],
   );
 
   // Clear typing status when unfocused
@@ -197,115 +222,157 @@ export default function ChatScreen({
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (csTimerRef.current) clearTimeout(csTimerRef.current);
-      if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
-      if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+      if (csTimerRef.current) {clearTimeout(csTimerRef.current);}
+      if (layoutTimerRef.current) {clearTimeout(layoutTimerRef.current);}
+      if (msgTimerRef.current) {clearTimeout(msgTimerRef.current);}
     };
   }, []);
 
   // Handle invitation response
-  const handleInvitationResponse = useCallback(async (messageId: string, response: 'accept' | 'decline', spaceId: string, spaceName: string, invitationId?: string) => {
-    try {
-      console.log('🔍 Debug: Handling invitation response', {
-        messageId,
-        response,
-        spaceId,
-        spaceName,
-        invitationId,
-      });
+  const handleInvitationResponse = useCallback(
+    async (
+      messageId: string,
+      response: 'accept' | 'decline',
+      spaceId: string,
+      spaceName: string,
+      invitationId?: string
+    ) => {
+      try {
+        console.log('🔍 Debug: Handling invitation response', {
+          messageId,
+          response,
+          spaceId,
+          spaceName,
+          invitationId,
+        });
 
-      // Try to manually add user to space/channel since database functions may not exist
-      if (response === 'accept' && spaceId) {
-        try {
-          const client = getSupabaseClient();
-          
+        // Try to manually add user to space/channel since database functions may not exist
+        if (response === 'accept' && spaceId) {
+          try {
+            const client = getSupabaseClient();
+
           // Get current user
-          const { data: { user }, error: authError } = await client.auth.getUser();
-          if (authError || !user) {
-            throw new Error('認証エラー');
-          }
+            const {
+              data: { user },
+              error: authError,
+            } = await client.auth.getUser();
+            if (authError || !user) {
+              throw new Error('認証エラー');
+            }
 
-          console.log('🔍 Debug: Current user', { userId: user.id });
+            console.log('🔍 Debug: Current user', { userId: user.id });
 
-          // First, try using existing join_public_space RPC function
-          console.log('🔍 Debug: Attempting to join space via RPC', { spaceId });
-          const { data: rpcResult, error: rpcError } = await client
-            .rpc('join_public_space', { p_space_id: spaceId });
-          
-          console.log('🔍 Debug: RPC join result', { data: rpcResult, error: rpcError });
-          
-          if (rpcResult && rpcResult.success) {
-            // Send confirmation message
-            const responseText = `ルーム「${spaceName}」への招待を受け入れました！`;
-            await sendMessage(responseText, MessageType.TEXT);
-            
-            Alert.alert('参加完了', `ルーム「${spaceName}」に参加しました！チャット一覧を更新してください。`);
-            return;
-          } else {
-            console.log('🔍 Debug: RPC failed, trying direct database access as fallback', { error: rpcResult?.error || rpcError });
-          }
+            // First, try using existing join_public_space RPC function
+            console.log('🔍 Debug: Attempting to join space via RPC', {
+              spaceId,
+            });
+            const { data: rpcResult, error: rpcError } = await client.rpc(
+              'join_public_space',
+              { p_space_id: spaceId }
+            );
+            console.log('🔍 Debug: RPC join result', {
+              data: rpcResult,
+              error: rpcError,
+            });
 
-          // Fallback: Direct database access - try to get the channel for this space
-          const { data: channels, error: channelError } = await client
-            .from('channels')
-            .select('id')
-            .eq('space_id', spaceId)
-            .limit(1);
-
-          console.log('🔍 Debug: Channel query result', { channels, error: channelError });
-
-          if (channels && channels.length > 0) {
-            const channelId = channels[0].id;
-            
-            // Add user to channel_members
-            const { error: memberError } = await client
-              .from('channel_members')
-              .upsert({
-                channel_id: channelId,
-                user_id: user.id,
-                role: 'member',
-                joined_at: new Date().toISOString(),
-                is_active: true,
-              }, {
-                onConflict: 'channel_id,user_id'
-              });
-
-            console.log('🔍 Debug: Add member result', { error: memberError });
-
-            if (!memberError) {
-              // Member count will be automatically updated by database trigger
-              console.log('🔍 Debug: Member successfully added, trigger will update count automatically');
-
+            if (rpcResult && rpcResult.success) {
               // Send confirmation message
               const responseText = `ルーム「${spaceName}」への招待を受け入れました！`;
               await sendMessage(responseText, MessageType.TEXT);
-              
-              Alert.alert('参加完了', `ルーム「${spaceName}」に参加しました！チャット一覧を更新してください。`);
+              Alert.alert(
+                '参加完了',
+                `ルーム「${spaceName}」に参加しました！チャット一覧を更新してください。`
+              );
               return;
+            } else {
+              console.log(
+                '🔍 Debug: RPC failed, trying direct database access as fallback',
+                { error: rpcResult?.error || rpcError }
+              );
             }
+
+            // Fallback: Direct database access - try to get the channel for this space
+            const { data: channels, error: channelError } = await client
+              .from('channels')
+              .select('id')
+              .eq('space_id', spaceId)
+              .limit(1);
+
+            console.log('🔍 Debug: Channel query result', {
+              channels,
+              error: channelError,
+            });
+
+            if (channels && channels.length > 0) {
+              const channelId = channels[0].id;
+
+            // Add user to channel_members
+              const { error: memberError } = await client
+                .from('channel_members')
+                .upsert(
+                  {
+                    channel_id: channelId,
+                    user_id: user.id,
+                    role: 'member',
+                    joined_at: new Date().toISOString(),
+                    is_active: true,
+                  },
+                  {
+                    onConflict: 'channel_id,user_id',
+                  }
+                );
+
+              console.log('🔍 Debug: Add member result', {
+                error: memberError,
+              });
+
+              if (!memberError) {
+                // Member count will be automatically updated by database trigger
+                console.log(
+                  '🔍 Debug: Member successfully added, trigger will update count automatically'
+                );
+
+                // Send confirmation message
+                const responseText = `ルーム「${spaceName}」への招待を受け入れました！`;
+                await sendMessage(responseText, MessageType.TEXT);
+                Alert.alert(
+                  '参加完了',
+                  `ルーム「${spaceName}」に参加しました！チャット一覧を更新してください。`
+                );
+                return;
+              }
+            }
+          } catch (dbError) {
+            console.error('Failed to add user to space:', dbError);
           }
-        } catch (dbError) {
-          console.error('Failed to add user to space:', dbError);
         }
-      }
-      
-      // Fallback: Just send a response message
-      const responseText = response === 'accept' 
-        ? `ルーム「${spaceName}」への招待を受け入れました！` 
-        : `ルーム「${spaceName}」への招待を辞退しました。`;
-      
+
+        // Fallback: Just send a response message
+        const responseText =
+          response === 'accept'
+            ? `ルーム「${spaceName}」への招待を受け入れました！`
+            : `ルーム「${spaceName}」への招待を辞退しました。`;
+
       await sendMessage(responseText, MessageType.TEXT);
-      
+
       if (response === 'accept') {
-        Alert.alert('参加意思表示完了', `ルーム「${spaceName}」への参加意思を表明しました。管理者による承認をお待ちください。`);
-      } else {
-        Alert.alert('辞退完了', `ルーム「${spaceName}」への招待を辞退しました。`);
+          Alert.alert(
+            '参加意思表示完了',
+            `ルーム「${spaceName}」への参加意思を表明しました。管理者による承認をお待ちください。`
+          );
+        } else {
+          Alert.alert(
+            '辞退完了',
+            `ルーム「${spaceName}」への招待を辞退しました。`
+          );
+        }
+      } catch (error) {
+        console.error('Invitation response error:', error);
+        Alert.alert('エラー', '応答の送信に失敗しました');
       }
-    } catch (error) {
-      console.error('Invitation response error:', error);
-      Alert.alert('エラー', '応答の送信に失敗しました');
-    }
-  }, [sendMessage]);
+    },
+    [sendMessage]
+  );
 
   // メッセージをレンダリングする関数
   const renderMessage = useCallback(
@@ -314,12 +381,15 @@ export default function ChatScreen({
       const isOptimistic = item.isOptimistic;
       const hasError = item.error;
       const isDeleted = item.deleted_at;
-      const senderName = item.sender?.display_name || item.sender?.username || '匿名';
-      
+      const senderName =
+        item.sender?.display_name || item.sender?.username || '匿名';
+
       // Check if this is an invitation message (check metadata for both text and system types)
-      const isInvitation = (item.message_type === MessageType.SYSTEM || item.message_type === MessageType.TEXT) && 
-                          item.metadata?.type === 'room_invitation' &&
-                          item.metadata?.status === 'pending';
+      const isInvitation =
+        (item.message_type === MessageType.SYSTEM ||
+          item.message_type === MessageType.TEXT) &&
+        item.metadata?.type === 'room_invitation' &&
+        item.metadata?.status === 'pending';
 
       return (
         <Pressable
@@ -345,11 +415,19 @@ export default function ChatScreen({
           <View style={{ alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
             <View
               style={{
-                backgroundColor: isInvitation ? '#F6C6D020' : isMe ? colors.pink : '#ffffff10',
+                backgroundColor: isInvitation
+                  ? '#F6C6D020'
+                  : isMe
+                    ? colors.pink
+                    : '#ffffff10',
                 padding: isInvitation ? 16 : 10,
                 borderRadius: 14,
                 borderWidth: hasError ? 1 : isInvitation ? 1 : 0,
-                borderColor: hasError ? '#ff4444' : isInvitation ? colors.pink + '40' : 'transparent',
+                borderColor: hasError
+                  ? '#ff4444'
+                  : isInvitation
+                    ? colors.pink + '40'
+                    : 'transparent',
                 maxWidth: isInvitation ? '90%' : '80%',
               }}
             >
@@ -358,55 +436,124 @@ export default function ChatScreen({
                 accessibilityRole="button"
                 accessibilityLabel={`${senderName}のプロフィールを開く`}
                 onPress={() => {
-                  if (onNavigateToUser && item.sender_id) onNavigateToUser(item.sender_id);
+                  if (onNavigateToUser && item.sender_id)
+                    {onNavigateToUser(item.sender_id);}
                 }}
-                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginBottom: 4,
+                }}
               >
                 {item.sender?.avatar_url ? (
                   <Image
                     source={{ uri: item.sender.avatar_url }}
-                    style={{ width: 20, height: 20, borderRadius: 10, marginRight: 6 }}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      marginRight: 6,
+                    }}
                   />
                 ) : (
                   <Text style={{ fontSize: 14, marginRight: 6 }}>
                     {item.sender?.avatar_emoji || '👤'}
                   </Text>
                 )}
-                <Text style={{ color: isMe ? '#23181D' : colors.subtext, fontSize: 11 }}>
+                <Text
+                  style={{
+                    color: isMe ? '#23181D' : colors.subtext,
+                    fontSize: 11,
+                  }}
+                >
                   {senderName}
                 </Text>
               </Pressable>
               {/* Attachments (images) */}
-              {Array.isArray(item.metadata?.attachments) && item.metadata!.attachments!.length > 0 && (
-                <View style={{ marginBottom: 8, gap: 6, flexDirection: 'row', flexWrap: 'wrap' }}>
-                  {item.metadata!.attachments!.map((att: any, idx: number) => (
-                    <Pressable
-                      key={idx}
-                      onPress={() => setViewer({ visible: true, index: idx, urls: item.metadata!.attachments!.map((a: any) => a.url || a) })}
-                      style={{ width: 220, height: 220, borderRadius: 8, overflow: 'hidden', backgroundColor: '#00000020', marginRight: 6 }}
-                    >
-                      <Image source={{ uri: att.url || att }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                    </Pressable>
-                  ))}
-                </View>
-              )}
+              {Array.isArray(item.metadata?.attachments) &&
+                item.metadata!.attachments!.length > 0 && (
+                  <View
+                    style={{
+                      marginBottom: 8,
+                      gap: 6,
+                      flexDirection: 'row',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    {item.metadata!.attachments!.map(
+                      (att: any, idx: number) => (
+                        <Pressable
+                          key={idx}
+                          onPress={() =>
+                            setViewer({
+                              visible: true,
+                              index: idx,
+                              urls: item.metadata!.attachments!.map(
+                                (a: any) => a.url || a
+                              ),
+                            })
+                          }
+                          style={{
+                            width: 220,
+                            height: 220,
+                            borderRadius: 8,
+                            overflow: 'hidden',
+                            backgroundColor: '#00000020',
+                            marginRight: 6,
+                          }}
+                        >
+                          <Image
+                            source={{ uri: att.url || att }}
+                            style={{ width: '100%', height: '100%' }}
+                            resizeMode="cover"
+                          />
+                        </Pressable>
+                      )
+                    )}
+                  </View>
+                )}
 
               {/* Text content or legacy image-only content */}
               {(() => {
-                if (isDeleted) return null;
-                const hasAtt = Array.isArray(item.metadata?.attachments) && item.metadata!.attachments!.length > 0;
+                if (isDeleted) {return null;}
+                const hasAtt =
+                  Array.isArray(item.metadata?.attachments) &&
+                  item.metadata!.attachments!.length > 0;
                 // Legacy single-image (no attachments, content is URL)
-                if (item.message_type === MessageType.IMAGE && (!item.content || item.content.startsWith('http'))) {
+                if (
+                  item.message_type === MessageType.IMAGE &&
+                  (!item.content || item.content.startsWith('http'))
+                ) {
                   if (!hasAtt) {
                     return (
-                      <Pressable onPress={() => setViewer({ visible: true, index: 0, urls: [item.content] })}>
-                        <Image source={{ uri: item.content }} style={{ width: 220, height: 220, borderRadius: 8, resizeMode: 'cover' }} />
+                      <Pressable
+                        onPress={() =>
+                          setViewer({
+                            visible: true,
+                            index: 0,
+                            urls: [item.content],
+                          })
+                        }
+                      >
+                        <Image
+                          source={{ uri: item.content }}
+                          style={{
+                            width: 220,
+                            height: 220,
+                            borderRadius: 8,
+                            resizeMode: 'cover',
+                          }}
+                        />
                       </Pressable>
                     );
                   }
                 }
                 // Show text if exists and not placeholder when attachments present
-                if (item.content && item.content.length && (!hasAtt || item.content !== '[image]')) {
+                if (
+                  item.content &&
+                  item.content.length &&
+                  (!hasAtt || item.content !== '[image]')
+                ) {
                   return (
                     <Text
                       style={{
@@ -421,76 +568,91 @@ export default function ChatScreen({
                 }
                 return null;
               })()}
-            
+
             {/* Invitation response buttons */}
-            {isInvitation && !isMe && !isDeleted && (
-              <View style={{ flexDirection: 'row', marginTop: 12, gap: 8 }}>
-                <Pressable
-                  onPress={() => handleInvitationResponse(
-                    item.id, 
-                    'accept', 
-                    item.metadata?.space_id, 
-                    item.metadata?.space_name,
-                    item.metadata?.invitation_id
+              {isInvitation && !isMe && !isDeleted && (
+                <View style={{ flexDirection: 'row', marginTop: 12, gap: 8 }}>
+                  <Pressable
+                    onPress={() =>
+                      handleInvitationResponse(
+                        item.id,
+                        'accept',
+                        item.metadata?.space_id,
+                        item.metadata?.space_name,
+                        item.metadata?.invitation_id,
                   )}
-                  style={({ pressed }) => [
-                    {
-                      backgroundColor: colors.pink,
-                      paddingHorizontal: 16,
-                      paddingVertical: 8,
-                      borderRadius: 16,
-                      flex: 1,
-                      alignItems: 'center',
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}
-                >
-                  <Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>
-                    ✅ 参加する
-                  </Text>
-                </Pressable>
-                
+                    style={({ pressed }) => [
+                      {
+                        backgroundColor: colors.pink,
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 16,
+                        flex: 1,
+                        alignItems: 'center',
+                        opacity: pressed ? 0.7 : 1,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: 'white',
+                        fontSize: 14,
+                        fontWeight: '600',
+                      }}
+                    >
+                      ✅ 参加する
+                    </Text>
+                  </Pressable>
+
                 <Pressable
-                  onPress={() => handleInvitationResponse(
-                    item.id, 
-                    'decline', 
-                    item.metadata?.space_id, 
-                    item.metadata?.space_name,
-                    item.metadata?.invitation_id
+                    onPress={() =>
+                      handleInvitationResponse(
+                        item.id,
+                        'decline',
+                        item.metadata?.space_id,
+                        item.metadata?.space_name,
+                        item.metadata?.invitation_id,
                   )}
-                  style={({ pressed }) => [
-                    {
-                      backgroundColor: '#ffffff20',
-                      borderWidth: 1,
-                      borderColor: colors.subtext + '40',
-                      paddingHorizontal: 16,
-                      paddingVertical: 8,
-                      borderRadius: 16,
-                      flex: 1,
-                      alignItems: 'center',
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}
-                >
-                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                    ❌ 辞退する
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-            
+                    style={({ pressed }) => [
+                      {
+                        backgroundColor: '#ffffff20',
+                        borderWidth: 1,
+                        borderColor: colors.subtext + '40',
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 16,
+                        flex: 1,
+                        alignItems: 'center',
+                        opacity: pressed ? 0.7 : 1,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: colors.text,
+                        fontSize: 14,
+                        fontWeight: '600',
+                      }}
+                    >
+                      ❌ 辞退する
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+
+
             {item.is_edited && !isDeleted && (
-              <Text
-                style={{ color: colors.subtext, fontSize: 10, marginTop: 2 }}
-              >
-                編集済み
-              </Text>
-            )}
-            {hasError && (
-              <Text style={{ color: '#ff4444', fontSize: 10, marginTop: 2 }}>
-                送信に失敗しました
-              </Text>
-            )}
+                <Text
+                  style={{ color: colors.subtext, fontSize: 10, marginTop: 2 }}
+                >
+                  編集済み
+                </Text>
+              )}
+              {hasError && (
+                <Text style={{ color: '#ff4444', fontSize: 10, marginTop: 2 }}>
+                  送信に失敗しました
+                </Text>
+              )}
             </View>
           </View>
         </Pressable>
@@ -504,12 +666,12 @@ export default function ChatScreen({
       editMessage,
       deleteMessage,
       handleInvitationResponse,
-    ]
+    ],
   );
 
   // Render typing indicator with animation
   const renderTypingIndicator = useCallback(() => {
-    if (typingUsers.length === 0) return null;
+    if (typingUsers.length === 0) {return null;}
 
     const [dot1] = useState(new Animated.Value(0));
     const [dot2] = useState(new Animated.Value(0));
@@ -537,7 +699,7 @@ export default function ChatScreen({
             createAnimation(dot1, 0),
             createAnimation(dot2, 150),
             createAnimation(dot3, 300),
-          ])
+          ]),
         ).start();
       };
 
@@ -564,7 +726,12 @@ export default function ChatScreen({
           <Text style={{ color: colors.subtext, fontSize: 12, marginRight: 4 }}>
             入力中
           </Text>
-          <View style={{ flexDirection: handPreference === 'left' ? 'row' : 'row-reverse', alignItems: 'center' }}>
+          <View
+            style={{
+              flexDirection: handPreference === 'left' ? 'row' : 'row-reverse',
+              alignItems: 'center',
+            }}
+          >
             <Animated.View
               style={{
                 width: 4,
@@ -633,7 +800,7 @@ export default function ChatScreen({
     );
   }
 
-  
+
 
   // Show loading state while chat is being loaded
   if (isLoading && messages.length === 0) {
@@ -663,7 +830,11 @@ export default function ChatScreen({
                 })}
               >
                 <Ionicons
-                  name={handPreference === 'left' ? 'chevron-back' : 'chevron-forward'}
+                  name={
+                    handPreference === 'left'
+                      ? 'chevron-back'
+                      : 'chevron-forward'
+                  }
                   size={20}
                   color={colors.text}
                 />
@@ -672,15 +843,30 @@ export default function ChatScreen({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="ユーザープロフィールを開く"
-              onPress={() => { if (otherUserId && onNavigateToUser) onNavigateToUser(otherUserId); }}
+              onPress={() => {
+                if (otherUserId && onNavigateToUser)
+                  onNavigateToUser(otherUserId);
+              }}
               style={{ flexDirection: 'row', alignItems: 'center' }}
             >
               {headerAvatarUrl ? (
-                <Image source={{ uri: headerAvatarUrl }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8 }} />
+                <Image
+                  source={{ uri: headerAvatarUrl }}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    marginRight: 8,
+                  }}
+                />
               ) : headerAvatarEmoji ? (
-                <Text style={{ fontSize: 16, marginRight: 8 }}>{headerAvatarEmoji}</Text>
+                <Text style={{ fontSize: 16, marginRight: 8 }}>
+                  {headerAvatarEmoji}
+                </Text>
               ) : null}
-              <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>
+              <Text
+                style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}
+              >
                 {headerName || 'チャット'}
               </Text>
             </Pressable>
@@ -719,7 +905,12 @@ export default function ChatScreen({
             borderBottomColor: '#ffffff10',
           }}
         >
-          <View style={{ flexDirection: handPreference === 'left' ? 'row' : 'row-reverse', alignItems: 'center' }}>
+          <View
+            style={{
+              flexDirection: handPreference === 'left' ? 'row' : 'row-reverse',
+              alignItems: 'center',
+            }}
+          >
             {onBack && (
               <Pressable
                 onPress={onBack}
@@ -731,7 +922,11 @@ export default function ChatScreen({
                 }}
               >
                 <Ionicons
-                  name={handPreference === 'left' ? 'chevron-back' : 'chevron-forward'}
+                  name={
+                    handPreference === 'left'
+                      ? 'chevron-back'
+                      : 'chevron-forward'
+                  }
                   size={20}
                   color={colors.text}
                 />
@@ -739,11 +934,23 @@ export default function ChatScreen({
             )}
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               {headerAvatarUrl ? (
-                <Image source={{ uri: headerAvatarUrl }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8 }} />
+                <Image
+                  source={{ uri: headerAvatarUrl }}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    marginRight: 8,
+                  }}
+                />
               ) : headerAvatarEmoji ? (
-                <Text style={{ fontSize: 16, marginRight: 8 }}>{headerAvatarEmoji}</Text>
+                <Text style={{ fontSize: 16, marginRight: 8 }}>
+                  {headerAvatarEmoji}
+                </Text>
               ) : null}
-              <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>
+              <Text
+                style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}
+              >
                 {headerName || 'チャット'}
               </Text>
             </View>
@@ -774,14 +981,14 @@ export default function ChatScreen({
           }
           onContentSizeChange={() => {
             // Scroll to bottom when new messages are added
-            if (csTimerRef.current) clearTimeout(csTimerRef.current);
+            if (csTimerRef.current) {clearTimeout(csTimerRef.current);}
             csTimerRef.current = setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: true });
             }, 100);
           }}
           onLayout={() => {
             // Scroll to bottom on initial layout
-            if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
+            if (layoutTimerRef.current) {clearTimeout(layoutTimerRef.current);}
             layoutTimerRef.current = setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: false });
             }, 100);
@@ -815,15 +1022,32 @@ export default function ChatScreen({
               disabled={images.length >= 4}
               onPress={async () => {
                 try {
-                  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                  if (!perm.granted) { Alert.alert('権限', '写真ライブラリへのアクセスが必要です'); return; }
-                  const res = await ImagePicker.launchImageLibraryAsync({ allowsMultipleSelection: true, mediaTypes: imagesOnlyMediaTypes(), selectionLimit: 4, quality: 1 });
-                  if (res.canceled) return;
+                  const perm =
+                    await ImagePicker.requestMediaLibraryPermissionsAsync();
+                  if (!perm.granted) {
+                    Alert.alert('権限', '写真ライブラリへのアクセスが必要です');
+                    return;
+                  }
+                  const res = await ImagePicker.launchImageLibraryAsync({
+                    allowsMultipleSelection: true,
+                    mediaTypes: imagesOnlyMediaTypes(),
+                    selectionLimit: 4,
+                    quality: 1,
+                  });
+                  if (res.canceled) {return;}
                   const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
                   setImages(prev => [...prev, ...picked].slice(0, 4));
                 } catch {}
               }}
-              style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: pressed ? '#ffffff20' : '#ffffff14' })}
+              style={({ pressed }) => ({
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 8,
+                backgroundColor: pressed ? '#ffffff20' : '#ffffff14',
+              })}
             >
               <Ionicons name="images-outline" size={18} color={colors.text} />
             </Pressable>
@@ -831,15 +1055,30 @@ export default function ChatScreen({
               disabled={images.length >= 4}
               onPress={async () => {
                 try {
-                  const perm = await ImagePicker.requestCameraPermissionsAsync();
-                  if (!perm.granted) { Alert.alert('権限', 'カメラへのアクセスが必要です'); return; }
-                  const res = await ImagePicker.launchCameraAsync({ mediaTypes: imageOnlyMediaTypeSingle(), quality: 1 });
-                  if (res.canceled) return;
+                  const perm =
+                    await ImagePicker.requestCameraPermissionsAsync();
+                  if (!perm.granted) {
+                    Alert.alert('権限', 'カメラへのアクセスが必要です');
+                    return;
+                  }
+                  const res = await ImagePicker.launchCameraAsync({
+                    mediaTypes: imageOnlyMediaTypeSingle(),
+                    quality: 1,
+                  });
+                  if (res.canceled) {return;}
                   const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
                   setImages(prev => [...prev, ...picked].slice(0, 4));
                 } catch {}
               }}
-              style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: pressed ? '#ffffff20' : '#ffffff14' })}
+              style={({ pressed }) => ({
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 8,
+                backgroundColor: pressed ? '#ffffff20' : '#ffffff14',
+              })}
             >
               <Ionicons name="camera-outline" size={18} color={colors.text} />
             </Pressable>
@@ -858,9 +1097,13 @@ export default function ChatScreen({
             />
             <Pressable
               onPress={handleSendMessage}
-              disabled={(!inputMessage.trim() && images.length === 0) || isSending}
+              disabled={
+                (!inputMessage.trim() && images.length === 0) || isSending
+              }
               style={({ pressed }) => ({
-                ...(handPreference === 'left' ? { marginRight: 8 } : { marginLeft: 8 }),
+                ...(handPreference === 'left'
+                  ? { marginRight: 8 }
+                  : { marginLeft: 8 }),
                 padding: 8,
                 borderRadius: 20,
                 backgroundColor:
@@ -868,26 +1111,55 @@ export default function ChatScreen({
                     ? colors.pink
                     : colors.surface,
                 opacity: pressed ? 0.7 : 1,
-
               })}
             >
               {isSending ? (
                 <Text style={{ color: colors.subtext, fontSize: 14 }}>...</Text>
               ) : (
                 <Ionicons
-                  name={(inputMessage.trim() || images.length > 0) ? 'send' : 'send-outline'}
+                  name={
+                    inputMessage.trim() || images.length > 0
+                      ? 'send'
+                      : 'send-outline'
+                  }
                   size={20}
-                  color={(inputMessage.trim() || images.length > 0) ? '#23181D' : colors.subtext}
+                  color={
+                    inputMessage.trim() || images.length > 0
+                      ? '#23181D'
+                      : colors.subtext
+                  }
                 />
               )}
             </Pressable>
           </View>
         </View>
         {images.length > 0 && (
-          <View style={{ marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          <View
+            style={{
+              marginTop: 8,
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 6,
+            }}
+          >
             {images.map((img, idx) => (
-              <Pressable key={idx} onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))} style={{ width: 48, height: 48, borderRadius: 8, overflow: 'hidden', backgroundColor: '#ffffff12' }}>
-                <Image source={{ uri: img.uri }} style={{ width: '100%', height: '100%' }} />
+              <Pressable
+                key={idx}
+                onPress={() =>
+                  setImages(prev => prev.filter((_, i) => i !== idx))
+                }
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  backgroundColor: '#ffffff12',
+                }}
+              >
+                <Image
+                  source={{ uri: img.uri }}
+                  style={{ width: '100%', height: '100%' }}
+                />
               </Pressable>
             ))}
           </View>
@@ -901,11 +1173,19 @@ export default function ChatScreen({
         onRequestClose={() => setViewer({ visible: false, index: 0, urls: [] })}
       >
         <Pressable
-          style={{ flex: 1, backgroundColor: '#000000CC', alignItems: 'center', justifyContent: 'center' }}
+          style={{
+            flex: 1,
+            backgroundColor: '#000000CC',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
           onPress={() => setViewer({ visible: false, index: 0, urls: [] })}
         >
           {viewer.urls[viewer.index] ? (
-            <Image source={{ uri: viewer.urls[viewer.index] }} style={{ width: '90%', height: '70%', resizeMode: 'contain' }} />
+            <Image
+              source={{ uri: viewer.urls[viewer.index] }}
+              style={{ width: '90%', height: '70%', resizeMode: 'contain' }}
+            />
           ) : null}
         </Pressable>
       </Modal>

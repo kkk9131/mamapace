@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+
 import { getSupabaseClient } from '../services/supabaseClient';
 import { roomService } from '../services/roomService';
 import {
@@ -237,7 +238,9 @@ export function useChannelMessages(channelId: string | null) {
   // Fetch initial messages
   const fetchMessages = useCallback(
     async (beforeMessageId?: string) => {
-      if (!channelId) return;
+      if (!channelId) {
+        return;
+      }
 
       setLoading(true);
       if (!beforeMessageId) {
@@ -270,7 +273,9 @@ export function useChannelMessages(channelId: string | null) {
 
   // Load more messages (pagination)
   const loadMore = useCallback(async () => {
-    if (!hasMore || loading || messages.length === 0) return;
+    if (!hasMore || loading || messages.length === 0) {
+      return;
+    }
 
     const oldestMessage = messages[0];
     await fetchMessages(oldestMessage.id);
@@ -283,7 +288,9 @@ export function useChannelMessages(channelId: string | null) {
       messageType: 'text' | 'image' | 'file' = 'text',
       attachments: any[] = []
     ) => {
-      if (!channelId) return null;
+      if (!channelId) {
+        return null;
+      }
 
       // Validate only when no attachments
       if (!content?.trim()) {
@@ -347,7 +354,7 @@ export function useChannelMessages(channelId: string | null) {
             (msg as OptimisticRoomMessage).tempId === tempId
               ? { ...msg, error: response.error }
               : msg
-          )
+          ),
         );
         return null;
       }
@@ -357,14 +364,18 @@ export function useChannelMessages(channelId: string | null) {
 
   // Mark channel as seen
   const markSeen = useCallback(async () => {
-    if (!channelId) return;
+    if (!channelId) {
+      return;
+    }
 
     await roomService.markChannelSeen(channelId);
   }, [channelId]);
 
   // Set up real-time subscription
   useEffect(() => {
-    if (!channelId) return;
+    if (!channelId) {
+      return;
+    }
 
     const channel = getSupabaseClient()
       .channel(`channel_messages:${channelId}`)
@@ -400,7 +411,7 @@ export function useChannelMessages(channelId: string | null) {
           setMessages(prev =>
             prev.map(msg =>
               msg.id === updatedMessage.id ? updatedMessage : msg
-            )
+            ),
           );
         }
       )
@@ -451,7 +462,9 @@ export function useChannelMembers(channelId: string | null) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchMembers = useCallback(async () => {
-    if (!channelId) return;
+    if (!channelId) {
+      return;
+    }
     setLoading(true);
     setError(null);
     const res = await roomService.getChannelMembers(channelId);
@@ -522,7 +535,9 @@ export function useAnonymousRoom() {
   // Send anonymous message
   const sendMessage = useCallback(
     async (content: string) => {
-      if (!room) return null;
+      if (!room) {
+        return null;
+      }
 
       const validation = roomService.validateMessageContent(content);
       if (!validation.isValid) {
@@ -556,7 +571,9 @@ export function useAnonymousRoom() {
 
   // Set up real-time subscription for current room
   useEffect(() => {
-    if (!room) return;
+    if (!room) {
+      return;
+    }
 
     const channel = getSupabaseClient()
       .channel(`anonymous_messages:${room.room_id}`)
@@ -592,7 +609,9 @@ export function useAnonymousRoom() {
 
   // Check for room expiry and refresh
   useEffect(() => {
-    if (!room) return;
+    if (!room) {
+      return;
+    }
 
     const checkExpiry = () => {
       const now = new Date();
@@ -656,7 +675,7 @@ export function useChatList() {
           item.channel_id === channelId
             ? { ...item, has_new: false, unread_count: 0 }
             : item
-        )
+        ),
       );
     }
   }, []);

@@ -22,17 +22,21 @@ import {
   Keyboard,
   Modal,
 } from 'react-native';
-import { useTheme } from '../theme/theme';
 import * as ImagePicker from 'expo-image-picker';
-import { imagesOnlyMediaTypes, imageOnlyMediaTypeSingle } from '../utils/imagePickerCompat';
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+
+import { useTheme } from '../theme/theme';
+import {
+  imagesOnlyMediaTypes,
+  imageOnlyMediaTypeSingle,
+} from '../utils/imagePickerCompat';
 import { uploadRoomImages } from '../services/storageService';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { roomService } from '../services/roomService';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { chatService } from '../services/chatService';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
-import { BlurView } from 'expo-blur';
 import {
   useChannelMessages,
   useModeration,
@@ -82,7 +86,11 @@ export default function ChannelScreen({
   const [showExitMenu, setShowExitMenu] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
-  const [imageViewer, setImageViewer] = useState<{ visible: boolean; index: number; urls: string[] }>({ visible: false, index: 0, urls: [] });
+  const [imageViewer, setImageViewer] = useState<{
+    visible: boolean;
+    index: number;
+    urls: string[];
+  }>({ visible: false, index: 0, urls: [] });
   const [isOwner, setIsOwner] = useState(false);
 
   // Refs
@@ -125,14 +133,19 @@ export default function ChannelScreen({
 
   // Determine if current user is owner
   useEffect(() => {
-    if (!user?.id) { setIsOwner(false); return; }
+    if (!user?.id) {
+      setIsOwner(false);
+      return;
+    }
     const mine = members.find(m => m.user_id === user.id);
     setIsOwner(!!mine && mine.role === 'owner');
   }, [members, user?.id]);
 
   // Start direct chat with selected member
   const handleStartChat = async (targetUserId: string, userName: string) => {
-    if (!targetUserId) return;
+    if (!targetUserId) {
+      return;
+    }
     if (!user) {
       Alert.alert('エラー', 'チャット機能を使用するにはログインが必要です。');
       return;
@@ -146,7 +159,10 @@ export default function ChannelScreen({
       if (onNavigateToChat) {
         onNavigateToChat(res.data.id, userName);
       } else {
-        Alert.alert('チャット', `${userName}とのチャットを開きました。チャットタブから確認できます。`);
+        Alert.alert(
+          'チャット',
+          `${userName}とのチャットを開きました。チャットタブから確認できます。`,
+        );
       }
     } else {
       Alert.alert('エラー', res.error || 'チャットの作成に失敗しました');
@@ -167,8 +183,12 @@ export default function ChannelScreen({
     return () => {
       clearTimeout(timer);
       // Clear pending scroll timers
-      if (csTimerRef.current) clearTimeout(csTimerRef.current);
-      if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
+      if (csTimerRef.current) {
+        clearTimeout(csTimerRef.current);
+      }
+      if (layoutTimerRef.current) {
+        clearTimeout(layoutTimerRef.current);
+      }
     };
   }, [fadeAnim]);
 
@@ -194,8 +214,12 @@ export default function ChannelScreen({
   // Ensure scroll timers are cleared on unmount (safety net)
   useEffect(() => {
     return () => {
-      if (csTimerRef.current) clearTimeout(csTimerRef.current);
-      if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
+      if (csTimerRef.current) {
+        clearTimeout(csTimerRef.current);
+      }
+      if (layoutTimerRef.current) {
+        clearTimeout(layoutTimerRef.current);
+      }
     };
   }, []);
 
@@ -208,18 +232,33 @@ export default function ChannelScreen({
 
   // Handle send message (bundle text + images into one message)
   const handleSendMessage = async () => {
-    if (!messageText.trim() && images.length === 0) return;
+    if (!messageText.trim() && images.length === 0) {
+      return;
+    }
 
     const content = messageText.trim();
     setMessageText('');
 
-    let attachments: { url: string; width?: number; height?: number; mime?: string }[] = [];
+    let attachments: {
+      url: string;
+      width?: number;
+      height?: number;
+      mime?: string;
+    }[] = [];
     if (images.length > 0) {
       try {
         const client = getSupabaseClient();
-        const { data: { user } } = await client.auth.getUser();
-        if (!user) { Alert.alert('エラー', 'ログインが必要です'); return; }
-        attachments = await uploadRoomImages(user.id, images.map(i => i.uri));
+        const {
+          data: { user },
+        } = await client.auth.getUser();
+        if (!user) {
+          Alert.alert('エラー', 'ログインが必要です');
+          return;
+        }
+        attachments = await uploadRoomImages(
+          user.id,
+          images.map(i => i.uri),
+        );
       } catch (e: any) {
         Alert.alert('エラー', e?.message || '画像の送信に失敗しました');
         return;
@@ -228,7 +267,8 @@ export default function ChannelScreen({
       }
     }
 
-    const type: 'text' | 'image' | 'file' = (!content && attachments.length > 0) ? 'image' : 'text';
+    const type: 'text' | 'image' | 'file' =
+      !content && attachments.length > 0 ? 'image' : 'text';
     const result = await sendMessage(content, type, attachments);
     if (result) {
       setTimeout(() => {
@@ -263,7 +303,9 @@ export default function ChannelScreen({
 
   // Handle room exit
   const handleExitRoom = async () => {
-    if (!spaceId) return; // Exit functionality not available without spaceId
+    if (!spaceId) {
+      return;
+    } // Exit functionality not available without spaceId
 
     setShowExitMenu(false);
 
@@ -307,10 +349,16 @@ export default function ChannelScreen({
     return (
       <Pressable
         onLongPress={() => {
-          if (isDeleted) return;
+          if (isDeleted) {
+            return;
+          }
           // Avoid actions for optimistic (unsaved) messages
-          const isOptimistic = (item as any).isOptimistic || (typeof item.id === 'string' && item.id.startsWith('temp_'));
-          if (isOptimistic) return;
+          const isOptimistic =
+            (item as any).isOptimistic ||
+            (typeof item.id === 'string' && item.id.startsWith('temp_'));
+          if (isOptimistic) {
+            return;
+          }
           if (isOwnMessage) {
             Alert.alert('メッセージ削除', 'このメッセージを削除しますか？', [
               { text: 'キャンセル', style: 'cancel' },
@@ -368,19 +416,35 @@ export default function ChannelScreen({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`${item.sender_display_name || item.sender_username}のプロフィールを開く`}
-                onPress={(e) => { e.stopPropagation(); if (onOpenUser && item.sender_id) onOpenUser(item.sender_id); }}
-                onPressIn={(e) => e.stopPropagation()}
-                onPressOut={(e) => e.stopPropagation()}
+                onPress={e => {
+                  e.stopPropagation();
+                  if (onOpenUser && item.sender_id) {
+                    onOpenUser(item.sender_id);
+                  }
+                }}
+                onPressIn={e => e.stopPropagation()}
+                onPressOut={e => e.stopPropagation()}
                 style={{ flexDirection: 'row', alignItems: 'center' }}
               >
                 {/* アイコン左、名前右（画像優先） */}
                 {item.sender?.avatar_url ? (
                   <Image
                     source={{ uri: item.sender.avatar_url }}
-                    style={{ width: 18, height: 18, borderRadius: 9, marginRight: 8 }}
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 9,
+                      marginRight: 8,
+                    }}
                   />
                 ) : (
-                  <Text style={{ color: colors.subtext, fontSize: 12, marginRight: 8 }}>
+                  <Text
+                    style={{
+                      color: colors.subtext,
+                      fontSize: 12,
+                      marginRight: 8,
+                    }}
+                  >
                     {item.sender_avatar_emoji || '👤'}
                   </Text>
                 )}
@@ -409,53 +473,97 @@ export default function ChannelScreen({
             </View>
 
             {/* Attachments (images) */}
-            {!isDeleted && Array.isArray(item.attachments) && item.attachments.length > 0 && (
-              <View style={{ marginBottom: 8, gap: 6, flexDirection: 'row', flexWrap: 'wrap' }}>
-                {item.attachments.map((att: any, idx: number) => (
-                  <Pressable
-                    key={idx}
-                    onPress={() =>
-                      setImageViewer({
-                        visible: true,
-                        index: idx,
-                        urls: item.attachments.map((a: any) => a.url || a),
-                      })
-                    }
-                    style={{ width: '48%', borderRadius: 10, overflow: 'hidden', backgroundColor: '#00000020' }}
-                  >
-                    <Image source={{ uri: att.url || att }} style={{ width: '100%', aspectRatio: 1 }} resizeMode="cover" />
-                  </Pressable>
-                ))}
-              </View>
-            )}
+            {!isDeleted &&
+              Array.isArray(item.attachments) &&
+              item.attachments.length > 0 && (
+                <View
+                  style={{
+                    marginBottom: 8,
+                    gap: 6,
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  {item.attachments.map((att: any, idx: number) => (
+                    <Pressable
+                      key={idx}
+                      onPress={() =>
+                        setImageViewer({
+                          visible: true,
+                          index: idx,
+                          urls: item.attachments.map((a: any) => a.url || a),
+                        })
+                      }
+                      style={{
+                        width: '48%',
+                        borderRadius: 10,
+                        overflow: 'hidden',
+                        backgroundColor: '#00000020',
+                      }}
+                    >
+                      <Image
+                        source={{ uri: att.url || att }}
+                        style={{ width: '100%', aspectRatio: 1 }}
+                        resizeMode="cover"
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+              )}
 
             {/* Text content (if any) */}
-            {!isDeleted && !!(item.content && item.content.length) && (!item.message_type || item.message_type !== 'image' || (item.attachments?.length ?? 0) === 0) && (
-              <ExpandableText
-                text={item.content}
-                maxLines={3}
-                textStyle={{
-                  color: item.is_masked ? colors.subtext : colors.text,
-                  fontSize: 16,
-                }}
-                containerStyle={{ marginBottom: 8 }}
-              />
-            )}
+            {!isDeleted &&
+              !!(item.content && item.content.length) &&
+              (!item.message_type ||
+                item.message_type !== 'image' ||
+                (item.attachments?.length ?? 0) === 0) && (
+                <ExpandableText
+                  text={item.content}
+                  maxLines={3}
+                  textStyle={{
+                    color: item.is_masked ? colors.subtext : colors.text,
+                    fontSize: 16,
+                  }}
+                  containerStyle={{ marginBottom: 8 }}
+                />
+              )}
 
             {/* Legacy single-image fallback: content is URL and no attachments */}
-            {!isDeleted && !item.attachments?.length && item.message_type === 'image' && item.content?.startsWith('http') && (
-              <Pressable
-                onPress={() =>
-                  setImageViewer({ visible: true, index: 0, urls: [item.content] })
-                }
-                style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden', backgroundColor: '#00000020' }}
-              >
-                <Image source={{ uri: item.content }} style={{ width: '100%', aspectRatio: 16/9 }} resizeMode="cover" />
-              </Pressable>
-            )}
+            {!isDeleted &&
+              !item.attachments?.length &&
+              item.message_type === 'image' &&
+              item.content?.startsWith('http') && (
+                <Pressable
+                  onPress={() =>
+                    setImageViewer({
+                      visible: true,
+                      index: 0,
+                      urls: [item.content],
+                    })
+                  }
+                  style={{
+                    marginTop: 8,
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                    backgroundColor: '#00000020',
+                  }}
+                >
+                  <Image
+                    source={{ uri: item.content }}
+                    style={{ width: '100%', aspectRatio: 16 / 9 }}
+                    resizeMode="cover"
+                  />
+                </Pressable>
+              )}
 
             {isDeleted && (
-              <Text style={{ color: colors.subtext, fontSize: 13, fontStyle: 'italic' }}>
+              <Text
+                style={{
+                  color: colors.subtext,
+                  fontSize: 13,
+                  fontStyle: 'italic',
+                }}
+              >
                 このメッセージは削除されました
               </Text>
             )}
@@ -474,351 +582,419 @@ export default function ChannelScreen({
 
   return (
     <>
-    <Animated.View
-      style={{
-        flex: 1,
-        backgroundColor: colors.bg || '#000000',
-        opacity: fadeAnim,
-      }}
-    >
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      <Animated.View
+        style={{
+          flex: 1,
+          backgroundColor: colors.bg || '#000000',
+          opacity: fadeAnim,
+        }}
       >
-        {/* Header */}
-        <View
-          style={{
-            paddingTop: 48,
-            paddingBottom: 16,
-            paddingHorizontal: theme.spacing(2),
-            borderBottomWidth: 1,
-            borderBottomColor: colors.subtext + '20',
-          }}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
-          <View style={{ 
-            flexDirection: handPreference === 'left' ? 'row' : 'row-reverse', 
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            {onBack && (
-              <Pressable 
-                onPress={onBack} 
-                style={{ 
-                  ...(handPreference === 'left' ? { marginRight: 12 } : { marginLeft: 12 })
-                }}
-              >
-                <Ionicons
-                  name={handPreference === 'left' ? 'chevron-back' : 'chevron-forward'}
-                  size={20}
-                  color={colors.text}
-                />
-              </Pressable>
-            )}
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  color: colors.text,
-                  fontSize: 18,
-                  fontWeight: 'bold',
-                }}
-              >
-                {spaceName}
-              </Text>
-              <Text style={{ color: colors.subtext, fontSize: 14 }}>
-                #general
-              </Text>
-            </View>
-
-            {/* Three dots menu - only show if spaceId is available */}
-            {spaceId && (
-              <Pressable
-                onPress={() => setShowMenu(true)}
-                style={({ pressed }) => [
-                  {
-                    padding: 8,
-                    marginRight: -8,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color: colors.text,
-                    fontSize: 20,
-                    fontWeight: 'bold',
-                  }}
-                >
-                  •••
-                </Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-
-        {/* Messages */}
-        <FlatList
-          ref={flatListRef}
-          data={messages.filter(m => !m.deleted_at)}
-          keyExtractor={item => item.id}
-          renderItem={renderMessage}
-          contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
-          inverted={false}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => {
-            if (csTimerRef.current) clearTimeout(csTimerRef.current);
-            csTimerRef.current = setTimeout(() => {
-              flatListRef.current?.scrollToEnd({ animated: false });
-            }, 50);
-          }}
-          onLayout={() => {
-            if (layoutTimerRef.current) clearTimeout(layoutTimerRef.current);
-            layoutTimerRef.current = setTimeout(() => {
-              flatListRef.current?.scrollToEnd({ animated: false });
-            }, 50);
-          }}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={refresh}
-              tintColor={colors.text}
-            />
-          }
-          onEndReached={() => {
-            if (hasMore && !loading) {
-              loadMore();
-            }
-          }}
-          onEndReachedThreshold={0.1}
-          ListEmptyComponent={() => (
-            <View
-              style={{
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: 40,
-              }}
-            >
-              <Text style={{ color: colors.subtext, fontSize: 16 }}>
-                {loading
-                  ? 'メッセージを読み込み中...'
-                  : 'まだメッセージがありません'}
-              </Text>
-              {!loading && (
-                <Text
-                  style={{
-                    color: colors.subtext,
-                    fontSize: 14,
-                    marginTop: 8,
-                    textAlign: 'center',
-                  }}
-                >
-                  最初のメッセージを送信してみましょう
-                </Text>
-              )}
-            </View>
-          )}
-          ListHeaderComponent={() =>
-            hasMore ? (
-              <View style={{ alignItems: 'center', padding: 16 }}>
-                <Text style={{ color: colors.subtext, fontSize: 14 }}>
-                  過去のメッセージを読み込み中...
-                </Text>
-              </View>
-            ) : null
-          }
-        />
-
-        {/* Message Input */}
-        <View
-          style={{
-            padding: theme.spacing(2),
-            paddingBottom: Platform.OS === 'ios' ? 90 : 20,
-          }}
-        >
+          {/* Header */}
           <View
             style={{
-              borderRadius: theme.radius.lg,
-              overflow: 'hidden',
+              paddingTop: 48,
+              paddingBottom: 16,
+              paddingHorizontal: theme.spacing(2),
+              borderBottomWidth: 1,
+              borderBottomColor: colors.subtext + '20',
             }}
           >
-            <BlurView
-              intensity={30}
-              tint="dark"
+            <View
               style={{
-                backgroundColor: '#ffffff10',
-                flexDirection: handPreference === 'left' ? 'row-reverse' : 'row',
-                alignItems: 'flex-end',
-                paddingHorizontal: 16,
-                paddingVertical: 12,
+                flexDirection:
+                  handPreference === 'left' ? 'row' : 'row-reverse',
+                alignItems: 'center',
+                justifyContent: 'space-between',
               }}
             >
-              {/* 添付ボタン */}
-              <Pressable
-                onPress={async () => {
-                  try {
-                    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                    if (!perm.granted) { Alert.alert('権限', '写真ライブラリへのアクセスが必要です'); return; }
-                    const res = await ImagePicker.launchImageLibraryAsync({ allowsMultipleSelection: true, mediaTypes: imagesOnlyMediaTypes(), selectionLimit: 4, quality: 1 });
-                    if (res.canceled) return;
-                    const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
-                    setImages(prev => [...prev, ...picked].slice(0, 4));
-                  } catch {}
-                }}
-                style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: pressed ? '#ffffff20' : '#ffffff14' })}
-              >
-                <Ionicons name="images-outline" size={18} color={colors.text} />
-              </Pressable>
-              <Pressable
-                onPress={async () => {
-                  try {
-                    const perm = await ImagePicker.requestCameraPermissionsAsync();
-                    if (!perm.granted) { Alert.alert('権限', 'カメラへのアクセスが必要です'); return; }
-                    const res = await ImagePicker.launchCameraAsync({ mediaTypes: imageOnlyMediaTypeSingle(), quality: 1 });
-                    if (res.canceled) return;
-                    const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
-                    setImages(prev => [...prev, ...picked].slice(0, 4));
-                  } catch {}
-                }}
-                style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: pressed ? '#ffffff20' : '#ffffff14' })}
-              >
-                <Ionicons name="camera-outline" size={18} color={colors.text} />
-              </Pressable>
-              <TextInput
-                style={{
-                  flex: 1,
-                  color: colors.text,
-                  fontSize: 16,
-                  maxHeight: 100,
-                  textAlignVertical: 'top',
-                }}
-                placeholder="メッセージを入力..."
-                placeholderTextColor={colors.subtext}
-                value={messageText}
-                onChangeText={setMessageText}
-                multiline
-                returnKeyType="send"
-                onSubmitEditing={handleSendMessage}
-                blurOnSubmit={false}
-              />
+              {onBack && (
+                <Pressable
+                  onPress={onBack}
+                  style={{
+                    ...(handPreference === 'left'
+                      ? { marginRight: 12 }
+                      : { marginLeft: 12 }),
+                  }}
+                >
+                  <Ionicons
+                    name={
+                      handPreference === 'left'
+                        ? 'chevron-back'
+                        : 'chevron-forward'
+                    }
+                    size={20}
+                    color={colors.text}
+                  />
+                </Pressable>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {spaceName}
+                </Text>
+                <Text style={{ color: colors.subtext, fontSize: 14 }}>
+                  #general
+                </Text>
+              </View>
 
-              <Pressable
-                onPress={handleSendMessage}
-                disabled={(!messageText.trim() && images.length === 0) || exitLoading}
-                style={({ pressed }) => [
-                  {
-                    backgroundColor: (messageText.trim() || images.length > 0)
-                      ? colors.pink
-                      : colors.subtext + '40',
-                    borderRadius: theme.radius.md,
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    ...(handPreference === 'left' ? { marginRight: 8 } : { marginLeft: 8 }),
-                    transform: [{ scale: pressed ? 0.95 : 1 }],
-                  },
-                ]}
+              {/* Three dots menu - only show if spaceId is available */}
+              {spaceId && (
+                <Pressable
+                  onPress={() => setShowMenu(true)}
+                  style={({ pressed }) => [
+                    {
+                      padding: 8,
+                      marginRight: -8,
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color: colors.text,
+                      fontSize: 20,
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    •••
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+
+          {/* Messages */}
+          <FlatList
+            ref={flatListRef}
+            data={messages.filter(m => !m.deleted_at)}
+            keyExtractor={item => item.id}
+            renderItem={renderMessage}
+            contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
+            inverted={false}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => {
+              if (csTimerRef.current) {
+                clearTimeout(csTimerRef.current);
+              }
+              csTimerRef.current = setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: false });
+              }, 50);
+            }}
+            onLayout={() => {
+              if (layoutTimerRef.current) {
+                clearTimeout(layoutTimerRef.current);
+              }
+              layoutTimerRef.current = setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: false });
+              }, 50);
+            }}
+            refreshControl={
+              <RefreshControl
+                refreshing={loading}
+                onRefresh={refresh}
+                tintColor={colors.text}
+              />
+            }
+            onEndReached={() => {
+              if (hasMore && !loading) {
+                loadMore();
+              }
+            }}
+            onEndReachedThreshold={0.1}
+            ListEmptyComponent={() => (
+              <View
+                style={{
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: 40,
+                }}
               >
-                <Ionicons
-                  name={(messageText.trim() || images.length > 0) ? 'send' : 'send-outline'}
-                  size={20}
-                  color={(messageText.trim() || images.length > 0) ? '#23181D' : colors.subtext}
-                />
-              </Pressable>
-            </BlurView>
-            {images.length > 0 && (
-              <View style={{ paddingHorizontal: 16, paddingTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {images.map((img, idx) => (
-                  <Pressable key={idx} onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))} style={{ width: 48, height: 48, borderRadius: 8, overflow: 'hidden', backgroundColor: '#ffffff12' }}>
-                    <Image source={{ uri: img.uri }} style={{ width: '100%', height: '100%' }} />
-                  </Pressable>
-                ))}
+                <Text style={{ color: colors.subtext, fontSize: 16 }}>
+                  {loading
+                    ? 'メッセージを読み込み中...'
+                    : 'まだメッセージがありません'}
+                </Text>
+                {!loading && (
+                  <Text
+                    style={{
+                      color: colors.subtext,
+                      fontSize: 14,
+                      marginTop: 8,
+                      textAlign: 'center',
+                    }}
+                  >
+                    最初のメッセージを送信してみましょう
+                  </Text>
+                )}
               </View>
             )}
-          </View>
-        </View>
+            ListHeaderComponent={() =>
+              hasMore ? (
+                <View style={{ alignItems: 'center', padding: 16 }}>
+                  <Text style={{ color: colors.subtext, fontSize: 14 }}>
+                    過去のメッセージを読み込み中...
+                  </Text>
+                </View>
+              ) : null
+            }
+          />
 
-        {/* Menu Modal - only show if spaceId is available */}
-        {showMenu && spaceId && (
-          <Pressable
+          {/* Message Input */}
+          <View
             style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              justifyContent: 'center',
-              alignItems: 'center',
+              padding: theme.spacing(2),
+              paddingBottom: Platform.OS === 'ios' ? 90 : 20,
             }}
-            onPress={() => setShowMenu(false)}
           >
-            <Pressable
+            <View
               style={{
-                backgroundColor: colors.bg,
                 borderRadius: theme.radius.lg,
-                marginHorizontal: theme.spacing(4),
-                paddingVertical: theme.spacing(3),
-                paddingHorizontal: theme.spacing(2),
-                minWidth: 200,
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: colors.subtext + '20',
+                overflow: 'hidden',
               }}
-              onPress={e => e.stopPropagation()}
             >
-              <Text
+              <BlurView
+                intensity={30}
+                tint="dark"
                 style={{
-                  color: colors.text,
-                  fontSize: 18,
-                  fontWeight: 'bold',
-                  marginBottom: theme.spacing(3),
+                  backgroundColor: '#ffffff10',
+                  flexDirection:
+                    handPreference === 'left' ? 'row-reverse' : 'row',
+                  alignItems: 'flex-end',
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
                 }}
               >
-                {spaceName}
-              </Text>
-
-              {/* Members button - shows sidebar */}
-              <Pressable
-                onPress={() => {
-                  setShowMenu(false);
-                  setShowMembers(true);
-                  if (onMembers) onMembers();
-                }}
-                style={({ pressed }) => [
-                  {
-                    backgroundColor: 'transparent',
-                    borderRadius: theme.radius.md,
-                    paddingHorizontal: theme.spacing(4),
-                    paddingVertical: theme.spacing(1.5),
-                    marginBottom: theme.spacing(2),
-                    opacity: pressed ? 0.7 : 1,
-                    minWidth: 120,
+                {/* 添付ボタン */}
+                <Pressable
+                  onPress={async () => {
+                    try {
+                      const perm =
+                        await ImagePicker.requestMediaLibraryPermissionsAsync();
+                      if (!perm.granted) {
+                        Alert.alert(
+                          '権限',
+                          '写真ライブラリへのアクセスが必要です',
+                        );
+                        return;
+                      }
+                      const res = await ImagePicker.launchImageLibraryAsync({
+                        allowsMultipleSelection: true,
+                        mediaTypes: imagesOnlyMediaTypes(),
+                        selectionLimit: 4,
+                        quality: 1,
+                      });
+                      if (res.canceled) {
+                        return;
+                      }
+                      const picked =
+                        res.assets?.map(a => ({ uri: a.uri })) || [];
+                      setImages(prev => [...prev, ...picked].slice(0, 4));
+                    } catch {}
+                  }}
+                  style={({ pressed }) => ({
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
                     alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: colors.subtext + '40',
-                  },
-                ]}
+                    justifyContent: 'center',
+                    marginRight: 8,
+                    backgroundColor: pressed ? '#ffffff20' : '#ffffff14',
+                  })}
+                >
+                  <Ionicons
+                    name="images-outline"
+                    size={18}
+                    color={colors.text}
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={async () => {
+                    try {
+                      const perm =
+                        await ImagePicker.requestCameraPermissionsAsync();
+                      if (!perm.granted) {
+                        Alert.alert('権限', 'カメラへのアクセスが必要です');
+                        return;
+                      }
+                      const res = await ImagePicker.launchCameraAsync({
+                        mediaTypes: imageOnlyMediaTypeSingle(),
+                        quality: 1,
+                      });
+                      if (res.canceled) {
+                        return;
+                      }
+                      const picked =
+                        res.assets?.map(a => ({ uri: a.uri })) || [];
+                      setImages(prev => [...prev, ...picked].slice(0, 4));
+                    } catch {}
+                  }}
+                  style={({ pressed }) => ({
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 8,
+                    backgroundColor: pressed ? '#ffffff20' : '#ffffff14',
+                  })}
+                >
+                  <Ionicons
+                    name="camera-outline"
+                    size={18}
+                    color={colors.text}
+                  />
+                </Pressable>
+                <TextInput
+                  style={{
+                    flex: 1,
+                    color: colors.text,
+                    fontSize: 16,
+                    maxHeight: 100,
+                    textAlignVertical: 'top',
+                  }}
+                  placeholder="メッセージを入力..."
+                  placeholderTextColor={colors.subtext}
+                  value={messageText}
+                  onChangeText={setMessageText}
+                  multiline
+                  returnKeyType="send"
+                  onSubmitEditing={handleSendMessage}
+                  blurOnSubmit={false}
+                />
+
+                <Pressable
+                  onPress={handleSendMessage}
+                  disabled={
+                    (!messageText.trim() && images.length === 0) || exitLoading
+                  }
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor:
+                        messageText.trim() || images.length > 0
+                          ? colors.pink
+                          : colors.subtext + '40',
+                      borderRadius: theme.radius.md,
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      ...(handPreference === 'left'
+                        ? { marginRight: 8 }
+                        : { marginLeft: 8 }),
+                      transform: [{ scale: pressed ? 0.95 : 1 }],
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={
+                      messageText.trim() || images.length > 0
+                        ? 'send'
+                        : 'send-outline'
+                    }
+                    size={20}
+                    color={
+                      messageText.trim() || images.length > 0
+                        ? '#23181D'
+                        : colors.subtext
+                    }
+                  />
+                </Pressable>
+              </BlurView>
+              {images.length > 0 && (
+                <View
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingTop: 8,
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: 6,
+                  }}
+                >
+                  {images.map((img, idx) => (
+                    <Pressable
+                      key={idx}
+                      onPress={() =>
+                        setImages(prev => prev.filter((_, i) => i !== idx))
+                      }
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 8,
+                        overflow: 'hidden',
+                        backgroundColor: '#ffffff12',
+                      }}
+                    >
+                      <Image
+                        source={{ uri: img.uri }}
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Menu Modal - only show if spaceId is available */}
+          {showMenu && spaceId && (
+            <Pressable
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              onPress={() => setShowMenu(false)}
+            >
+              <Pressable
+                style={{
+                  backgroundColor: colors.bg,
+                  borderRadius: theme.radius.lg,
+                  marginHorizontal: theme.spacing(4),
+                  paddingVertical: theme.spacing(3),
+                  paddingHorizontal: theme.spacing(2),
+                  minWidth: 200,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: colors.subtext + '20',
+                }}
+                onPress={e => e.stopPropagation()}
               >
                 <Text
                   style={{
                     color: colors.text,
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: 'bold',
+                    marginBottom: theme.spacing(3),
                   }}
                 >
-                  メンバー
+                  {spaceName}
                 </Text>
-              </Pressable>
 
-              {/* Invite button - only show for private spaces */}
-              {isPrivateSpace && onInvite && (
+                {/* Members button - shows sidebar */}
                 <Pressable
                   onPress={() => {
                     setShowMenu(false);
-                    onInvite();
+                    setShowMembers(true);
+                    if (onMembers) {
+                      onMembers();
+                    }
                   }}
                   style={({ pressed }) => [
                     {
-                      backgroundColor: colors.pink,
+                      backgroundColor: 'transparent',
                       borderRadius: theme.radius.md,
                       paddingHorizontal: theme.spacing(4),
                       paddingVertical: theme.spacing(1.5),
@@ -826,79 +1002,149 @@ export default function ChannelScreen({
                       opacity: pressed ? 0.7 : 1,
                       minWidth: 120,
                       alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: colors.subtext + '40',
                     },
                   ]}
                 >
                   <Text
                     style={{
-                      color: 'white',
+                      color: colors.text,
                       fontSize: 16,
                       fontWeight: 'bold',
                     }}
                   >
-                    招待
+                    メンバー
                   </Text>
                 </Pressable>
-              )}
 
-              <Pressable
-                onPress={handleExitRoom}
-                disabled={exitLoading}
-                style={({ pressed }) => [
-                  {
-                    backgroundColor: exitLoading
-                      ? colors.subtext + '40'
-                      : 'transparent',
-                    borderRadius: theme.radius.md,
-                    paddingHorizontal: theme.spacing(4),
-                    paddingVertical: theme.spacing(1.5),
-                    marginBottom: theme.spacing(2),
-                    opacity: pressed ? 0.7 : 1,
-                    minWidth: 120,
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: colors.pink,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color: colors.pink,
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                  }}
-                >
-                  {exitLoading ? '退出中...' : '退出'}
-                </Text>
-              </Pressable>
+                {/* Invite button - only show for private spaces */}
+                {isPrivateSpace && onInvite && (
+                  <Pressable
+                    onPress={() => {
+                      setShowMenu(false);
+                      onInvite();
+                    }}
+                    style={({ pressed }) => [
+                      {
+                        backgroundColor: colors.pink,
+                        borderRadius: theme.radius.md,
+                        paddingHorizontal: theme.spacing(4),
+                        paddingVertical: theme.spacing(1.5),
+                        marginBottom: theme.spacing(2),
+                        opacity: pressed ? 0.7 : 1,
+                        minWidth: 120,
+                        alignItems: 'center',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: 'white',
+                        fontSize: 16,
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      招待
+                    </Text>
+                  </Pressable>
+                )}
 
-              {/* Delete room - owner only */}
-              {isOwner && (
                 <Pressable
-                  onPress={() => {
-                    setShowMenu(false);
-                    if (!spaceId) return;
-                    Alert.alert(
-                      'ルーム削除',
-                      `${spaceName} を削除しますか？\nこの操作は元に戻せません。`,
-                      [
-                        { text: 'キャンセル', style: 'cancel' },
-                        {
-                          text: '削除',
-                          style: 'destructive',
-                          onPress: async () => {
-                            const res = await roomService.deleteSpace(spaceId);
-                            if ((res as any).success) {
-                              Alert.alert('削除完了', 'ルームを削除しました');
-                              if (onBack) onBack();
-                            } else {
-                              Alert.alert('エラー', (res as any).error || '削除に失敗しました');
-                            }
+                  onPress={handleExitRoom}
+                  disabled={exitLoading}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: exitLoading
+                        ? colors.subtext + '40'
+                        : 'transparent',
+                      borderRadius: theme.radius.md,
+                      paddingHorizontal: theme.spacing(4),
+                      paddingVertical: theme.spacing(1.5),
+                      marginBottom: theme.spacing(2),
+                      opacity: pressed ? 0.7 : 1,
+                      minWidth: 120,
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: colors.pink,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color: colors.pink,
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {exitLoading ? '退出中...' : '退出'}
+                  </Text>
+                </Pressable>
+
+                {/* Delete room - owner only */}
+                {isOwner && (
+                  <Pressable
+                    onPress={() => {
+                      setShowMenu(false);
+                      if (!spaceId) {
+                        return;
+                      }
+                      Alert.alert(
+                        'ルーム削除',
+                        `${spaceName} を削除しますか？\nこの操作は元に戻せません。`,
+                        [
+                          { text: 'キャンセル', style: 'cancel' },
+                          {
+                            text: '削除',
+                            style: 'destructive',
+                            onPress: async () => {
+                              const res =
+                                await roomService.deleteSpace(spaceId);
+                              if ((res as any).success) {
+                                Alert.alert('削除完了', 'ルームを削除しました');
+                                if (onBack) {
+                                  onBack();
+                                }
+                              } else {
+                                Alert.alert(
+                                  'エラー',
+                                  (res as any).error || '削除に失敗しました',
+                                );
+                              }
+                            },
                           },
-                        },
-                      ]
-                    );
-                  }}
+                        ],
+                      );
+                    }}
+                    style={({ pressed }) => [
+                      {
+                        backgroundColor: 'transparent',
+                        borderRadius: theme.radius.md,
+                        paddingHorizontal: theme.spacing(4),
+                        paddingVertical: theme.spacing(1.5),
+                        opacity: pressed ? 0.7 : 1,
+                        minWidth: 120,
+                        alignItems: 'center',
+                        borderWidth: 1,
+                        borderColor: '#ff4d4f',
+                        marginTop: theme.spacing(1),
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: '#ff4d4f',
+                        fontSize: 16,
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      ルーム削除
+                    </Text>
+                  </Pressable>
+                )}
+
+                <Pressable
+                  onPress={() => setShowMenu(false)}
                   style={({ pressed }) => [
                     {
                       backgroundColor: 'transparent',
@@ -909,244 +1155,268 @@ export default function ChannelScreen({
                       minWidth: 120,
                       alignItems: 'center',
                       borderWidth: 1,
-                      borderColor: '#ff4d4f',
-                      marginTop: theme.spacing(1),
+                      borderColor: colors.subtext + '40',
                     },
                   ]}
                 >
-                  <Text style={{ color: '#ff4d4f', fontSize: 16, fontWeight: 'bold' }}>ルーム削除</Text>
-                </Pressable>
-              )}
-
-              <Pressable
-                onPress={() => setShowMenu(false)}
-                style={({ pressed }) => [
-                  {
-                    backgroundColor: 'transparent',
-                    borderRadius: theme.radius.md,
-                    paddingHorizontal: theme.spacing(4),
-                    paddingVertical: theme.spacing(1.5),
-                    opacity: pressed ? 0.7 : 1,
-                    minWidth: 120,
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: colors.subtext + '40',
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color: colors.text,
-                    fontSize: 16,
-                  }}
-                >
-                  キャンセル
-                </Text>
-              </Pressable>
-            </Pressable>
-          </Pressable>
-        )}
-
-        {/* Members Sidebar */}
-        {showMembers && (
-          <Pressable
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              justifyContent: 'flex-start',
-              alignItems: 'flex-end',
-            }}
-            onPress={() => setShowMembers(false)}
-          >
-            <Animated.View
-              style={{
-                width: '80%',
-                height: '100%',
-                backgroundColor: colors.bg,
-                borderTopLeftRadius: theme.radius.lg,
-                borderBottomLeftRadius: theme.radius.lg,
-                transform: [
-                  {
-                    translateX: membersSlide.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [Dimensions.get('window').width, 0],
-                    }),
-                  },
-                ],
-              }}
-            >
-              {/* Sidebar header */}
-              <View
-                style={{
-                  paddingTop: 48,
-                  paddingBottom: 16,
-                  paddingHorizontal: theme.spacing(2),
-                  borderBottomWidth: 1,
-                  borderBottomColor: colors.subtext + '20',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Text
-                  style={{ color: colors.text, fontSize: 18, fontWeight: 'bold' }}
-                >
-                  メンバー
-                </Text>
-                <Pressable onPress={() => setShowMembers(false)}>
-                  <Text style={{ color: colors.text, fontSize: 18 }}>×</Text>
-                </Pressable>
-              </View>
-
-              {/* Members list */}
-              <FlatList
-                data={members}
-                keyExtractor={item => item.user_id}
-                contentContainerStyle={{ padding: theme.spacing(2), paddingBottom: 100 }}
-                ListHeaderComponent={() => (
-                  <View style={{ marginBottom: theme.spacing(1) }}>
-                    <Text style={{ color: colors.subtext, fontSize: 14 }}>
-                      参加メンバー（{members.length}）
-                    </Text>
-                  </View>
-                )}
-                ItemSeparatorComponent={() => (
-                  <View style={{ height: theme.spacing(1) }} />
-                )}
-                renderItem={({ item }) => (
-                  <Pressable
-                    onPress={() => { if (onOpenUser) onOpenUser(item.user_id); }}
+                  <Text
                     style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: 10,
-                      paddingHorizontal: 12,
-                      borderRadius: theme.radius.lg,
-                      backgroundColor: '#ffffff10',
+                      color: colors.text,
+                      fontSize: 16,
                     }}
                   >
-                    {item.user?.avatar_url ? (
-                      <Image
-                        source={{ uri: item.user.avatar_url }}
-                        style={{ width: 22, height: 22, borderRadius: 11, marginRight: 10 }}
-                      />
-                    ) : (
-                      <Text style={{ fontSize: 18, marginRight: 10 }}>
-                        {item.user?.avatar_emoji || '👤'}
-                      </Text>
-                    )}
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
-                        {item.user?.display_name || item.user?.username || 'ユーザー'}
-                      </Text>
-                      <Text style={{ color: colors.subtext, fontSize: 12 }}>
-                        {item.role === 'owner'
-                          ? 'オーナー'
-                          : item.role === 'moderator'
-                          ? 'モデレーター'
-                          : 'メンバー'}
+                    キャンセル
+                  </Text>
+                </Pressable>
+              </Pressable>
+            </Pressable>
+          )}
+
+          {/* Members Sidebar */}
+          {showMembers && (
+            <Pressable
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                justifyContent: 'flex-start',
+                alignItems: 'flex-end',
+              }}
+              onPress={() => setShowMembers(false)}
+            >
+              <Animated.View
+                style={{
+                  width: '80%',
+                  height: '100%',
+                  backgroundColor: colors.bg,
+                  borderTopLeftRadius: theme.radius.lg,
+                  borderBottomLeftRadius: theme.radius.lg,
+                  transform: [
+                    {
+                      translateX: membersSlide.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [Dimensions.get('window').width, 0],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                {/* Sidebar header */}
+                <View
+                  style={{
+                    paddingTop: 48,
+                    paddingBottom: 16,
+                    paddingHorizontal: theme.spacing(2),
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.subtext + '20',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: colors.text,
+                      fontSize: 18,
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    メンバー
+                  </Text>
+                  <Pressable onPress={() => setShowMembers(false)}>
+                    <Text style={{ color: colors.text, fontSize: 18 }}>×</Text>
+                  </Pressable>
+                </View>
+
+                {/* Members list */}
+                <FlatList
+                  data={members}
+                  keyExtractor={item => item.user_id}
+                  contentContainerStyle={{
+                    padding: theme.spacing(2),
+                    paddingBottom: 100,
+                  }}
+                  ListHeaderComponent={() => (
+                    <View style={{ marginBottom: theme.spacing(1) }}>
+                      <Text style={{ color: colors.subtext, fontSize: 14 }}>
+                        参加メンバー（{members.length}）
                       </Text>
                     </View>
+                  )}
+                  ItemSeparatorComponent={() => (
+                    <View style={{ height: theme.spacing(1) }} />
+                  )}
+                  renderItem={({ item }) => (
                     <Pressable
-                      onPress={() =>
-                        handleStartChat(
-                          item.user_id,
-                          item.user?.display_name || item.user?.username || 'ユーザー'
-                        )
-                      }
-                      style={({ pressed }) => ({
-                        backgroundColor: colors.pink,
+                      onPress={() => {
+                        if (onOpenUser) {
+                          onOpenUser(item.user_id);
+                        }
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 10,
                         paddingHorizontal: 12,
-                        paddingVertical: 8,
-                        borderRadius: theme.radius.md,
-                        opacity: pressed ? 0.8 : 1,
-                      })}
-                      
-                      // Prevent row onPress
-                      onPressIn={(e) => e.stopPropagation()}
-                      onPressOut={(e) => e.stopPropagation()}
+                        borderRadius: theme.radius.lg,
+                        backgroundColor: '#ffffff10',
+                      }}
                     >
-                      <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>
-                        チャット
-                      </Text>
+                      {item.user?.avatar_url ? (
+                        <Image
+                          source={{ uri: item.user.avatar_url }}
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 11,
+                            marginRight: 10,
+                          }}
+                        />
+                      ) : (
+                        <Text style={{ fontSize: 18, marginRight: 10 }}>
+                          {item.user?.avatar_emoji || '👤'}
+                        </Text>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            color: colors.text,
+                            fontSize: 16,
+                            fontWeight: '600',
+                          }}
+                        >
+                          {item.user?.display_name ||
+                            item.user?.username ||
+                            'ユーザー'}
+                        </Text>
+                        <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                          {item.role === 'owner'
+                            ? 'オーナー'
+                            : item.role === 'moderator'
+                              ? 'モデレーター'
+                              : 'メンバー'}
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={() =>
+                          handleStartChat(
+                            item.user_id,
+                            item.user?.display_name ||
+                              item.user?.username ||
+                              'ユーザー'
+                          )
+                        }
+                        style={({ pressed }) => ({
+                          backgroundColor: colors.pink,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: theme.radius.md,
+                          opacity: pressed ? 0.8 : 1,
+                        })}
+                        // Prevent row onPress
+                        onPressIn={e => e.stopPropagation()}
+                        onPressOut={e => e.stopPropagation()}
+                      >
+                        <Text
+                          style={{
+                            color: 'white',
+                            fontWeight: 'bold',
+                            fontSize: 12,
+                          }}
+                        >
+                          チャット
+                        </Text>
+                      </Pressable>
                     </Pressable>
-                  </Pressable>
-                )}
-                ListEmptyComponent={() => (
-                  <View style={{ padding: theme.spacing(2) }}>
-                    <Text style={{ color: colors.subtext, fontSize: 14 }}>
-                      {membersLoading ? 'メンバーを読み込み中...' : 'メンバーがいません'}
+                  )}
+                  ListEmptyComponent={() => (
+                    <View style={{ padding: theme.spacing(2) }}>
+                      <Text style={{ color: colors.subtext, fontSize: 14 }}>
+                        {membersLoading
+                          ? 'メンバーを読み込み中...'
+                          : 'メンバーがいません'}
+                      </Text>
+                    </View>
+                  )}
+                  refreshing={membersLoading}
+                  onRefresh={refreshMembers}
+                />
+
+                {/* Error display for members */}
+                {membersError && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 90,
+                      left: theme.spacing(2),
+                      right: theme.spacing(2),
+                      backgroundColor: colors.pink + '20',
+                      borderRadius: theme.radius.md,
+                      padding: 12,
+                      borderWidth: 1,
+                      borderColor: colors.pink,
+                    }}
+                  >
+                    <Text style={{ color: colors.pink, fontSize: 14 }}>
+                      {membersError}
                     </Text>
                   </View>
                 )}
-                refreshing={membersLoading}
-                onRefresh={refreshMembers}
-              />
+              </Animated.View>
+            </Pressable>
+          )}
 
-              {/* Error display for members */}
-              {membersError && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 90,
-                    left: theme.spacing(2),
-                    right: theme.spacing(2),
-                    backgroundColor: colors.pink + '20',
-                    borderRadius: theme.radius.md,
-                    padding: 12,
-                    borderWidth: 1,
-                    borderColor: colors.pink,
-                  }}
-                >
-                  <Text style={{ color: colors.pink, fontSize: 14 }}>{membersError}</Text>
-                </View>
-              )}
-            </Animated.View>
-          </Pressable>
-        )}
-
-        {/* Error display */}
-        {(error || exitError) && (
-          <View
-            style={{
-              position: 'absolute',
-              top: 100,
-              left: theme.spacing(2),
-              right: theme.spacing(2),
-              backgroundColor: colors.pink + '20',
-              borderRadius: theme.radius.md,
-              padding: 12,
-              borderWidth: 1,
-              borderColor: colors.pink,
-            }}
-          >
-            <Text style={{ color: colors.pink, fontSize: 14 }}>
-              {error || exitError}
-            </Text>
-          </View>
-        )}
-      </KeyboardAvoidingView>
-    </Animated.View>
+          {/* Error display */}
+          {(error || exitError) && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 100,
+                left: theme.spacing(2),
+                right: theme.spacing(2),
+                backgroundColor: colors.pink + '20',
+                borderRadius: theme.radius.md,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: colors.pink,
+              }}
+            >
+              <Text style={{ color: colors.pink, fontSize: 14 }}>
+                {error || exitError}
+              </Text>
+            </View>
+          )}
+        </KeyboardAvoidingView>
+      </Animated.View>
       {/* Simple image viewer modal */}
       <Modal
         visible={imageViewer.visible}
         transparent
         animationType="fade"
-        onRequestClose={() => setImageViewer({ visible: false, index: 0, urls: [] })}
+        onRequestClose={() =>
+          setImageViewer({ visible: false, index: 0, urls: [] })
+        }
       >
         <Pressable
-          style={{ flex: 1, backgroundColor: '#000000CC', alignItems: 'center', justifyContent: 'center' }}
+          style={{
+            flex: 1,
+            backgroundColor: '#000000CC',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
           onPress={() => setImageViewer({ visible: false, index: 0, urls: [] })}
         >
           {imageViewer.urls[imageViewer.index] ? (
-            <Image source={{ uri: imageViewer.urls[imageViewer.index] }} style={{ width: '90%', height: '70%', resizeMode: 'contain' }} />
+            <Image
+              source={{ uri: imageViewer.urls[imageViewer.index] }}
+              style={{ width: '90%', height: '70%', resizeMode: 'contain' }}
+            />
           ) : null}
         </Pressable>
       </Modal>
-  </>
+    </>
   );
 }

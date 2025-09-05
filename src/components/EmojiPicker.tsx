@@ -10,8 +10,9 @@
 
 import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView, Animated } from 'react-native';
-import { useTheme } from '../theme/theme';
 import * as Haptics from 'expo-haptics';
+
+import { useTheme } from '../theme/theme';
 
 interface EmojiPickerProps {
   /** Currently selected emoji */
@@ -167,7 +168,9 @@ export default function EmojiPicker({
    * Handles emoji selection with haptic feedback
    */
   const handleEmojiSelect = async (emoji: string) => {
-    if (disabled) return;
+    if (disabled) {
+      return;
+    }
 
     await Haptics.selectionAsync();
     onEmojiSelect(emoji);
@@ -191,7 +194,9 @@ export default function EmojiPicker({
    * Handles category selection
    */
   const handleCategorySelect = async (category: string) => {
-    if (disabled) return;
+    if (disabled) {
+      return;
+    }
 
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setActiveCategory(category);

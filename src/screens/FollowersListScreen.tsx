@@ -9,19 +9,20 @@ import {
   Image,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useEffect, useState, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
-import { useEffect, useState, useCallback } from 'react';
 import {
   getFollowers,
   followUser,
   unfollowUser,
   isFollowing,
+  FollowUser,
 } from '../services/profileService';
-import { FollowUser } from '../services/profileService';
 import { secureLogger } from '../utils/privacyProtection';
 import { getSupabaseClient } from '../services/supabaseClient';
-import { Ionicons } from '@expo/vector-icons';
 import { chatService } from '../services/chatService';
 
 interface FollowersListScreenProps {
@@ -29,7 +30,10 @@ interface FollowersListScreenProps {
   onOpenUser?: (userId: string) => void;
 }
 
-export default function FollowersListScreen({ onNavigateToChat, onOpenUser }: FollowersListScreenProps) {
+export default function FollowersListScreen({
+  onNavigateToChat,
+  onOpenUser,
+}: FollowersListScreenProps) {
   const theme = useTheme();
   const { colors } = theme;
   const { user } = useAuth();
@@ -52,7 +56,9 @@ export default function FollowersListScreen({ onNavigateToChat, onOpenUser }: Fo
 
   const loadFollowers = useCallback(
     async (refresh = false) => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        return;
+      }
 
       try {
         if (refresh) {
@@ -154,7 +160,12 @@ export default function FollowersListScreen({ onNavigateToChat, onOpenUser }: Fo
           {avatarMap[item.user_id] ? (
             <Image
               source={{ uri: avatarMap[item.user_id]! }}
-              style={{ width: 44, height: 44, borderRadius: 22, marginRight: 10 }}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                marginRight: 10,
+              }}
             />
           ) : (
             <View
@@ -174,7 +185,9 @@ export default function FollowersListScreen({ onNavigateToChat, onOpenUser }: Fo
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`${displayName}のプロフィールを開く`}
-            onPress={() => { onOpenUser && onOpenUser(item.user_id); }}
+            onPress={() => {
+              onOpenUser && onOpenUser(item.user_id);
+            }}
             style={{ flex: 1 }}
           >
             <Text style={{ color: colors.text, fontWeight: '700' }}>
@@ -185,29 +198,50 @@ export default function FollowersListScreen({ onNavigateToChat, onOpenUser }: Fo
             </Text>
           </Pressable>
           {!isMe && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+            >
               <Pressable
                 accessibilityLabel={`${displayName}とチャット`}
                 onPress={async () => {
                   try {
-                    const res = await chatService.createOrGetChat({ participantIds: [item.user_id], type: 'direct' });
+                    const res = await chatService.createOrGetChat({
+                      participantIds: [item.user_id],
+                      type: 'direct',
+                    });
                     if (res.success && res.data?.id) {
-                      onNavigateToChat && onNavigateToChat(res.data.id, displayName);
+                      onNavigateToChat &&
+                        onNavigateToChat(res.data.id, displayName);
                     } else {
-                      Alert.alert('エラー', res.error || 'チャットの作成に失敗しました');
+                      Alert.alert(
+                        'エラー',
+                        res.error || 'チャットの作成に失敗しました',
+                      );
                     }
                   } catch (e: any) {
-                    Alert.alert('エラー', e?.message || 'チャットの作成に失敗しました');
+                    Alert.alert(
+                      'エラー',
+                      e?.message || 'チャットの作成に失敗しました',
+                    );
                   }
                 }}
-                style={({ pressed }) => [{
-                  width: 36, height: 36, borderRadius: 18,
-                  alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: colors.surface,
-                  transform: [{ scale: pressed ? 0.96 : 1 }]
-                }]}
+                style={({ pressed }) => [
+                  {
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.surface,
+                    transform: [{ scale: pressed ? 0.96 : 1 }],
+                  },
+                ]}
               >
-                <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.text} />
+                <Ionicons
+                  name="chatbubble-ellipses-outline"
+                  size={18}
+                  color={colors.text}
+                />
               </Pressable>
               <Pressable
                 onPress={() => handleFollowToggle(item.user_id)}

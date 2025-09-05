@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
 import {
   RegistrationRequest,
   LoginRequest,
@@ -786,7 +787,9 @@ function debounce<T extends (...args: any[]) => any>(
 export function formatValidationError(
   error: string | undefined
 ): string | null {
-  if (!error) return null;
+  if (!error) {
+    return null;
+  }
 
   // Ensure error messages are user-friendly
   return error;

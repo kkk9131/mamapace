@@ -1,15 +1,20 @@
 import { View, Text, Pressable, Animated, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useTheme } from '../theme/theme';
-import MyPostsListScreen from './MyPostsListScreen';
-import { useAuth } from '../contexts/AuthContext';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { getSupabaseClient } from '../services/supabaseClient';
-import { getMyProfile, getFollowCounts } from '../services/profileService';
-import { PublicUserProfile } from '../types/auth';
-import { FollowCounts } from '../services/profileService';
 import { useFocusEffect } from '@react-navigation/native';
+
+import { useAuth } from '../contexts/AuthContext';
+import { getSupabaseClient } from '../services/supabaseClient';
+import {
+  getMyProfile,
+  getFollowCounts,
+  FollowCounts,
+} from '../services/profileService';
+import { PublicUserProfile } from '../types/auth';
+import { useTheme } from '../theme/theme';
 import { secureLogger } from '../utils/privacyProtection';
+
+import MyPostsListScreen from './MyPostsListScreen';
 
 export default function ProfileScreen({
   onNavigate,
@@ -28,7 +33,9 @@ export default function ProfileScreen({
   });
 
   const loadProfileData = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      return;
+    }
 
     try {
       // Load profile

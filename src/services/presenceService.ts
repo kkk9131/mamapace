@@ -9,11 +9,12 @@
  * - Privacy controls for visibility
  */
 
-import { supabaseClient } from './supabaseClient';
-import { authService } from './authService';
 import { secureLogger } from '../utils/privacyProtection';
 import { OnlineStatus, UserPresence } from '../types/chat';
 import { PublicUserProfile } from '../types/auth';
+
+import { authService } from './authService';
+import { supabaseClient } from './supabaseClient';
 
 // =====================================================
 // CONFIGURATION

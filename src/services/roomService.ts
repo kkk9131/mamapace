@@ -10,7 +10,6 @@
  * 3. Follow existing security patterns from authService and chatService
  */
 
-import { getSupabaseClient } from './supabaseClient';
 import {
   Space,
   SpaceWithOwner,
@@ -37,6 +36,8 @@ import {
 } from '../types/room';
 import { PublicUserProfile } from '../types/auth';
 
+import { getSupabaseClient } from './supabaseClient';
+
 /**
  * Room Service Class
  * Handles all room-related API operations
@@ -46,9 +47,15 @@ export class RoomService {
    * Normalize unknown error into readable string
    */
   static normalizeError(error: unknown, fallback = 'Unexpected error'): string {
-    if (!error) return fallback;
-    if (error instanceof Error) return error.message;
-    if (typeof error === 'string') return error;
+    if (!error) {
+      return fallback;
+    }
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (typeof error === 'string') {
+      return error;
+    }
     try {
       return JSON.stringify(error);
     } catch {
@@ -95,13 +102,16 @@ export class RoomService {
         return { error: errMsg };
       }
 
-      let spaceId = data.space_id as string;
+      const spaceId = data.space_id as string;
       let channelId = data.channel_id as string | null;
 
       // Fallback: ensure a default channel exists even if RPC returned null channel_id (edge cases)
       if (!channelId) {
         // Server-side ensure via RPC (owner only)
-        const ensured = await supabase.rpc('ensure_default_channel_if_missing', { p_space_id: spaceId });
+        const ensured = await supabase.rpc(
+          'ensure_default_channel_if_missing',
+          { p_space_id: spaceId },
+        );
         if (!ensured.error && ensured.data) {
           channelId = String(ensured.data);
         } else {
@@ -149,33 +159,44 @@ export class RoomService {
         .eq('channel_id', channelId);
 
       if (error) {
-        console.error('[RoomService] Get channel members error:', error.message);
+        console.error(
+          '[RoomService] Get channel members error:',
+          error.message,
+        );
         return { error: 'Failed to get channel members' };
       }
 
-      const members: ChannelMemberWithUser[] = (data || []).map((m: {
-        channel_id: string;
-        user_id: string;
-        role: 'owner' | 'moderator' | 'member';
-        last_seen_at: string;
-        joined_at: string;
-        is_active: boolean;
-        user: PublicUserProfile;
-      }) => ({
-        channel_id: m.channel_id,
-        user_id: m.user_id,
-        role: m.role,
-        last_seen_at: m.last_seen_at,
-        joined_at: m.joined_at,
-        is_active: m.is_active,
-        user: m.user,
-      }));
+      const members: ChannelMemberWithUser[] = (data || []).map(
+        (m: {
+          channel_id: string;
+          user_id: string;
+          role: 'owner' | 'moderator' | 'member';
+          last_seen_at: string;
+          joined_at: string;
+          is_active: boolean;
+          user: PublicUserProfile;
+        }) => ({
+          channel_id: m.channel_id,
+          user_id: m.user_id,
+          role: m.role,
+          last_seen_at: m.last_seen_at,
+          joined_at: m.joined_at,
+          is_active: m.is_active,
+          user: m.user,
+        }),
+      );
 
       // Sort: owner -> moderator -> member, then by display_name/username
-      const roleOrder: Record<string, number> = { owner: 0, moderator: 1, member: 2 };
+      const roleOrder: Record<string, number> = {
+        owner: 0,
+        moderator: 1,
+        member: 2,
+      };
       members.sort((a, b) => {
         const r = (roleOrder[a.role] ?? 99) - (roleOrder[b.role] ?? 99);
-        if (r !== 0) return r;
+        if (r !== 0) {
+          return r;
+        }
         const an = a.user?.display_name || a.user?.username || '';
         const bn = b.user?.display_name || b.user?.username || '';
         return an.localeCompare(bn);
@@ -183,7 +204,10 @@ export class RoomService {
 
       return { success: true, data: members };
     } catch (error: unknown) {
-      const msg = RoomService.normalizeError(error, 'Failed to get channel members');
+      const msg = RoomService.normalizeError(
+        error,
+        'Failed to get channel members',
+      );
       console.error('[RoomService] Get channel members exception:', msg);
       return { error: msg };
     }
@@ -256,9 +280,9 @@ export class RoomService {
       );
 
       // Compute member counts from channel_members to avoid stale counts on spaces
-      const spaceIds = (spaces as Space[]).map((s) => s.id);
-      let channelMap = new Map<string, string>(); // space_id -> channel_id
-      let memberCountMap = new Map<string, number>(); // channel_id -> count
+      const spaceIds = (spaces as Space[]).map(s => s.id);
+      const channelMap = new Map<string, string>(); // space_id -> channel_id
+      const memberCountMap = new Map<string, number>(); // channel_id -> count
 
       // Fetch channels for spaces
       if (spaceIds.length) {
@@ -266,7 +290,9 @@ export class RoomService {
           .from('channels')
           .select('id, space_id')
           .in('space_id', spaceIds);
-        (channels || []).forEach((c: { id: string; space_id: string }) => channelMap.set(c.space_id, c.id));
+        (channels || []).forEach((c: { id: string; space_id: string }) =>
+          channelMap.set(c.space_id, c.id),
+        );
 
         const channelIds = (channels || []).map((c: { id: string }) => c.id);
         if (channelIds.length) {
@@ -283,19 +309,23 @@ export class RoomService {
       }
 
       // Transform data to include can_join flag, owner information, and accurate member_count
-      const spacesWithOwner: SpaceWithOwner[] = (spaces as Space[]).map((space) => {
-        const owner = ownerMap.get(space.owner_id);
-        const channelId = channelMap.get(space.id);
-        const computedCount = channelId ? (memberCountMap.get(channelId) || 0) : space.member_count || 0;
-        const maxMembers = space.max_members ?? 500;
-        return {
-          ...space,
-          member_count: computedCount,
-          max_members: maxMembers,
-          owner: owner || null,
-          can_join: computedCount < maxMembers,
-        } as SpaceWithOwner;
-      });
+      const spacesWithOwner: SpaceWithOwner[] = (spaces as Space[]).map(
+        space => {
+          const owner = ownerMap.get(space.owner_id);
+          const channelId = channelMap.get(space.id);
+          const computedCount = channelId
+            ? memberCountMap.get(channelId) || 0
+            : space.member_count || 0;
+          const maxMembers = space.max_members ?? 500;
+          return {
+            ...space,
+            member_count: computedCount,
+            max_members: maxMembers,
+            owner: owner || null,
+            can_join: computedCount < maxMembers,
+          } as SpaceWithOwner;
+        },
+      );
 
       return {
         success: true,
@@ -356,11 +386,16 @@ export class RoomService {
         console.error('[RoomService] Get channel error:', channelError.message);
       }
 
-      let channel: { id: string } | null = channelRow ? { id: channelRow.id } : null;
+      let channel: { id: string } | null = channelRow
+        ? { id: channelRow.id }
+        : null;
 
       if (!channel) {
         // Ensure default channel exists (owner only RPC, but safe if caller is not owner; it just errors silently here)
-        const ensured = await supabase.rpc('ensure_default_channel_if_missing', { p_space_id: spaceId });
+        const ensured = await supabase.rpc(
+          'ensure_default_channel_if_missing',
+          { p_space_id: spaceId },
+        );
         if (!ensured.error && ensured.data) {
           channel = { id: ensured.data as string };
         } else {
@@ -451,7 +486,10 @@ export class RoomService {
           .eq('space_id', spaceId)
           .eq('user_id', user.user.id);
         if (delErr) {
-          console.error('[RoomService] Leave space (space_members) error:', delErr.message);
+          console.error(
+            '[RoomService] Leave space (space_members) error:',
+            delErr.message,
+          );
           return { error: 'Failed to leave space' };
         }
         return { success: true, message: 'Left space' };
@@ -532,33 +570,35 @@ export class RoomService {
       }
 
       // Transform data to match ChannelWithSpace type
-      const spaces: ChannelWithSpace[] = (data || []).map((item: {
-        channel_id: string;
-        role: 'owner' | 'moderator' | 'member';
-        last_seen_at: string;
-        channels: {
-          id: string;
-          space_id: string;
-          name: string;
-          description: string | null;
-          channel_type: 'text' | 'voice' | 'announcement';
-          is_active: boolean;
-          created_at: string;
-          spaces: Space;
-        };
-      }) => ({
-        id: item.channels.id,
-        space_id: item.channels.space_id,
-        name: item.channels.name,
-        description: item.channels.description,
-        channel_type: item.channels.channel_type,
-        is_active: item.channels.is_active,
-        created_at: item.channels.created_at,
-        space: item.channels.spaces,
-        member_role: item.role,
-        has_new: false, // TODO
-        unread_count: 0, // TODO
-      }));
+      const spaces: ChannelWithSpace[] = (data || []).map(
+        (item: {
+          channel_id: string;
+          role: 'owner' | 'moderator' | 'member';
+          last_seen_at: string;
+          channels: {
+            id: string;
+            space_id: string;
+            name: string;
+            description: string | null;
+            channel_type: 'text' | 'voice' | 'announcement';
+            is_active: boolean;
+            created_at: string;
+            spaces: Space;
+          };
+        }) => ({
+          id: item.channels.id,
+          space_id: item.channels.space_id,
+          name: item.channels.name,
+          description: item.channels.description,
+          channel_type: item.channels.channel_type,
+          is_active: item.channels.is_active,
+          created_at: item.channels.created_at,
+          space: item.channels.spaces,
+          member_role: item.role,
+          has_new: false, // TODO
+          unread_count: 0, // TODO
+        }),
+      );
 
       return {
         success: true,
@@ -577,9 +617,15 @@ export class RoomService {
     try {
       const supabase = getSupabaseClient();
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return { error: 'Not authenticated' };
+      if (!user.user) {
+        return { error: 'Not authenticated' };
+      }
 
-      const { error } = await supabase.from('spaces').delete().eq('id', spaceId).eq('owner_id', user.user.id);
+      const { error } = await supabase
+        .from('spaces')
+        .delete()
+        .eq('id', spaceId)
+        .eq('owner_id', user.user.id);
       if (error) {
         console.error('[RoomService] Delete space error:', error.message);
         return { error: 'Failed to delete space' };
@@ -591,11 +637,15 @@ export class RoomService {
     }
   }
 
-  private static async getSpacesFromMembershipOrOwned(): Promise<ApiResponse<ChannelWithSpace[]>> {
+  private static async getSpacesFromMembershipOrOwned(): Promise<
+    ApiResponse<ChannelWithSpace[]>
+  > {
     try {
       const supabase = getSupabaseClient();
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return { error: 'Not authenticated' };
+      if (!user.user) {
+        return { error: 'Not authenticated' };
+      }
 
       // Owned spaces
       const { data: owned } = await supabase
@@ -620,9 +670,11 @@ export class RoomService {
         memberSpaces = (spaces as Space[]) || [];
       }
 
-      const combine: Space[] = ([...(owned || []), ...memberSpaces] as Space[]);
+      const combine: Space[] = [...(owned || []), ...memberSpaces] as Space[];
       const unique = new Map<string, Space>();
-      for (const s of combine) unique.set(s.id, s);
+      for (const s of combine) {
+        unique.set(s.id, s);
+      }
 
       const result: ChannelWithSpace[] = Array.from(unique.values()).map(
         (s: Space) => ({
@@ -679,10 +731,15 @@ export class RoomService {
       }
 
       // Prepare content: ensure non-empty when attachments exist to satisfy DB constraint
-      const sanitized = request.content ? RoomService.sanitizeContent(request.content) : '';
-      const contentToInsert = (sanitized && sanitized.length > 0)
-        ? sanitized
-        : ((request.attachments && request.attachments.length > 0) ? '[image]' : '');
+      const sanitized = request.content
+        ? RoomService.sanitizeContent(request.content)
+        : '';
+      const contentToInsert =
+        sanitized && sanitized.length > 0
+          ? sanitized
+          : request.attachments && request.attachments.length > 0
+            ? '[image]'
+            : '';
 
       // Insert the message with sender_id
       const { data: message, error } = await supabase
@@ -721,13 +778,17 @@ export class RoomService {
   /**
    * Soft delete a channel message (own message only)
    */
-  static async deleteChannelMessage(messageId: string): Promise<ApiResponse<boolean>> {
+  static async deleteChannelMessage(
+    messageId: string,
+  ): Promise<ApiResponse<boolean>> {
     try {
       const supabase = getSupabaseClient();
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return { error: 'Not authenticated' };
+      if (!user.user) {
+        return { error: 'Not authenticated' };
+      }
       // Try hard delete first (preferred if RLS allows deleting own rows)
-      let del = await supabase
+      const del = await supabase
         .from('room_messages')
         .delete()
         .eq('id', messageId)
@@ -748,7 +809,10 @@ export class RoomService {
           .is('deleted_at', null);
 
         if (upd.error) {
-          console.error('[RoomService] Delete message error:', upd.error.message);
+          console.error(
+            '[RoomService] Delete message error:',
+            upd.error.message,
+          );
           return { error: 'Failed to delete message' };
         }
       }
@@ -911,7 +975,9 @@ export class RoomService {
       }
 
       // Use SECURITY DEFINER RPC to avoid N+1 queries and compute NEW flags in SQL
-      const { data, error } = await supabase.rpc('get_chat_list_with_new', { p_limit: 50 });
+      const { data, error } = await supabase.rpc('get_chat_list_with_new', {
+        p_limit: 50,
+      });
       if (error) {
         console.error('[RoomService] Get chat list error:', error.message);
         return { error: 'Failed to get chat list' };
@@ -943,7 +1009,10 @@ export class RoomService {
 
       // 1) Try SECURITY DEFINER RPC first (preferred)
       // Some Supabase setups require an explicit empty params object
-      const rpc = await supabase.rpc('get_or_create_current_anon_room', {} as any);
+      const rpc = await supabase.rpc(
+        'get_or_create_current_anon_room',
+        {} as any,
+      );
 
       if (!rpc.error && rpc.data && !rpc.data.error) {
         return {
@@ -958,14 +1027,18 @@ export class RoomService {
 
       // 明示的にRPCがエラーJSONを返している場合（認証エラーなど）
       if (!rpc.error && rpc.data?.error) {
-        const msg = typeof rpc.data.error === 'string' ? rpc.data.error : 'Failed to get anonymous room';
+        const msg =
+          typeof rpc.data.error === 'string'
+            ? rpc.data.error
+            : 'Failed to get anonymous room';
         console.error('[RoomService] Get anonymous room error:', msg);
         return { error: msg };
       }
 
       // 2) Fallback: if RPC is missing (schema cache / function not found),
       // compute slot locally and avoid direct INSERT to satisfy RLS.
-      const likelyMissing = rpc.error?.message?.includes('schema cache') ||
+      const likelyMissing =
+        rpc.error?.message?.includes('schema cache') ||
         rpc.error?.message?.includes('function') ||
         rpc.error?.message?.includes('not found');
 
@@ -994,7 +1067,10 @@ export class RoomService {
       }
 
       // Other errors（通信やサーバー例外）
-      console.error('[RoomService] Get anonymous room error:', rpc.error?.message || rpc.error);
+      console.error(
+        '[RoomService] Get anonymous room error:',
+        rpc.error?.message || rpc.error,
+      );
       return { error: rpc.error?.message || 'Failed to get anonymous room' };
     } catch (error: unknown) {
       const msg = this.normalizeError(error, 'Failed to get anonymous room');
@@ -1004,11 +1080,35 @@ export class RoomService {
   }
 
   private static generateEphemeralName(): string {
-    const animals = ['たぬき', 'うさぎ', 'きつね', 'ねこ', 'いぬ', 'くま', 'ぱんだ', 'こあら', 'ぺんぎん', 'ふくろう'];
-    const colors = ['あか', 'あお', 'きいろ', 'みどり', 'むらさき', 'ぴんく', 'おれんじ', 'しろ', 'くろ', 'はいいろ'];
+    const animals = [
+      'たぬき',
+      'うさぎ',
+      'きつね',
+      'ねこ',
+      'いぬ',
+      'くま',
+      'ぱんだ',
+      'こあら',
+      'ぺんぎん',
+      'ふくろう',
+    ];
+    const colors = [
+      'あか',
+      'あお',
+      'きいろ',
+      'みどり',
+      'むらさき',
+      'ぴんく',
+      'おれんじ',
+      'しろ',
+      'くろ',
+      'はいいろ',
+    ];
     const animal = animals[Math.floor(Math.random() * animals.length)];
     const color = colors[Math.floor(Math.random() * colors.length)];
-    const suffix = String.fromCharCode(65 + Math.floor(Math.random() * 26)) + Math.floor(Math.random() * 10).toString();
+    const suffix =
+      String.fromCharCode(65 + Math.floor(Math.random() * 26)) +
+      Math.floor(Math.random() * 10).toString();
     return `${animal}-${color}-${suffix}`;
   }
 
@@ -1049,7 +1149,10 @@ export class RoomService {
       });
 
       if (error) {
-        console.error('[RoomService] Send anonymous message error:', error.message);
+        console.error(
+          '[RoomService] Send anonymous message error:',
+          error.message,
+        );
         return { error: error.message };
       }
 
@@ -1065,7 +1168,10 @@ export class RoomService {
         message: 'Message sent successfully',
       };
     } catch (error: unknown) {
-      const msg = this.normalizeError(error, 'Failed to send anonymous message');
+      const msg = this.normalizeError(
+        error,
+        'Failed to send anonymous message',
+      );
       console.error('[RoomService] Send anonymous message exception:', msg);
       return { error: msg };
     }
@@ -1275,7 +1381,10 @@ export class RoomService {
   static sanitizeContent(input: string): string {
     const trimmed = (input || '').trim();
     // Remove null bytes and control chars except newline and tab
-    const cleaned = trimmed.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+    const cleaned = trimmed.replace(
+      /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,
+      '',
+    );
     // Enforce length limit
     return cleaned.slice(0, 2000);
   }

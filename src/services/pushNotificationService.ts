@@ -3,9 +3,11 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+
 import { getExpoProjectId } from '../config/notificationsConfig';
-import { getSupabaseClient } from './supabaseClient';
 import { secureLogger } from '../utils/privacyProtection';
+
+import { getSupabaseClient } from './supabaseClient';
 
 // Local persistent device identifier for de-duplication
 const DEVICE_ID_KEY = 'mamapace_device_id';
@@ -13,7 +15,9 @@ const DEVICE_ID_KEY = 'mamapace_device_id';
 async function getOrCreateDeviceId(): Promise<string> {
   try {
     const existing = await SecureStore.getItemAsync(DEVICE_ID_KEY);
-    if (existing) return existing;
+    if (existing) {
+      return existing;
+    }
     const id = `${Platform.OS}-${Date.now()}-${Math.random()
       .toString(36)
       .slice(2, 10)}`;
@@ -43,7 +47,9 @@ Notifications.setNotificationHandler({
 });
 
 async function ensureAndroidChannels() {
-  if (Platform.OS !== 'android') return;
+  if (Platform.OS !== 'android') {
+    return;
+  }
   try {
     // Default/general notifications
     await Notifications.setNotificationChannelAsync('default', {
@@ -69,11 +75,12 @@ async function ensureAndroidChannels() {
   }
 }
 
-export async function ensurePushPermission(): Promise<
-  Notifications.NotificationPermissionsStatus
-> {
+export async function ensurePushPermission(): Promise<Notifications.NotificationPermissionsStatus> {
   const settings = await Notifications.getPermissionsAsync();
-  if (settings.granted || settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
+  if (
+    settings.granted ||
+    settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL
+  ) {
     return settings;
   }
   return await Notifications.requestPermissionsAsync();
@@ -83,14 +90,19 @@ export async function ensurePushPermission(): Promise<
  * Registers the current device for push notifications and stores/upserts
  * the Expo push token in Supabase bound to the authenticated user.
  */
-export async function registerDeviceForPush(userId: string): Promise<PushRegistrationResult> {
+export async function registerDeviceForPush(
+  userId: string,
+): Promise<PushRegistrationResult> {
   try {
     if (!Device.isDevice) {
       return { success: false, reason: 'simulator_or_web' };
     }
 
     const perm = await ensurePushPermission();
-    if (!perm.granted && perm.ios?.status !== Notifications.IosAuthorizationStatus.PROVISIONAL) {
+    if (
+      !perm.granted &&
+      perm.ios?.status !== Notifications.IosAuthorizationStatus.PROVISIONAL
+    ) {
       return { success: false, reason: 'permission_denied' };
     }
 
@@ -110,19 +122,17 @@ export async function registerDeviceForPush(userId: string): Promise<PushRegistr
     const model = Device.modelName ?? 'unknown';
 
     const client = getSupabaseClient();
-    const { error } = await client
-      .from('push_subscriptions')
-      .upsert(
-        {
-          user_id: userId,
-          device_id: deviceId,
-          expo_push_token: token,
-          device_os: platform,
-          device_model: model,
-          last_active_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,device_id' }
-      );
+    const { error } = await client.from('push_subscriptions').upsert(
+      {
+        user_id: userId,
+        device_id: deviceId,
+        expo_push_token: token,
+        device_os: platform,
+        device_model: model,
+        last_active_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,device_id' }
+    );
 
     if (error) {
       secureLogger.error('Failed to upsert push token', { error });
@@ -139,7 +149,9 @@ export async function registerDeviceForPush(userId: string): Promise<PushRegistr
 /**
  * Removes the current device registration from Supabase for the given user.
  */
-export async function unregisterDeviceForPush(userId: string): Promise<boolean> {
+export async function unregisterDeviceForPush(
+  userId: string,
+): Promise<boolean> {
   try {
     const deviceId = await getOrCreateDeviceId();
     const client = getSupabaseClient();
@@ -154,7 +166,9 @@ export async function unregisterDeviceForPush(userId: string): Promise<boolean> 
     }
     return true;
   } catch (e) {
-    secureLogger.error('unregisterDeviceForPush exception', { error: String(e) });
+    secureLogger.error('unregisterDeviceForPush exception', {
+      error: String(e),
+    });
     return false;
   }
 }

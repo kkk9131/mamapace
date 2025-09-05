@@ -16,6 +16,8 @@ import React, {
   useCallback,
   useState,
 } from 'react';
+import Constants from 'expo-constants';
+
 import {
   PublicUserProfile,
   AuthContext as AuthContextType,
@@ -36,7 +38,6 @@ import {
   registerDeviceForPush,
   unregisterDeviceForPush,
 } from '../services/pushNotificationService';
-import Constants from 'expo-constants';
 
 // =====================================================
 // CONTEXT STATE TYPES
@@ -247,7 +248,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           await registerDeviceForPush(user.id);
         } catch (e) {
-          secureLogger.warn('Push registration failed on session restore', { error: String(e) });
+          secureLogger.warn('Push registration failed on session restore', {
+            error: String(e),
+          });
         }
       } else {
         dispatch({ type: 'SET_USER', payload: null });
@@ -273,30 +276,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Check session every 5 minutes
-    const interval = setInterval(
-      async () => {
-        try {
-          const needsRefresh = await authService.needsRefresh();
+    const interval = setInterval(async () => {
+      try {
+        const needsRefresh = await authService.needsRefresh();
 
-          if (needsRefresh) {
-            secureLogger.info(
-              'AuthContext: Session needs refresh, attempting refresh'
+        if (needsRefresh) {
+          secureLogger.info(
+            'AuthContext: Session needs refresh, attempting refresh'
+          );
+          const success = await refreshToken();
+
+          if (!success) {
+            secureLogger.warn(
+              'AuthContext: Session refresh failed, logging out'
             );
-            const success = await refreshToken();
-
-            if (!success) {
-              secureLogger.warn(
-                'AuthContext: Session refresh failed, logging out'
-              );
-              await logout();
-            }
+            await logout();
           }
-        } catch (error) {
-          secureLogger.error('AuthContext: Session check failed', { error });
         }
-      },
-      SESSION_CHECK_INTERVAL_MS
-    );
+      } catch (error) {
+        secureLogger.error('AuthContext: Session check failed', { error });
+      }
+    }, SESSION_CHECK_INTERVAL_MS);
 
     setSessionCheckInterval(interval);
   }, [sessionCheckInterval]);
@@ -476,7 +476,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             await registerDeviceForPush(response.user.id);
           } catch (e) {
-            secureLogger.warn('Push registration failed on login', { error: String(e) });
+            secureLogger.warn('Push registration failed on login', {
+              error: String(e),
+            });
           }
         } else {
           const errorResponse = response as AuthErrorResponse;
@@ -557,7 +559,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!keepToken && state.user) {
           await unregisterDeviceForPush(state.user.id);
         } else if (keepToken) {
-          secureLogger.info('Skipping push token unregister on logout (dev mode)');
+          secureLogger.info(
+            'Skipping push token unregister on logout (dev mode)',
+          );
         }
       } catch (e) {
         secureLogger.warn('Supabase signOut failed', { error: String(e) });
@@ -844,7 +848,9 @@ export function useServiceHealth() {
   const [isLoading, setIsLoading] = useState(false);
 
   const checkHealth = useCallback(async () => {
-    if (!isInitialized) return;
+    if (!isInitialized) {
+      return;
+    }
 
     setIsLoading(true);
     try {

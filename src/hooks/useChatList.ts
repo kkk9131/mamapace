@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+
 import { chatService } from '../services/chatService';
 import { secureLogger } from '../utils/privacyProtection';
 import {
@@ -291,7 +292,6 @@ export function useChatList(filters: ChatListFilters = {}) {
         setError(`チャット一覧の読み込みエラー: ${error}`);
       }
       // Remove functions from dependencies to prevent infinite loop
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [isAuthenticated, user, state.chats, state.nextCursor]
   );

@@ -4,6 +4,7 @@
  */
 
 import { jest } from '@jest/globals';
+
 import { ChatConstraints, ChatErrorCode, MessageType } from '../../types/chat';
 
 describe('ChatService - Core Functionality Tests', () => {

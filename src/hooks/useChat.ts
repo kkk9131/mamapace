@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+
 import { chatService } from '../services/chatService';
 import { secureLogger } from '../utils/privacyProtection';
 import {
@@ -71,11 +72,14 @@ const HOOK_CONFIG = {
 // =====================================================
 
 // 軽量なメモリキャッシュ（画面遷移時の一時消失防止）
-const chatStateCache = new Map<string, {
-  messages: MessageWithSender[];
-  chat: ChatWithParticipants | null;
-  nextCursor?: string;
-}>();
+const chatStateCache = new Map<
+  string,
+  {
+    messages: MessageWithSender[];
+    chat: ChatWithParticipants | null;
+    nextCursor?: string;
+  }
+>();
 
 export function useChat(chatId: string) {
   const { user, isAuthenticated } = useAuth();
@@ -248,7 +252,7 @@ export function useChat(chatId: string) {
                   m.sender_id === messageEvent.data.sender_id
               );
 
-              let newMessages = [...prev.messages];
+              const newMessages = [...prev.messages];
               if (optimisticIndex >= 0) {
                 newMessages.splice(optimisticIndex, 1);
               }
@@ -480,7 +484,11 @@ export function useChat(chatId: string) {
 
       if (!content.trim()) {
         // allow empty content if metadata (e.g., attachments) exists
-        if (!metadata || !('attachments' in metadata) || !(metadata as any).attachments?.length) {
+        if (
+          !metadata ||
+          !('attachments' in metadata) ||
+          !(metadata as any).attachments?.length
+        ) {
           setError('メッセージを入力してください。');
           return;
         }

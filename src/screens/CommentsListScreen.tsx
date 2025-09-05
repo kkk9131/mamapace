@@ -9,9 +9,10 @@ import {
   Modal,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useEffect, useRef, useState } from 'react';
+
 import { SkeletonLine } from '../components/Skeleton';
 import { useTheme } from '../theme/theme';
-import { useEffect, useRef, useState } from 'react';
 import { Comment } from '../types/post';
 import {
   createComment,
@@ -47,7 +48,9 @@ export default function CommentsListScreen({
     }).start();
   }, [fade]);
   const [items, setItems] = useState<Comment[]>([]);
-  const [viewer, setViewer] = useState<{ visible: boolean; url?: string }>({ visible: false });
+  const [viewer, setViewer] = useState<{ visible: boolean; url?: string }>({
+    visible: false,
+  });
   const { user } = useAuth();
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,7 +58,9 @@ export default function CommentsListScreen({
   const endReached = useRef(false);
 
   const load = async (opts?: { refresh?: boolean }) => {
-    if (loading) return;
+    if (loading) {
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetchComments(postId, {
@@ -73,7 +78,9 @@ export default function CommentsListScreen({
   }, [postId, refreshKey]);
 
   const onEndReached = () => {
-    if (endReached.current || loading || !cursor) return;
+    if (endReached.current || loading || !cursor) {
+      return;
+    }
     endReached.current = true;
     load().finally(() => {
       endReached.current = false;
@@ -104,7 +111,9 @@ export default function CommentsListScreen({
             },
             (payload: any) => {
               const pid = payload?.new?.post_id ?? payload?.old?.post_id;
-              if (pid !== postId) return;
+              if (pid !== postId) {
+                return;
+              }
               // refetch list to include joined user fields consistently
               load({ refresh: true });
             }
@@ -191,13 +200,20 @@ export default function CommentsListScreen({
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`${item.user?.display_name || item.user?.username || '匿名'}のプロフィールを開く`}
-                  onPress={() => { onOpenUser && onOpenUser(item.user_id); }}
+                  onPress={() => {
+                    onOpenUser && onOpenUser(item.user_id);
+                  }}
                   style={{ flexDirection: 'row', alignItems: 'center' }}
                 >
                   {item.user?.avatar_url ? (
                     <Image
                       source={{ uri: item.user.avatar_url }}
-                      style={{ width: 20, height: 20, borderRadius: 10, marginRight: 6 }}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
+                        marginRight: 6,
+                      }}
                     />
                   ) : (
                     <Text style={{ fontSize: 14, marginRight: 6 }}>
@@ -205,8 +221,8 @@ export default function CommentsListScreen({
                     </Text>
                   )}
                   <Text style={{ color: colors.subtext, fontSize: 12 }}>
-                    {item.user?.display_name || item.user?.username || '匿名'} ・{' '}
-                    {new Date(item.created_at).toLocaleString()}
+                    {item.user?.display_name || item.user?.username || '匿名'}{' '}
+                    ・ {new Date(item.created_at).toLocaleString()}
                   </Text>
                 </Pressable>
                 {item.user_id === user?.id && (
@@ -245,17 +261,37 @@ export default function CommentsListScreen({
                 />
               )}
               {/* Attachments */}
-              {Array.isArray(item.attachments) && item.attachments.length > 0 && (
-                <View style={{ marginTop: 8 }}>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {item.attachments.slice(0, 4).map((att: any, idx: number) => (
-                      <Pressable key={idx} onPress={() => setViewer({ visible: true, url: att.url })} style={{ width: '23%', aspectRatio: 1, borderRadius: 8, overflow: 'hidden', backgroundColor: '#ffffff12' }}>
-                        <Image source={{ uri: att.url }} style={{ width: '100%', height: '100%' }} />
-                      </Pressable>
-                    ))}
+              {Array.isArray(item.attachments) &&
+                item.attachments.length > 0 && (
+                  <View style={{ marginTop: 8 }}>
+                    <View
+                      style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
+                    >
+                      {item.attachments
+                        .slice(0, 4)
+                        .map((att: any, idx: number) => (
+                          <Pressable
+                            key={idx}
+                            onPress={() =>
+                              setViewer({ visible: true, url: att.url })
+                            }
+                            style={{
+                              width: '23%',
+                              aspectRatio: 1,
+                              borderRadius: 8,
+                              overflow: 'hidden',
+                              backgroundColor: '#ffffff12',
+                            }}
+                          >
+                            <Image
+                              source={{ uri: att.url }}
+                              style={{ width: '100%', height: '100%' }}
+                            />
+                          </Pressable>
+                        ))}
+                    </View>
                   </View>
-                </View>
-              )}
+                )}
             </BlurView>
           </View>
         )}
@@ -341,10 +377,26 @@ export default function CommentsListScreen({
         </Pressable>
       )}
       {/* Viewer */}
-      <Modal visible={viewer.visible} transparent animationType="fade" onRequestClose={() => setViewer({ visible: false })}>
-        <Pressable style={{ flex: 1, backgroundColor: '#000000CC', alignItems: 'center', justifyContent: 'center' }} onPress={() => setViewer({ visible: false })}>
+      <Modal
+        visible={viewer.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewer({ visible: false })}
+      >
+        <Pressable
+          style={{
+            flex: 1,
+            backgroundColor: '#000000CC',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onPress={() => setViewer({ visible: false })}
+        >
           {viewer.url ? (
-            <Image source={{ uri: viewer.url }} style={{ width: '90%', height: '70%', resizeMode: 'contain' }} />
+            <Image
+              source={{ uri: viewer.url }}
+              style={{ width: '90%', height: '70%', resizeMode: 'contain' }}
+            />
           ) : null}
         </Pressable>
       </Modal>

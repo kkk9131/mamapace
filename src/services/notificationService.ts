@@ -1,5 +1,6 @@
-import { getSupabaseClient } from './supabaseClient';
 import { secureLogger } from '../utils/privacyProtection';
+
+import { getSupabaseClient } from './supabaseClient';
 
 export type NotificationItem = {
   id: string;
@@ -10,10 +11,7 @@ export type NotificationItem = {
 };
 
 export const notificationService = {
-  async list(
-    userId: string,
-    opts?: { limit?: number; cursor?: string }
-  ) {
+  async list(userId: string, opts?: { limit?: number; cursor?: string }) {
     try {
       const client = getSupabaseClient();
       let q = client
@@ -29,7 +27,9 @@ export const notificationService = {
       q = q.limit(limit);
 
       const { data, error } = await q;
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       const items: NotificationItem[] = (data ?? []).map(n => ({
         id: n.id,
         type: n.type,
@@ -37,10 +37,13 @@ export const notificationService = {
         created_at: n.created_at,
         read: Boolean(n.read_at),
       }));
-      const nextCursor = items.length > 0 ? items[items.length - 1].created_at : null;
+      const nextCursor =
+        items.length > 0 ? items[items.length - 1].created_at : null;
       return { data: items, nextCursor } as const;
     } catch (e) {
-      secureLogger.error('notificationService.list failed', { error: String(e) });
+      secureLogger.error('notificationService.list failed', {
+        error: String(e),
+      });
       return { data: [] as NotificationItem[], error: 'list_failed' as const };
     }
   },
@@ -53,10 +56,14 @@ export const notificationService = {
         .update({ read_at: new Date().toISOString() })
         .eq('id', id)
         .eq('user_id', userId);
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return { ok: true };
     } catch (e) {
-      secureLogger.error('notificationService.markRead failed', { error: String(e) });
+      secureLogger.error('notificationService.markRead failed', {
+        error: String(e),
+      });
       return { ok: false };
     }
   },
@@ -69,10 +76,14 @@ export const notificationService = {
         .delete()
         .eq('id', id)
         .eq('user_id', userId);
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return { ok: true };
     } catch (e) {
-      secureLogger.error('notificationService.remove failed', { error: String(e) });
+      secureLogger.error('notificationService.remove failed', {
+        error: String(e),
+      });
       return { ok: false };
     }
   },

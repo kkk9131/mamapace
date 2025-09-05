@@ -9,11 +9,6 @@
  * 5. Handle errors without exposing system details
  */
 
-import { supabaseClient, initializeSupabase } from './supabaseClient';
-import { sessionManager, initializeSessionManager } from './sessionManager';
-import secureSessionStore from './secureSessionStore';
-import { encryptionService, initializeEncryption } from './encryptionService';
-import { validationService } from './validationService';
 import { secureLogger } from '../utils/privacyProtection';
 import {
   AuthResponse,
@@ -33,6 +28,12 @@ import {
   SecurityActionType,
 } from '../types/auth';
 import { appConfig } from '../config/appConfig';
+
+import { supabaseClient, initializeSupabase } from './supabaseClient';
+import { sessionManager, initializeSessionManager } from './sessionManager';
+import secureSessionStore from './secureSessionStore';
+import { encryptionService, initializeEncryption } from './encryptionService';
+import { validationService } from './validationService';
 
 // =====================================================
 // CONFIGURATION
@@ -455,7 +456,9 @@ class AuthService {
 
     try {
       const sessionData = await sessionManager.restoreSession();
-      if (!sessionData) return null;
+      if (!sessionData) {
+        return null;
+      }
 
       const isValid = await sessionManager.isSessionValid();
       if (!isValid) {
@@ -699,7 +702,9 @@ class AuthService {
     }
 
     if (appConfig.useServerHashing) {
-      if (!this.phase1Session?.expiresAt) return false;
+      if (!this.phase1Session?.expiresAt) {
+        return false;
+      }
       const now = Date.now();
       const exp = new Date(this.phase1Session.expiresAt).getTime();
       return exp - now < 60 * 60 * 1000; // less than 60 minutes

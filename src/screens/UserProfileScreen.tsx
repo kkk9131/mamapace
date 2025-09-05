@@ -9,6 +9,8 @@ import {
   Alert,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
+
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
@@ -25,7 +27,6 @@ import { PublicUserProfile } from '../types/auth';
 import { fetchHomeFeed } from '../services/postService';
 import { secureLogger } from '../utils/privacyProtection';
 import { chatService } from '../services/chatService';
-import { Ionicons } from '@expo/vector-icons';
 
 interface UserProfileScreenProps {
   userId: string;
@@ -217,9 +218,7 @@ export default function UserProfileScreen({
             fontSize: 18,
             fontWeight: '800',
           }}
-        >
-
-        </Text>
+        />
         {onBack && (
           <Pressable
             onPress={onBack}
@@ -234,7 +233,9 @@ export default function UserProfileScreen({
             ]}
           >
             <Ionicons
-              name={handPreference === 'left' ? 'chevron-back' : 'chevron-forward'}
+              name={
+                handPreference === 'left' ? 'chevron-back' : 'chevron-forward'
+              }
               size={20}
               color={colors.text}
             />
@@ -264,9 +265,7 @@ export default function UserProfileScreen({
               backgroundColor: '#ffffff10',
             }}
           >
-            <View
-              style={{ flexDirection: 'row', alignItems: 'center' }}
-            >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View
                 style={{
                   width: 48,

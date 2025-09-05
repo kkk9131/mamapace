@@ -358,7 +358,7 @@ export function checkRateLimit(
 
     let reason = 'レート制限に達しました。';
     if (backoffMultiplier > 1) {
-      reason += ` 連続違反のため待機時間が延長されました。`;
+      reason += ' 連続違反のため待機時間が延長されました。';
     }
 
     return {
@@ -403,7 +403,7 @@ export function moderateContent(
   const validation = validateMessageContent(content, messageType, senderId);
   const reasons: string[] = [...validation.warnings];
   let action: 'allow' | 'flag' | 'block' = 'allow';
-  let confidence = 1 - validation.securityScore;
+  const confidence = 1 - validation.securityScore;
 
   // Auto-block high-risk content
   if (validation.securityScore >= SECURITY_CONFIG.AUTO_MODERATE_SCORE) {

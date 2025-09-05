@@ -5,16 +5,17 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { useTheme } from '../theme/theme';
 import { useChatList } from '../hooks/useChatList';
 import { useAuth } from '../contexts/AuthContext';
 import { ChatWithParticipants } from '../types/chat';
 import { getSupabaseClient } from '../services/supabaseClient';
-import { Image } from 'react-native';
 import { chatService } from '../services/chatService';
 
 interface ChatsListScreenProps {
@@ -130,7 +131,7 @@ export default function ChatsListScreen({
             (chats || [])
               .map(c => c.participants?.find(p => p.id !== user?.id)?.id)
               .filter(Boolean) as string[]
-          )
+          ),
         );
         if (ids.length) {
           const { data: profiles } = await getSupabaseClient()

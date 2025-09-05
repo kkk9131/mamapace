@@ -17,8 +17,9 @@ import {
   Alert,
   Animated,
 } from 'react-native';
-import { useTheme } from '../theme/theme';
 import { BlurView } from 'expo-blur';
+
+import { useTheme } from '../theme/theme';
 import { useSpaceOperations, useSpacePermissions } from '../hooks/useRooms';
 import { CreateSpaceRequest, RoomConstraints } from '../types/room';
 

@@ -12,17 +12,20 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
+import { useEffect, useRef, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
+
 import { useTheme } from '../theme/theme';
 import { notifyError } from '../utils/notify';
-
-import { useEffect, useRef, useState } from 'react';
 import { createPost } from '../services/postService';
 import { triggerCompassionateAiComment } from '../services/aiCommentService';
-import * as ImagePicker from 'expo-image-picker';
-import { imagesOnlyMediaTypes, imageOnlyMediaTypeSingle } from '../utils/imagePickerCompat';
+import {
+  imagesOnlyMediaTypes,
+  imageOnlyMediaTypeSingle,
+} from '../utils/imagePickerCompat';
 import { uploadPostImages } from '../services/storageService';
 import { useAuth } from '../contexts/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function ComposeScreen({
   onClose,
@@ -100,12 +103,19 @@ export default function ComposeScreen({
               style={{ padding: 12, backgroundColor: '#ffffff10' }}
             >
               {/* 添付ツールバー */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginBottom: 8,
+                }}
+              >
                 <Pressable
                   disabled={images.length >= 4}
                   onPress={async () => {
                     try {
-                      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                      const perm =
+                        await ImagePicker.requestMediaLibraryPermissionsAsync();
                       if (!perm.granted) {
                         notifyError('写真ライブラリへのアクセスが必要です');
                         return;
@@ -116,8 +126,11 @@ export default function ComposeScreen({
                         selectionLimit: 4,
                         quality: 1,
                       });
-                      if (res.canceled) return;
-                      const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
+                      if (res.canceled) {
+                        return;
+                      }
+                      const picked =
+                        res.assets?.map(a => ({ uri: a.uri })) || [];
                       setImages(prev => {
                         const combined = [...prev, ...picked];
                         return combined.slice(0, 4);
@@ -133,21 +146,33 @@ export default function ComposeScreen({
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginRight: 8,
-                    backgroundColor: images.length >= 4 ? '#ffffff08' : pressed ? '#ffffff20' : '#ffffff14',
+                    backgroundColor:
+                      images.length >= 4
+                        ? '#ffffff08'
+                        : pressed
+                          ? '#ffffff20'
+                          : '#ffffff14',
                     borderWidth: 1,
                     borderColor: '#ffffff22',
-                    transform: [{ scale: pressed && images.length < 4 ? 0.96 : 1 }],
+                    transform: [
+                      { scale: pressed && images.length < 4 ? 0.96 : 1 },
+                    ],
                     opacity: images.length >= 4 ? 0.6 : 1,
                   })}
                 >
-                  <Ionicons name="images-outline" size={18} color={colors.text} />
+                  <Ionicons
+                    name="images-outline"
+                    size={18}
+                    color={colors.text}
+                  />
                 </Pressable>
                 {/* カメラボタン */}
                 <Pressable
                   disabled={images.length >= 4}
                   onPress={async () => {
                     try {
-                      const perm = await ImagePicker.requestCameraPermissionsAsync();
+                      const perm =
+                        await ImagePicker.requestCameraPermissionsAsync();
                       if (!perm.granted) {
                         notifyError('カメラへのアクセスが必要です');
                         return;
@@ -156,8 +181,11 @@ export default function ComposeScreen({
                         mediaTypes: imageOnlyMediaTypeSingle(),
                         quality: 1,
                       });
-                      if (res.canceled) return;
-                      const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
+                      if (res.canceled) {
+                        return;
+                      }
+                      const picked =
+                        res.assets?.map(a => ({ uri: a.uri })) || [];
                       setImages(prev => {
                         const combined = [...prev, ...picked];
                         return combined.slice(0, 4);
@@ -173,23 +201,36 @@ export default function ComposeScreen({
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginRight: 8,
-                    backgroundColor: images.length >= 4 ? '#ffffff08' : pressed ? '#ffffff20' : '#ffffff14',
+                    backgroundColor:
+                      images.length >= 4
+                        ? '#ffffff08'
+                        : pressed
+                          ? '#ffffff20'
+                          : '#ffffff14',
                     borderWidth: 1,
                     borderColor: '#ffffff22',
-                    transform: [{ scale: pressed && images.length < 4 ? 0.96 : 1 }],
+                    transform: [
+                      { scale: pressed && images.length < 4 ? 0.96 : 1 },
+                    ],
                     opacity: images.length >= 4 ? 0.6 : 1,
                   })}
                 >
-                  <Ionicons name="camera-outline" size={18} color={colors.text} />
+                  <Ionicons
+                    name="camera-outline"
+                    size={18}
+                    color={colors.text}
+                  />
                 </Pressable>
-                <View style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  borderRadius: 999,
-                  backgroundColor: '#ffffff10',
-                  borderWidth: 1,
-                  borderColor: '#ffffff18',
-                }}>
+                <View
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 999,
+                    backgroundColor: '#ffffff10',
+                    borderWidth: 1,
+                    borderColor: '#ffffff18',
+                  }}
+                >
                   <Text style={{ color: colors.subtext, fontSize: 11 }}>
                     {images.length}/4
                   </Text>
@@ -243,19 +284,41 @@ export default function ComposeScreen({
               {/* サムネイルプレビュー */}
               {images.length > 0 && (
                 <View style={{ marginTop: 12, gap: 8 }}>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  <View
+                    style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
+                  >
                     {images.map((img, idx) => (
-                      <View key={idx} style={{ width: '23%', aspectRatio: 1, borderRadius: 8, overflow: 'hidden', backgroundColor: '#ffffff12' }}>
+                      <View
+                        key={idx}
+                        style={{
+                          width: '23%',
+                          aspectRatio: 1,
+                          borderRadius: 8,
+                          overflow: 'hidden',
+                          backgroundColor: '#ffffff12',
+                        }}
+                      >
                         <Pressable
-                          onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))}
-                          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+                          onPress={() =>
+                            setImages(prev => prev.filter((_, i) => i !== idx))
+                          }
+                          style={{
+                            flex: 1,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
                         >
-                          <Image source={{ uri: img.uri }} style={{ width: '100%', height: '100%' }} />
+                          <Image
+                            source={{ uri: img.uri }}
+                            style={{ width: '100%', height: '100%' }}
+                          />
                         </Pressable>
                       </View>
                     ))}
                   </View>
-                  <Text style={{ color: colors.subtext, fontSize: 11 }}>タップで削除</Text>
+                  <Text style={{ color: colors.subtext, fontSize: 11 }}>
+                    タップで削除
+                  </Text>
                 </View>
               )}
               <View style={{ alignItems: 'flex-end', marginTop: 4 }}>
@@ -269,23 +332,42 @@ export default function ComposeScreen({
           <Pressable
             disabled={submitting}
             onPress={async () => {
-              if (!body.trim() && images.length === 0) return;
+              if (!body.trim() && images.length === 0) {
+                return;
+              }
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               setSubmitting(true);
               try {
-                if (!user?.id) throw new Error('ログインが必要です');
-                let attachments: { url: string; width?: number; height?: number; mime?: string }[] = [];
+                if (!user?.id) {
+                  throw new Error('ログインが必要です');
+                }
+                let attachments: {
+                  url: string;
+                  width?: number;
+                  height?: number;
+                  mime?: string;
+                }[] = [];
                 if (images.length > 0) {
-                  attachments = await uploadPostImages(user.id, images.map(i => i.uri));
+                  attachments = await uploadPostImages(
+                    user.id,
+                    images.map(i => i.uri),
+                  );
                 }
                 const created = await createPost(body.trim(), attachments);
                 if (aiOn && created?.id) {
                   // Fire-and-forget; do not block UX
-                  const bodyForAi = (created as any)?.body || body.trim() || '[image]';
-                  triggerCompassionateAiComment({ postId: created.id, body: bodyForAi }).catch(() => {});
+                  const bodyForAi =
+                    (created as any)?.body || body.trim() || '[image]';
+                  triggerCompassionateAiComment({
+                    postId: created.id,
+                    body: bodyForAi,
+                  }).catch(() => {});
                 }
-                if (onPosted) onPosted();
-                else onClose && onClose();
+                if (onPosted) {
+                  onPosted();
+                } else {
+                  onClose && onClose();
+                }
               } catch (e: any) {
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Error

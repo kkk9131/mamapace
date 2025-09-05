@@ -11,6 +11,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, Animated } from 'react-native';
+
 import { useTheme } from '../theme/theme';
 import { ValidationConstraints } from '../types/auth';
 import { secureLogger } from '../utils/privacyProtection';
