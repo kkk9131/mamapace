@@ -92,9 +92,9 @@ export default function AnonRoomV2Screen({
           filter: `anonymous_room_id=eq.${slotId}`,
         },
         payload => {
-          const row = payload.new as any;
+          const row = payload.new as Record<string, unknown>;
           const msg = {
-            id: String(row.id),
+            id: String(row.id ?? ''),
             content: String(row.content ?? ''),
             display_name: String(row.display_name ?? ''),
             created_at: String(row.created_at ?? ''),

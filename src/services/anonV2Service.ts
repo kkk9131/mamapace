@@ -16,13 +16,16 @@ export async function fetchLiveMessages(): Promise<AnonV2Message[]> {
     .select('id, content, display_name, created_at, expires_at')
     .order('created_at', { ascending: true });
   if (!error && Array.isArray(data)) {
-    return (data || []).map(row => ({
-      id: String((row as any).id),
-      content: String((row as any).content ?? ''),
-      display_name: String((row as any).display_name ?? ''),
-      created_at: String((row as any).created_at ?? ''),
-      expires_at: (row as any).expires_at ? String((row as any).expires_at) : undefined,
-    }));
+    return (data || []).map(row => {
+      const r = row as Record<string, unknown>;
+      return {
+        id: String(r.id ?? ''),
+        content: String(r.content ?? ''),
+        display_name: String(r.display_name ?? ''),
+        created_at: String(r.created_at ?? ''),
+        expires_at: r.expires_at ? String(r.expires_at) : undefined,
+      };
+    });
   }
 
   // 2) Fallback to existing RPCs (pre-V2)
@@ -31,10 +34,11 @@ export async function fetchLiveMessages(): Promise<AnonV2Message[]> {
     const { data: roomInfo, error: e1 } = await client.rpc(
       'get_or_create_current_anon_room'
     );
-    if (e1 || !roomInfo || (roomInfo as any).error) {
+    if (e1 || !roomInfo || (roomInfo as Record<string, unknown>).error) {
       return [];
     }
-    const slotId = (roomInfo as any).room_id as string;
+    const rinfo = roomInfo as Record<string, unknown>;
+    const slotId = String(rinfo.room_id ?? '');
     const { data: rows, error: err2 } = await client.rpc(
       'get_anonymous_messages',
       {
@@ -45,13 +49,16 @@ export async function fetchLiveMessages(): Promise<AnonV2Message[]> {
     if (err2 || !Array.isArray(rows)) {
       return [];
     }
-    return (rows as any[]).map(r => ({
-      id: String(r.id),
-      content: String(r.content ?? ''),
-      display_name: String(r.display_name ?? ''),
-      created_at: String(r.created_at ?? ''),
-      expires_at: r.expires_at ? String(r.expires_at) : undefined,
-    }));
+    return (rows as any[]).map(row => {
+      const rr = row as Record<string, unknown>;
+      return {
+        id: String(rr.id ?? ''),
+        content: String(rr.content ?? ''),
+        display_name: String(rr.display_name ?? ''),
+        created_at: String(rr.created_at ?? ''),
+        expires_at: rr.expires_at ? String(rr.expires_at) : undefined,
+      };
+    });
   } catch {
     return [];
   }
@@ -61,8 +68,10 @@ export async function fetchLiveMessages(): Promise<AnonV2Message[]> {
 export async function getCurrentAnonSlotId(): Promise<string | null> {
   const client = getSupabaseClient();
   const { data, error } = await client.rpc('get_or_create_current_anon_room');
-  if (error || !data || (data as any).error) return null;
-  return (data as any).room_id as string;
+  if (error || !data) return null;
+  const d = data as Record<string, unknown>;
+  if (d.error) return null;
+  return String(d.room_id ?? '');
 }
 
 export type SendAnonResult =
@@ -162,10 +171,13 @@ export async function toggleAnonReaction(
   if (error || !data) {
     return null;
   }
-  return {
-    reacted: !!(data as any).reacted,
-    count: Number((data as any).count || 0),
-  };
+  {
+    const d = data as Record<string, unknown>;
+    return {
+      reacted: Boolean(d.reacted),
+      count: Number(d.count ?? 0),
+    };
+  }
 }
 
 export interface AnonMessageMeta {
@@ -182,11 +194,14 @@ export async function getAnonMessageMeta(messageId: string): Promise<AnonMessage
   if (error || !data) {
     return null;
   }
-  return {
-    reaction_count: Number((data as any).reaction_count || 0),
-    comment_count: Number((data as any).comment_count || 0),
-    reacted: !!(data as any).reacted,
-  };
+  {
+    const d = data as Record<string, unknown>;
+    return {
+      reaction_count: Number(d.reaction_count ?? 0),
+      comment_count: Number(d.comment_count ?? 0),
+      reacted: Boolean(d.reacted),
+    };
+  }
 }
 
 // Comments API
@@ -210,13 +225,16 @@ export async function addAnonComment(
   if (error || !data) {
     return null;
   }
-  return {
-    id: String((data as any).id),
-    message_id: String((data as any).message_id),
-    display_name: String((data as any).display_name ?? ''),
-    content: String((data as any).content ?? ''),
-    created_at: String((data as any).created_at ?? ''),
-  } as AnonComment;
+  {
+    const d = data as Record<string, unknown>;
+    return {
+      id: String(d.id ?? ''),
+      message_id: String(d.message_id ?? ''),
+      display_name: String(d.display_name ?? ''),
+      content: String(d.content ?? ''),
+      created_at: String(d.created_at ?? ''),
+    };
+  }
 }
 
 export async function getAnonComments(
@@ -231,11 +249,14 @@ export async function getAnonComments(
   if (error || !data) {
     return [];
   }
-  return (data as any[]).map(row => ({
-    id: String(row.id),
-    message_id: String(row.message_id),
-    display_name: String(row.display_name ?? ''),
-    content: String(row.content ?? ''),
-    created_at: String(row.created_at ?? ''),
-  }));
+  return (data as any[]).map(row => {
+    const r = row as Record<string, unknown>;
+    return {
+      id: String(r.id ?? ''),
+      message_id: String(r.message_id ?? ''),
+      display_name: String(r.display_name ?? ''),
+      content: String(r.content ?? ''),
+      created_at: String(r.created_at ?? ''),
+    };
+  });
 }
