@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { useTheme } from '../theme/theme';
+import { useAuthReady } from '../contexts/AuthContext';
 import BubbleField from '../ui/anonymousRoomV2/BubbleField';
 import { fetchLiveMessages, sendAnonMessage, getCurrentAnonSlotId } from '../services/anonV2Service';
 import { getSupabaseClient } from '../services/supabaseClient';
@@ -28,6 +29,7 @@ export default function AnonRoomV2Screen({
   onCompose?: () => void;
   onBack?: () => void;
 }) {
+  const servicesReady = useAuthReady();
   const { colors, spacing, shadow } = useTheme();
   const insets = useSafeAreaInsets();
   const fade = useRef(new Animated.Value(0)).current;
@@ -49,6 +51,7 @@ export default function AnonRoomV2Screen({
   const [slotId, setSlotId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!servicesReady) return; // Wait until Supabase and services are ready
     let mounted = true;
     const load = async () => {
       const rows = await fetchLiveMessages();
@@ -72,7 +75,7 @@ export default function AnonRoomV2Screen({
       mounted = false;
       clearInterval(t);
     };
-  }, []);
+  }, [servicesReady]);
 
   // Secure realtime subscription scoped to current slot id
   useEffect(() => {
@@ -148,6 +151,14 @@ export default function AnonRoomV2Screen({
       }),
     ]).start();
   };
+  if (!servicesReady) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: colors.subtext }}>読み込み中…</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <View
