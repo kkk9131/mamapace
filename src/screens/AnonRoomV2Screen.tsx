@@ -87,7 +87,7 @@ export default function AnonRoomV2Screen({
           event: 'INSERT',
           schema: 'public',
           table: 'room_messages',
-          filter: 'anonymous_room_id=is.not.null',
+          filter: 'anonymous_room_id=not.is.null',
         },
         payload => {
           const row: any = payload.new;
