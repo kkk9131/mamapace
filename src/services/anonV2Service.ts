@@ -1,14 +1,12 @@
 import { getSupabaseClient } from './supabaseClient';
 
-export type AnonV2Message = {
+export interface AnonV2Message {
   id: string;
   content: string;
   display_name: string;
   created_at: string;
   expires_at?: string;
-};
-
-export type AnonLiveResult = { slotId: string; messages: AnonV2Message[] };
+}
 
 export async function fetchLiveMessages(): Promise<AnonV2Message[]> {
   const client = getSupabaseClient();
@@ -18,7 +16,13 @@ export async function fetchLiveMessages(): Promise<AnonV2Message[]> {
     .select('id, content, display_name, created_at, expires_at')
     .order('created_at', { ascending: true });
   if (!error && Array.isArray(data)) {
-    return (data || []) as AnonV2Message[];
+    return (data || []).map(row => ({
+      id: String((row as any).id),
+      content: String((row as any).content ?? ''),
+      display_name: String((row as any).display_name ?? ''),
+      created_at: String((row as any).created_at ?? ''),
+      expires_at: (row as any).expires_at ? String((row as any).expires_at) : undefined,
+    }));
   }
 
   // 2) Fallback to existing RPCs (pre-V2)
@@ -42,11 +46,11 @@ export async function fetchLiveMessages(): Promise<AnonV2Message[]> {
       return [];
     }
     return (rows as any[]).map(r => ({
-      id: r.id,
-      content: r.content,
-      display_name: r.display_name,
-      created_at: r.created_at,
-      expires_at: r.expires_at,
+      id: String(r.id),
+      content: String(r.content ?? ''),
+      display_name: String(r.display_name ?? ''),
+      created_at: String(r.created_at ?? ''),
+      expires_at: r.expires_at ? String(r.expires_at) : undefined,
     }));
   } catch {
     return [];

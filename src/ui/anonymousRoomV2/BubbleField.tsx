@@ -11,6 +11,7 @@ import {
   GestureResponderEvent,
   PanResponderGestureState,
   TextInput,
+  InteractionManager,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -462,11 +463,15 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
       raf = requestAnimationFrame(step);
     };
 
-    raf = requestAnimationFrame(step);
+    const handle = InteractionManager.runAfterInteractions(() => {
+      raf = requestAnimationFrame(step);
+    });
     return () => {
       if (raf) {
         cancelAnimationFrame(raf);
       }
+      // @ts-ignore - RN types may not expose cancel
+      handle?.done?.();
     };
   }, [bubbles, reduceMotion, width, contentHeight]);
 
@@ -544,6 +549,25 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
     () => [0].map(v => new Animated.Value(v)),
     [contentHeight]
   );
+
+  // メモリクリーンアップ：表示から外れたメッセージの副次状態を間引く
+  useEffect(() => {
+    const visible = new Set(posts.map(p => p.id));
+    setCommentsMap(prev => {
+      const next: typeof prev = {} as any;
+      for (const [k, v] of Object.entries(prev)) {
+        if (visible.has(k)) next[k] = v as any;
+      }
+      return next;
+    });
+    setReactionState(prev => {
+      const next: typeof prev = {} as any;
+      for (const [k, v] of Object.entries(prev)) {
+        if (visible.has(k)) next[k] = v as any;
+      }
+      return next;
+    });
+  }, [posts]);
 
   return (
     <View style={{ flex: 1 }} {...panResponder.panHandlers}>

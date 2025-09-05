@@ -31,15 +31,13 @@ export default function AnonRoomV2Screen({
   const { colors, spacing, shadow } = useTheme();
   const insets = useSafeAreaInsets();
   const fade = useRef(new Animated.Value(0)).current;
-  const [liveMessages, setLiveMessages] = useState<
-    {
-      id: string;
-      content: string;
-      display_name: string;
-      created_at: string;
-      expires_at?: string;
-    }[]
-  >([]);
+  const [liveMessages, setLiveMessages] = useState<Array<{
+    id: string;
+    content: string;
+    display_name: string;
+    created_at: string;
+    expires_at?: string;
+  }>>([]);
   const [messageText, setMessageText] = useState('');
   const inputRef = useRef<TextInput>(null);
   const [inputFocused, setInputFocused] = useState(false);
@@ -56,7 +54,7 @@ export default function AnonRoomV2Screen({
       if (!mounted) {
         return;
       }
-      setLiveMessages(rows as any);
+      setLiveMessages(rows);
     };
     load();
     const t = setInterval(load, 15000);
@@ -89,6 +87,7 @@ export default function AnonRoomV2Screen({
           event: 'INSERT',
           schema: 'public',
           table: 'room_messages',
+          filter: 'anonymous_room_id=is.not.null',
         },
         payload => {
           const row: any = payload.new;
@@ -233,10 +232,10 @@ export default function AnonRoomV2Screen({
           );
         })()}
         <BubbleField
-          posts={(liveMessages || []).map((m: any) => ({
-            id: String(m.id),
-            title: String(m.content || '').slice(0, 18),
-            body: String(m.content || ''),
+          posts={(liveMessages || []).map(m => ({
+            id: m.id,
+            title: (m.content ?? '').slice(0, 18),
+            body: m.content ?? '',
             created_at: m.created_at,
             expires_at: m.expires_at,
           }))}
