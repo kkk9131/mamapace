@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import VerifiedBadge from '../components/VerifiedBadge';
 
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,6 +24,7 @@ import {
   unfollowUser,
   getUserProfile,
 } from '../services/profileService';
+import { getSupabaseClient } from '../services/supabaseClient';
 import { PublicUserProfile } from '../types/auth';
 import { fetchHomeFeed } from '../services/postService';
 import { secureLogger } from '../utils/privacyProtection';
@@ -64,7 +66,18 @@ export default function UserProfileScreen({
       // Try to load user profile data first
       try {
         const profile = await getUserProfile(userId);
-        setUserData(profile);
+        // Enrich with maternal_verified from public view (idempotent)
+        try {
+          const supabase = getSupabaseClient();
+          const { data: pub } = await supabase
+            .from('user_profiles_public')
+            .select('maternal_verified')
+            .eq('id', userId)
+            .maybeSingle();
+          setUserData({ ...(profile as any), maternal_verified: pub?.maternal_verified ?? false });
+        } catch {
+          setUserData(profile);
+        }
       } catch (profileError) {
         secureLogger.warn(
           'Failed to load profile via RPC, falling back to post data:',
@@ -76,7 +89,7 @@ export default function UserProfileScreen({
 
         if (userPosts.length > 0 && userPosts[0].user) {
           const userInfo = userPosts[0].user;
-          setUserData({
+          const enriched: any = {
             id: userId,
             username: userInfo.username,
             display_name: userInfo.display_name,
@@ -86,10 +99,20 @@ export default function UserProfileScreen({
             updated_at: '',
             profile_visibility: 'public',
             is_active: true,
-          } as PublicUserProfile);
+          } as PublicUserProfile;
+          try {
+            const supabase = getSupabaseClient();
+            const { data: pub } = await supabase
+              .from('user_profiles_public')
+              .select('maternal_verified')
+              .eq('id', userId)
+              .maybeSingle();
+            (enriched as any).maternal_verified = pub?.maternal_verified ?? false;
+          } catch {}
+          setUserData(enriched);
         } else {
           // Ultimate fallback
-          setUserData({
+          const enriched: any = {
             id: userId,
             username: 'user',
             display_name: 'ユーザー',
@@ -99,7 +122,17 @@ export default function UserProfileScreen({
             updated_at: '',
             profile_visibility: 'public',
             is_active: true,
-          } as PublicUserProfile);
+          } as PublicUserProfile;
+          try {
+            const supabase = getSupabaseClient();
+            const { data: pub } = await supabase
+              .from('user_profiles_public')
+              .select('maternal_verified')
+              .eq('id', userId)
+              .maybeSingle();
+            (enriched as any).maternal_verified = pub?.maternal_verified ?? false;
+          } catch {}
+          setUserData(enriched);
         }
       }
 
@@ -289,15 +322,18 @@ export default function UserProfileScreen({
                   </Text>
                 )}
               </View>
-              <Text
-                style={{
-                  color: colors.text,
-                  fontSize: 20,
-                  fontWeight: '800',
-                }}
-              >
-                {userData?.display_name || 'ユーザー'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 20,
+                    fontWeight: '800',
+                  }}
+                >
+                  {userData?.display_name || 'ユーザー'}
+                </Text>
+                {userData?.maternal_verified && <VerifiedBadge size={18} />}
+              </View>
             </View>
 
             {userData?.bio && userData.bio.trim() && (

@@ -98,6 +98,37 @@ export async function updateMyProfile(
   return data as PublicUserProfile;
 }
 
+// M1: Set maternal health ID (immediate verification in M1)
+export async function setMaternalId(id: string): Promise<boolean> {
+  const client = getSupabaseClient();
+  // Require authentication
+  const { data: auth } = await client.auth.getUser();
+  if (!auth?.user) {
+    throw new Error('この操作にはログインが必要です');
+  }
+  if (!id || id.trim().length === 0) {
+    throw new Error('母子手帳番号を入力してください');
+  }
+  // Basic client-side sanity (digits only, typical length 10)
+  const trimmed = id.replace(/\D/g, '');
+  if (trimmed.length < 6) {
+    throw new Error('母子手帳番号の形式が正しくありません');
+  }
+  const { data, error } = await client.rpc('set_maternal_id', { p_id: trimmed });
+  if (error) {
+    const raw = error.message || '';
+    secureLogger.error('Failed to set maternal ID:', error);
+    if (raw.includes('not authenticated') || raw.includes('permission denied')) {
+      throw new Error('この操作にはログインが必要です');
+    }
+    if (raw.includes('profile not found')) {
+      throw new Error('プロフィールが見つかりません。再ログイン後にお試しください');
+    }
+    throw new Error('認証に失敗しました。しばらくしてからお試しください');
+  }
+  return !!data;
+}
+
 /**
  * Update only avatar_url field for current user profile.
  * Tries RPC `update_my_avatar_url` first, falls back to direct table update.

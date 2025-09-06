@@ -8,6 +8,7 @@ import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { PostWithMeta } from '../types/post';
 
 import ExpandableText from './ExpandableText';
+import VerifiedBadge from './VerifiedBadge';
 
 export default function PostCard({
   post,
@@ -142,16 +143,19 @@ export default function PostCard({
               style={{ flex: 1 }}
               hitSlop={{ top: 8, bottom: 8, left: 0, right: 0 }}
             >
-              <Text
-                style={{
-                  color: colors.text,
-                  fontSize: 16,
-                  fontWeight: '600',
-                }}
-                numberOfLines={1}
-              >
-                {post.user?.display_name || post.user?.username || '匿名'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 16,
+                    fontWeight: '600',
+                  }}
+                  numberOfLines={1}
+                >
+                  {post.user?.display_name || post.user?.username || '匿名'}
+                </Text>
+                {post.user?.maternal_verified && <VerifiedBadge size={16} />}
+              </View>
             </Pressable>
           </View>
           <Text

@@ -27,6 +27,7 @@ import { chatService } from '../services/chatService';
 import { getSupabaseClient } from '../services/supabaseClient';
 
 import { Ionicons } from '@expo/vector-icons';
+import VerifiedBadge from '../components/VerifiedBadge';
 
 interface ChatScreenProps {
   chatId?: string;
@@ -86,6 +87,7 @@ export default function ChatScreen({
 
   // Header user info (chat partner)
   const [headerName, setHeaderName] = useState<string | null>(userName || null);
+  const [headerVerified, setHeaderVerified] = useState<boolean>(false);
   const [headerAvatarUrl, setHeaderAvatarUrl] = useState<string | null>(null);
   const [headerAvatarEmoji, setHeaderAvatarEmoji] = useState<string | null>(
     null
@@ -112,6 +114,14 @@ export default function ChatScreen({
             );
             setHeaderAvatarUrl(data.avatar_url || null);
             setHeaderAvatarEmoji(data.avatar_emoji || null);
+            try {
+              const { data: pub } = await client
+                .from('user_profiles_public')
+                .select('maternal_verified')
+                .eq('id', otherId)
+                .maybeSingle();
+              setHeaderVerified(!!pub?.maternal_verified);
+            } catch {}
           }
         } else if (userName && !cancelled) {
           setHeaderName(userName);
@@ -468,6 +478,11 @@ export default function ChatScreen({
                 >
                   {senderName}
                 </Text>
+                {item.sender?.maternal_verified && (
+                  <View style={{ marginLeft: 4 }}>
+                    <VerifiedBadge size={12} />
+                  </View>
+                )}
               </Pressable>
               {/* Attachments (images) */}
               {Array.isArray(item.metadata?.attachments) &&
@@ -867,7 +882,12 @@ export default function ChatScreen({
               <Text
                 style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}
               >
-                {headerName || 'チャット'}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>
+                    {headerName || 'チャット'}
+                  </Text>
+                  {headerVerified && <VerifiedBadge size={16} />}
+                </View>
               </Text>
             </Pressable>
           </View>
@@ -951,7 +971,12 @@ export default function ChatScreen({
               <Text
                 style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}
               >
-                {headerName || 'チャット'}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>
+                    {headerName || 'チャット'}
+                  </Text>
+                  {headerVerified && <VerifiedBadge size={16} />}
+                </View>
               </Text>
             </View>
           </View>

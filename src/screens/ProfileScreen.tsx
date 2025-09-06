@@ -11,6 +11,7 @@ import {
   FollowCounts,
 } from '../services/profileService';
 import { PublicUserProfile } from '../types/auth';
+import VerifiedBadge from '../components/VerifiedBadge';
 import { useTheme } from '../theme/theme';
 import { secureLogger } from '../utils/privacyProtection';
 
@@ -40,7 +41,18 @@ export default function ProfileScreen({
     try {
       // Load profile
       const profileData = await getMyProfile();
-      setProfile(profileData);
+      // Enrich with maternal_verified from public view
+      try {
+        const supabase = getSupabaseClient();
+        const { data: pub } = await supabase
+          .from('user_profiles_public')
+          .select('maternal_verified')
+          .eq('id', user.id)
+          .maybeSingle();
+        setProfile({ ...(profileData as any), maternal_verified: pub?.maternal_verified ?? false });
+      } catch {
+        setProfile(profileData);
+      }
 
       // Load follow counts
       const counts = await getFollowCounts(user.id);
@@ -123,11 +135,14 @@ export default function ProfileScreen({
               )}
             </View>
             <View style={{ flex: 1 }}>
-              <Text
-                style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}
-              >
-                {profile?.display_name || user?.display_name || 'ママネーム'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text
+                  style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}
+                >
+                  {profile?.display_name || user?.display_name || 'ママネーム'}
+                </Text>
+                {profile?.maternal_verified && <VerifiedBadge size={18} />}
+              </View>
               <Text style={{ color: colors.subtext, fontSize: 12 }}>
                 @{profile?.username || user?.username}
               </Text>
