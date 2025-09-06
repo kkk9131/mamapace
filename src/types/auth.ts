@@ -48,6 +48,8 @@ export interface PublicUserProfile {
   bio: string | null;
   avatar_emoji: string | null;
   avatar_url?: string | null;
+  // M1: maternal badge flag (public)
+  maternal_verified?: boolean;
   created_at: string;
   profile_visibility: 'public' | 'friends' | 'private';
   is_active: boolean;

@@ -24,6 +24,7 @@ import {
 import { secureLogger } from '../utils/privacyProtection';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { chatService } from '../services/chatService';
+import VerifiedBadge from '../components/VerifiedBadge';
 
 interface FollowersListScreenProps {
   onNavigateToChat?: (chatId: string, userName: string) => void;
@@ -46,6 +47,7 @@ export default function FollowersListScreen({
 
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [avatarMap, setAvatarMap] = useState<Record<string, string | null>>({});
+  const [badgeMap, setBadgeMap] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -81,7 +83,7 @@ export default function FollowersListScreen({
 
         setNextCursor(result.nextCursor);
 
-        // 補完: avatar_url をまとめて取得
+        // 補完: avatar_url / maternal_verified をまとめて取得
         const ids = Array.from(new Set(result.items.map(i => i.user_id)));
         if (ids.length) {
           const { data: profiles } = await getSupabaseClient()
@@ -91,6 +93,14 @@ export default function FollowersListScreen({
           const map: Record<string, string | null> = {};
           (profiles || []).forEach((p: any) => (map[p.id] = p.avatar_url));
           setAvatarMap(prev => ({ ...prev, ...map }));
+
+          const { data: pubs } = await getSupabaseClient()
+            .from('user_profiles_public')
+            .select('id, maternal_verified')
+            .in('id', ids);
+          const bmap: Record<string, boolean> = {};
+          (pubs || []).forEach((p: any) => (bmap[p.id] = !!p.maternal_verified));
+          setBadgeMap(prev => ({ ...prev, ...bmap }));
         }
 
         // Check follow status for each follower
@@ -190,9 +200,12 @@ export default function FollowersListScreen({
             }}
             style={{ flex: 1 }}
           >
-            <Text style={{ color: colors.text, fontWeight: '700' }}>
-              {displayName}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>
+                {displayName}
+              </Text>
+              {badgeMap[item.user_id] && <VerifiedBadge size={16} />}
+            </View>
             <Text style={{ color: colors.subtext, fontSize: 12 }}>
               @{item.username}
             </Text>

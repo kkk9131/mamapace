@@ -24,6 +24,7 @@ export interface PostWithMeta extends Post {
     display_name: string | null;
     avatar_emoji: string | null;
     avatar_url?: string | null;
+    maternal_verified?: boolean;
   } | null;
 }
 
@@ -39,6 +40,7 @@ export interface Comment {
     display_name: string | null;
     avatar_emoji: string | null;
     avatar_url?: string | null;
+    maternal_verified?: boolean;
   } | null;
   attachments?: Attachment[];
 }

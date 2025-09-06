@@ -26,6 +26,7 @@ import AnonRoomV2Screen from './AnonRoomV2Screen';
 import ChannelScreen from './ChannelScreen';
 import CreateSpaceScreen from './CreateSpaceScreen';
 import InviteFollowersScreen from './InviteFollowersScreen';
+import VerifiedBadge from '../components/VerifiedBadge';
 
 interface RoomsScreenProps {
   onNavigateToChannel?: (channelId: string, spaceName: string) => void;
@@ -468,7 +469,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                       {item.description}
                     </Text>
                   )}
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <Text
                       style={{
                         color: colors.subtext,
@@ -477,6 +478,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                     >
                       by {item.owner.display_name || item.owner.username}
                     </Text>
+                    {item.owner?.maternal_verified && <VerifiedBadge size={14} />}
                   </View>
                 </View>
 

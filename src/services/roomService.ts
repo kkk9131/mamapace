@@ -154,7 +154,7 @@ export class RoomService {
         .from('channel_members')
         .select(
           `channel_id, user_id, role, last_seen_at, joined_at, is_active,
-           user:user_profiles (id, username, display_name, avatar_emoji, avatar_url)`
+           user:user_profiles (id, username, display_name, avatar_emoji, avatar_url, maternal_verified)`
         )
         .eq('channel_id', channelId);
 
@@ -262,8 +262,8 @@ export class RoomService {
 
       // Fetch owner profiles separately
       const { data: ownerProfiles, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('id, username, display_name, avatar_emoji')
+        .from('user_profiles_public')
+        .select('id, username, display_name, avatar_emoji, avatar_url, maternal_verified')
         .in('id', ownerIds);
 
       if (profileError) {
@@ -442,8 +442,12 @@ export class RoomService {
         });
 
       if (memberError) {
-        console.error('[RoomService] Join space error:', memberError.message);
-        return { error: memberError.message };
+        const raw = memberError.message || '';
+        const human = raw.includes('maternal badge required')
+          ? '非公開スペースに参加するには母子手帳の認証が必要です'
+          : raw;
+        console.error('[RoomService] Join space error:', raw);
+        return { error: human || '参加に失敗しました' };
       }
 
       return {

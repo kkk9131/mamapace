@@ -77,6 +77,22 @@ export async function fetchHomeFeed(
         : it
     );
   }
+  // maternal_verified を公開ビューから補完
+  {
+    const ids = Array.from(new Set(items.map(it => it.user_id)));
+    if (ids.length > 0) {
+      const { data: pubs } = await client
+        .from('user_profiles_public')
+        .select('id, maternal_verified')
+        .in('id', ids);
+      const map = new Map((pubs || []).map((p: any) => [p.id, !!p.maternal_verified]));
+      items = items.map(it =>
+        it.user
+          ? { ...it, user: { ...it.user, maternal_verified: map.get(it.user_id) ?? false } }
+          : it,
+      );
+    }
+  }
   return { items, nextCursor: computeNextCursor(items) };
 }
 
@@ -137,6 +153,21 @@ export async function fetchMyPosts(options?: {
       );
     }
   }
+  {
+    const ids = Array.from(new Set(items.map(it => it.user_id)));
+    if (ids.length > 0) {
+      const { data: pubs } = await client
+        .from('user_profiles_public')
+        .select('id, maternal_verified')
+        .in('id', ids);
+      const map = new Map((pubs || []).map((p: any) => [p.id, !!p.maternal_verified]));
+      items = items.map(it =>
+        it.user
+          ? { ...it, user: { ...it.user, maternal_verified: map.get(it.user_id) ?? false } }
+          : it,
+      );
+    }
+  }
   return { items, nextCursor: computeNextCursor(items) };
 }
 
@@ -194,6 +225,21 @@ export async function fetchLikedPosts(options: {
               },
             }
           : it
+      );
+    }
+  }
+  {
+    const ids = Array.from(new Set(items.map(it => it.user_id)));
+    if (ids.length > 0) {
+      const { data: pubs } = await client
+        .from('user_profiles_public')
+        .select('id, maternal_verified')
+        .in('id', ids);
+      const map = new Map((pubs || []).map((p: any) => [p.id, !!p.maternal_verified]));
+      items = items.map(it =>
+        it.user
+          ? { ...it, user: { ...it.user, maternal_verified: map.get(it.user_id) ?? false } }
+          : it,
       );
     }
   }
@@ -308,6 +354,22 @@ export async function fetchComments(
               },
             }
           : it
+      ) as Comment[];
+    }
+  }
+  // maternal_verified 補完
+  {
+    const ids = Array.from(new Set(items.map(it => it.user_id)));
+    if (ids.length > 0) {
+      const { data: pubs } = await client
+        .from('user_profiles_public')
+        .select('id, maternal_verified')
+        .in('id', ids);
+      const map = new Map((pubs || []).map((p: any) => [p.id, !!p.maternal_verified]));
+      items = items.map(it =>
+        it.user
+          ? { ...it, user: { ...it.user, maternal_verified: map.get(it.user_id) ?? false } }
+          : it,
       ) as Comment[];
     }
   }
