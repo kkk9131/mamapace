@@ -14,8 +14,10 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { getSupabaseClient } from '../services/supabaseClient';
 import { imagesOnlyMediaTypes } from '../utils/imagePickerCompat';
-import { updateMyProfile, updateMyAvatarUrl } from '../services/profileService';
+import { updateMyProfile, updateMyAvatarUrl, setMaternalId } from '../services/profileService';
+import validationService from '../services/validationService';
 import { uploadAvatarImage } from '../services/storageService';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { secureLogger } from '../utils/privacyProtection';
@@ -36,7 +38,7 @@ const EMOJI_OPTIONS = [
 export default function ProfileEditScreen({ navigation }: any) {
   const theme = useTheme();
   const { colors } = theme;
-  const { user } = useAuth();
+  const { user, dispatch } = useAuth();
   const { handPreference } = useHandPreference();
 
   const [displayName, setDisplayName] = useState(user?.display_name || '');
@@ -45,6 +47,8 @@ export default function ProfileEditScreen({ navigation }: any) {
   const [avatarImageUri, setAvatarImageUri] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [maternalId, setMaternalIdInput] = useState('');
+  const [verifying, setVerifying] = useState(false);
 
   const handleDisplayNameChange = (text: string) => {
     setDisplayName(text);
@@ -111,6 +115,37 @@ export default function ProfileEditScreen({ navigation }: any) {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleVerifyMaternal = async () => {
+    try {
+      setVerifying(true);
+      // Optional client-side validation for UX (non-authoritative)
+      const v = validationService.validateMaternalHealthIdClient(maternalId);
+      if (!v.isValid) {
+        Alert.alert('確認', v.error || '母子手帳番号の形式が正しくありません');
+        return;
+      }
+      await setMaternalId(maternalId);
+      // Reflect in auth context immediately
+      try {
+        const supabase = getSupabaseClient();
+        const { data: pub } = await supabase
+          .from('user_profiles_public')
+          .select('maternal_verified')
+          .eq('id', user?.id || '')
+          .maybeSingle();
+        if (user && typeof pub?.maternal_verified !== 'undefined') {
+          dispatch({ type: 'SET_USER', payload: { ...user, maternal_verified: pub.maternal_verified } as any });
+        }
+      } catch {}
+      Alert.alert('認証済み', '母子手帳の認証が完了しました');
+    } catch (e: any) {
+      secureLogger.error('Maternal verify failed', e);
+      Alert.alert('エラー', e?.message || '認証に失敗しました');
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -496,6 +531,79 @@ export default function ProfileEditScreen({ navigation }: any) {
               >
                 {bio.length}/200文字
               </Text>
+            </BlurView>
+          </View>
+
+          {/* Maternal Health ID (Badge) */}
+          <View
+            style={{
+              marginBottom: theme.spacing(6),
+              borderRadius: theme.radius.lg,
+              overflow: 'hidden',
+              ...theme.shadow.card,
+            }}
+          >
+            <BlurView
+              intensity={20}
+              tint="dark"
+              style={{ padding: theme.spacing(2), backgroundColor: '#ffffff10' }}
+            >
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: 16,
+                  fontWeight: '700',
+                  marginBottom: theme.spacing(1),
+                }}
+                accessibilityLabel="母子手帳番号入力"
+              >
+                母子手帳番号（認証）
+              </Text>
+              <TextInput
+                value={maternalId}
+                onChangeText={t => setMaternalIdInput(t.replace(/\D/g, ''))}
+                placeholder="数字のみ（例: 1234567890）"
+                placeholderTextColor={colors.subtext}
+                keyboardType="number-pad"
+                secureTextEntry
+                maxLength={16}
+                style={{
+                  color: colors.text,
+                  fontSize: 16,
+                  padding: theme.spacing(1.5),
+                  borderRadius: theme.radius.md,
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.surface,
+                }}
+                editable={!verifying}
+              />
+              <Text style={{ color: colors.subtext, fontSize: 12, marginTop: 6 }}>
+                入力内容はサーバーで安全にハッシュ化され保存されます。
+              </Text>
+              <View style={{ height: theme.spacing(1.5) }} />
+              <Pressable
+                onPress={handleVerifyMaternal}
+                disabled={verifying || maternalId.length === 0}
+                style={({ pressed }) => [
+                  {
+                    alignSelf: 'flex-start',
+                    paddingHorizontal: theme.spacing(2),
+                    paddingVertical: theme.spacing(1),
+                    borderRadius: 999,
+                    backgroundColor: colors.pink,
+                    opacity: verifying || maternalId.length === 0 ? 0.5 : 1,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                  },
+                ]}
+                accessibilityLabel="母子手帳の認証を実行"
+              >
+                {verifying ? (
+                  <ActivityIndicator size="small" color="#fff" />)
+                : (
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>認証する</Text>
+                )}
+              </Pressable>
             </BlurView>
           </View>
         </ScrollView>

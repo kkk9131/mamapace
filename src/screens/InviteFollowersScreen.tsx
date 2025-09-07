@@ -17,6 +17,7 @@ import { PublicUserProfile } from '../types/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { secureLogger } from '../utils/privacyProtection';
 import { chatService } from '../services/chatService';
+import VerifiedBadge from '../components/VerifiedBadge';
 
 interface InviteFollowersScreenProps {
   spaceName: string;
@@ -45,6 +46,7 @@ export default function InviteFollowersScreen({
 
   // State
   const [followers, setFollowers] = useState<FollowerWithSelection[]>([]);
+  const [badgeMap, setBadgeMap] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
@@ -74,6 +76,19 @@ export default function InviteFollowersScreen({
           selected: false,
         }))
       );
+      // Load maternal_verified flags from public view
+      try {
+        const ids = unique.map(f => f.id);
+        if (ids.length) {
+          const { data: pubs } = await getSupabaseClient()
+            .from('user_profiles_public')
+            .select('id, maternal_verified')
+            .in('id', ids);
+          const bmap: Record<string, boolean> = {};
+          (pubs || []).forEach((p: any) => (bmap[p.id] = !!p.maternal_verified));
+          setBadgeMap(bmap);
+        }
+      } catch {}
     } catch (error) {
       secureLogger.error('Failed to load followers:', error);
       Alert.alert('エラー', 'フォロワー一覧の取得に失敗しました');
@@ -241,15 +256,18 @@ export default function InviteFollowersScreen({
 
               {/* User info */}
               <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    color: colors.text,
-                    fontSize: 16,
-                    fontWeight: '700',
-                  }}
-                >
-                  {item.display_name}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text
+                    style={{
+                      color: colors.text,
+                      fontSize: 16,
+                      fontWeight: '700',
+                    }}
+                  >
+                    {item.display_name}
+                  </Text>
+                  {badgeMap[item.id] && <VerifiedBadge size={16} />}
+                </View>
                 <Text style={{ color: colors.subtext, fontSize: 14 }}>
                   @{item.username}
                 </Text>

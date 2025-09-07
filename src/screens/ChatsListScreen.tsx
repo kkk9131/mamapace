@@ -17,6 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ChatWithParticipants } from '../types/chat';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { chatService } from '../services/chatService';
+import VerifiedBadge from '../components/VerifiedBadge';
 
 interface ChatsListScreenProps {
   onOpen?: (chatId: string, userName: string) => void;
@@ -123,6 +124,7 @@ export default function ChatsListScreen({
 
   // 補完: 参加者のavatar_urlを一括取得
   const [avatarMap, setAvatarMap] = useState<Record<string, string | null>>({});
+  const [badgeMap, setBadgeMap] = useState<Record<string, boolean>>({});
   useEffect(() => {
     (async () => {
       try {
@@ -141,6 +143,14 @@ export default function ChatsListScreen({
           const map: Record<string, string | null> = {};
           (profiles || []).forEach((p: any) => (map[p.id] = p.avatar_url));
           setAvatarMap(map);
+
+          const { data: pubs } = await getSupabaseClient()
+            .from('user_profiles_public')
+            .select('id, maternal_verified')
+            .in('id', ids);
+          const bmap: Record<string, boolean> = {};
+          (pubs || []).forEach((p: any) => (bmap[p.id] = !!p.maternal_verified));
+          setBadgeMap(bmap);
         }
       } catch {}
     })();
@@ -318,6 +328,9 @@ export default function ChatsListScreen({
                 >
                   {displayName}
                 </Text>
+                {otherParticipant?.id && badgeMap[otherParticipant.id] && (
+                  <VerifiedBadge size={16} />
+                )}
 
                 {/* NEWタグ */}
                 {isNew && (

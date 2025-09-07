@@ -24,6 +24,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { getSupabaseClient } from '../services/supabaseClient';
 import ExpandableText from '../components/ExpandableText';
+import VerifiedBadge from '../components/VerifiedBadge';
 
 export default function CommentsListScreen({
   postId,
@@ -220,10 +221,15 @@ export default function CommentsListScreen({
                       {item.user?.avatar_emoji || '👤'}
                     </Text>
                   )}
-                  <Text style={{ color: colors.subtext, fontSize: 12 }}>
-                    {item.user?.display_name || item.user?.username || '匿名'}{' '}
-                    ・ {new Date(item.created_at).toLocaleString()}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                      {item.user?.display_name || item.user?.username || '匿名'}
+                    </Text>
+                    {item.user?.maternal_verified && <VerifiedBadge size={14} />}
+                    <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                      ・ {new Date(item.created_at).toLocaleString()}
+                    </Text>
+                  </View>
                 </Pressable>
                 {item.user_id === user?.id && (
                   <Pressable
