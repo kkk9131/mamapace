@@ -29,6 +29,7 @@ import CommentComposeScreen from '../screens/CommentComposeScreen';
 import CommentsListScreen from '../screens/CommentsListScreen';
 import FollowersListScreen from '../screens/FollowersListScreen';
 import FollowingListScreen from '../screens/FollowingListScreen';
+import AIChatBotScreen from '../screens/AIChatBotScreen';
 import LikedPostsListScreen from '../screens/LikedPostsListScreen';
 import MyPostsListScreen from '../screens/MyPostsListScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -60,7 +61,8 @@ type TabKey =
   | 'myPosts'
   | 'profileEdit'
   | 'userProfile'
-  | 'devAnonV2';
+  | 'devAnonV2'
+  | 'aiChat';
 
 const tabs = [
   { key: 'me', label: 'あなた', Component: ProfileScreen },
@@ -295,6 +297,8 @@ export default function CustomTabs({
                   setChatReturnTo('chats');
                   setActive('chat');
                 }}
+                onOpenFollowers={() => setActive('followers')}
+                onOpenAIChat={() => setActive('aiChat')}
               />
             </ErrorBoundary>
           ) : active === 'anon' ? (
@@ -440,6 +444,10 @@ export default function CustomTabs({
                 }}
               />
             ) : null
+          ) : active === 'aiChat' ? (
+            <ErrorBoundary>
+              <AIChatBotScreen onBack={() => setActive('chats')} />
+            </ErrorBoundary>
           ) : (
             <ProfileScreen
               onNavigate={(key: string) => setActive(key as TabKey)}
