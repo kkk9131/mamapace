@@ -3,6 +3,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+import { clamp, needsSearch as needsSearchHelper, toGeminiContents as toContents, formatWithSources as formatSources, type ChatMessage as ChatMsg } from './helpers.ts';
 
 type Env = {
   GEMINI_API_KEY: string;
@@ -11,7 +12,7 @@ type Env = {
   GOOGLE_SEARCH_CX?: string; // optional: Custom Search Engine ID
 };
 
-type ChatMessage = { role: 'user' | 'assistant' | 'system'; content: string };
+type ChatMessage = ChatMsg;
 
 interface RequestBody {
   messages: ChatMessage[];
@@ -44,46 +45,7 @@ const CONFIG = {
   SEARCH_MIN_QUERY_LEN: Number(Deno.env.get('AI_SEARCH_MIN_QUERY_LEN') || 6),
 } as const;
 
-function clamp(text: string, n: number): string {
-  if (!text) return '';
-  const t = text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim();
-  return t.length > n ? t.slice(0, n) + '…' : t;
-}
-
-function needsSearch(messages: ChatMessage[]): boolean {
-  // Heuristic based on last user message
-  const lastUser = [...messages].reverse().find(m => m.role === 'user');
-  if (!lastUser) return false;
-  const q = lastUser.content.toLowerCase();
-  const jp = lastUser.content;
-  if ((jp || '').length < CONFIG.SEARCH_MIN_QUERY_LEN) return false;
-  const keywords = [
-    'ニュース',
-    '価格',
-    '値段',
-    '料金',
-    '統計',
-    '規格',
-    '法令',
-    '法律',
-    '日時',
-    '今日',
-    '最新',
-    'バージョン',
-    'ver',
-    '在庫',
-    '発売',
-    '場所',
-    'どこ',
-    '住所',
-    '地図',
-  ];
-  if (keywords.some(k => jp.includes(k))) return true;
-  // English hints
-  const enHints = ['price', 'news', 'stats', 'statistics', 'law', 'regulation', 'version', 'stock', 'where'];
-  if (enHints.some(k => q.includes(k))) return true;
-  return false;
-}
+const needsSearch = (messages: ChatMessage[]) => needsSearchHelper(messages, CONFIG.SEARCH_MIN_QUERY_LEN);
 
 async function googleSearch(query: string): Promise<{ title: string; link: string; source: string }[]> {
   const key = Deno.env.get('GOOGLE_SEARCH_API_KEY') || '';
@@ -127,27 +89,9 @@ function buildSystemPrompt(): string {
   ].join('\n');
 }
 
-function toGeminiContents(systemPrompt: string, history: ChatMessage[]) {
-  // Flatten messages: prepend system prompt, then alternating user/assistant
-  const parts = [{ role: 'user', parts: [{ text: systemPrompt }] }];
-  for (const m of history) {
-    const role = m.role === 'assistant' ? 'model' : 'user';
-    parts.push({ role, parts: [{ text: clamp(m.content, CONFIG.MAX_USER_INPUT) }] });
-  }
-  return parts;
-}
+const toGeminiContents = (systemPrompt: string, history: ChatMessage[]) => toContents(systemPrompt, history, CONFIG.MAX_USER_INPUT);
 
-function formatWithSources(text: string, sources: { title: string; source: string }[]) {
-  const lines = text.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
-  if (sources.length > 0) {
-    // Keep max 5 lines for body + 6th line as sources
-    const body = lines.slice(0, 5);
-    const lab = sources.slice(0, 2).map((s, i) => `[${i + 1}] ${s.source}`).join(', ');
-    return [...body, `出典: ${lab}`].join('\n');
-  }
-  // No sources: return body only (max 6 lines)
-  return lines.slice(0, 6).join('\n');
-}
+const formatWithSources = (text: string, sources: { title: string; source: string }[]) => formatSources(text, sources);
 
 async function generateWithGemini(apiKey: string, contents: any) {
   const payload = {
