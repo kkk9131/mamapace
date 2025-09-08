@@ -40,10 +40,11 @@ function readSupabaseCredentials(): { url?: string; anonKey?: string } {
       return { url: envUrl, anonKey: envAnon };
     }
 
-    // 2) Runtime extras from app.json
+    // 2) Runtime extras from app.json (support multiple Expo shapes)
     const fromExpoExtra =
       (Constants as any)?.expoConfig?.extra ||
-      (Constants as any)?.manifestExtra ||
+      (Constants as any)?.manifest?.extra ||
+      (Constants as any)?.manifest2?.extra ||
       {};
 
     const url = fromExpoExtra.SUPABASE_URL || envUrl;

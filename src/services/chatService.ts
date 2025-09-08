@@ -44,7 +44,7 @@ import {
 import { PublicUserProfile } from '../types/auth';
 
 import { authService } from './authService';
-import { getSupabaseClient } from './supabaseClient';
+import { getSupabaseClient, supabaseClient, initializeSupabase } from './supabaseClient';
 
 // =====================================================
 // CONFIGURATION
@@ -2003,26 +2003,43 @@ class ChatService {
    */
   async testConnection(): Promise<ChatResponse<any>> {
     try {
+      // Ensure client is initialized
+      try {
+        const stats = supabaseClient.getStats();
+        if (!stats.isInitialized) {
+          await initializeSupabase();
+        }
+      } catch {}
+
       const client = getSupabaseClient();
 
-      // Test authentication
+      // Prefer getSession on mobile (more robust right after sign-in)
       const {
-        data: { user },
-        error: authError,
-      } = await client.auth.getUser();
-      if (authError || !user) {
-        return {
-          success: false,
-          error: 'Authentication failed',
-          error_code: ChatErrorCode.ACCESS_DENIED,
-        };
+        data: { session },
+        error: sessionError,
+      } = await client.auth.getSession();
+
+      const user = session?.user;
+      if (sessionError || !user) {
+        // Fallback to getUser just in case
+        const {
+          data: { user: u },
+          error: userError,
+        } = await client.auth.getUser();
+        if (userError || !u) {
+          return {
+            success: false,
+            error: 'Authentication failed',
+            error_code: ChatErrorCode.ACCESS_DENIED,
+          };
+        }
       }
 
       // Test database access with a simple query
       const { data, error } = await client
-        .from('profiles')
+        .from('user_profiles')
         .select('id, username')
-        .eq('id', user.id)
+        .eq('id', (user || session?.user).id)
         .limit(1);
 
       if (error) {

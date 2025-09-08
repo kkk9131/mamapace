@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,11 +17,13 @@ import { useChatList } from '../hooks/useChatList';
 import { useAuth } from '../contexts/AuthContext';
 import { ChatWithParticipants } from '../types/chat';
 import { getSupabaseClient } from '../services/supabaseClient';
-import { chatService } from '../services/chatService';
+// import { chatService } from '../services/chatService';
 import VerifiedBadge from '../components/VerifiedBadge';
 
 interface ChatsListScreenProps {
   onOpen?: (chatId: string, userName: string) => void;
+  onOpenFollowers?: () => void;
+  onOpenAIChat?: () => void;
   filters?: {
     hasUnread?: boolean;
     chatType?: 'direct' | 'group';
@@ -30,11 +33,14 @@ interface ChatsListScreenProps {
 
 export default function ChatsListScreen({
   onOpen,
+  onOpenFollowers,
+  onOpenAIChat,
   filters = {},
 }: ChatsListScreenProps) {
   const theme = useTheme();
   const { colors } = theme;
   const { user } = useAuth();
+  // AI FAB icon (fixed)
 
   // 開いたチャットの最終確認時刻を記録（NEWタグ管理用）
   const [lastViewedTimes, setLastViewedTimes] = useState<Map<string, string>>(
@@ -208,19 +214,6 @@ export default function ChatsListScreen({
     clearError();
     retry();
   }, [clearError, retry]);
-
-  // Test database connection
-  const handleTestConnection = useCallback(async () => {
-    try {
-      const result = await chatService.testConnection();
-      Alert.alert(
-        'データベーステスト結果',
-        `認証: ${result.success ? '成功' : '失敗'}\n${result.data ? JSON.stringify(result.data, null, 2) : result.error}`
-      );
-    } catch (error) {
-      Alert.alert('テストエラー', String(error));
-    }
-  }, []);
 
   // Show error alert
   useEffect(() => {
@@ -453,7 +446,7 @@ export default function ChatsListScreen({
             marginBottom: 8,
           }}
         >
-          チャットがありません
+          メッセージがありません
         </Text>
         <Text
           style={{
@@ -462,25 +455,11 @@ export default function ChatsListScreen({
             paddingHorizontal: 32,
           }}
         >
-          新しいチャットを始めてみましょう
+          新しいメッセージを初めてみましょう
         </Text>
-        <Pressable
-          onPress={handleTestConnection}
-          style={{
-            marginTop: 16,
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-            backgroundColor: colors.pink,
-            borderRadius: 8,
-          }}
-        >
-          <Text style={{ color: '#23181D', fontWeight: '600' }}>
-            データベース接続テスト
-          </Text>
-        </Pressable>
       </View>
     );
-  }, [isLoading, colors, chats.length, error, handleTestConnection]);
+  }, [isLoading, colors, chats.length, error]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: 48 }}>
@@ -493,15 +472,39 @@ export default function ChatsListScreen({
           borderBottomColor: '#ffffff10',
         }}
       >
-        <Text
+        <View
           style={{
-            color: colors.text,
-            fontSize: 24,
-            fontWeight: '700',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
-          メッセージ ({chats.length})
-        </Text>
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 24,
+              fontWeight: '700',
+            }}
+          >
+            メッセージ ({chats.length})
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="フォロワー一覧へ"
+            onPress={() => onOpenFollowers && onOpenFollowers()}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 8,
+              backgroundColor: colors.pink,
+              transform: [{ translateY: -2 }],
+            }}
+          >
+            <Text style={{ color: '#23181D', fontWeight: '800', fontSize: 16 }}>
+              ↑
+            </Text>
+          </Pressable>
+        </View>
         {error && (
           <Text style={{ color: '#ff4444', fontSize: 14, marginTop: 4 }}>
             エラー: {error}
@@ -521,6 +524,30 @@ export default function ChatsListScreen({
           // FlatList layout complete
         }}
       />
+
+      {/* AI Chatbot FAB */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="AIチャットボットを開く"
+        onPress={() => onOpenAIChat && onOpenAIChat()}
+        style={{
+          position: 'absolute',
+          right: 16,
+          bottom: 88, // keep above bottom tab bar
+          backgroundColor: colors.pink,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          alignItems: 'center',
+          justifyContent: 'center',
+          shadowColor: '#000',
+          shadowOpacity: 0.25,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 4 },
+        }}
+      >
+        <Ionicons name="heart-outline" size={26} color="#23181D" />
+      </Pressable>
     </View>
   );
 }
