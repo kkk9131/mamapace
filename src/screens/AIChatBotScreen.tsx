@@ -47,7 +47,10 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
   const send = async () => {
     if (!input.trim() || loading) return;
     const userMsg: ChatItem = { id: `u_${Date.now()}`, role: 'user', content: input.trim() };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => {
+      const next = [...prev, userMsg];
+      return next.length > 200 ? next.slice(next.length - 200) : next;
+    });
     setInput('');
     setLoading(true);
     try {
@@ -55,7 +58,10 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
       const res = await sendAIChat(convo, sessionId);
       const content = res.ok && res.text ? res.text : '出力に失敗しました。時間をおいて再試行してください。';
       const aiMsg: ChatItem = { id: `a_${Date.now() + 1}`, role: 'assistant', content };
-      setMessages(prev => [...prev, aiMsg]);
+      setMessages(prev => {
+        const next = [...prev, aiMsg];
+        return next.length > 200 ? next.slice(next.length - 200) : next;
+      });
       if (res.session_id && res.session_id !== sessionId) {
         setSessionId(res.session_id);
         try {

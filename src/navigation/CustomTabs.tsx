@@ -445,7 +445,9 @@ export default function CustomTabs({
               />
             ) : null
           ) : active === 'aiChat' ? (
-            <AIChatBotScreen onBack={() => setActive('chats')} />
+            <ErrorBoundary>
+              <AIChatBotScreen onBack={() => setActive('chats')} />
+            </ErrorBoundary>
           ) : (
             <ProfileScreen
               onNavigate={(key: string) => setActive(key as TabKey)}

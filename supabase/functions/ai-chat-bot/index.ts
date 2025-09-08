@@ -37,8 +37,12 @@ function resolveAllowedOrigin(req: Request): string | null {
 const GEMINI_ENDPOINT =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
-const MAX_HISTORY = 20; // keep prompt bounded
-const MAX_USER_INPUT = 2000; // chars
+const CONFIG = {
+  MAX_HISTORY: Number(Deno.env.get('AI_MAX_HISTORY') || 20),
+  MAX_USER_INPUT: Number(Deno.env.get('AI_MAX_USER_INPUT') || 2000),
+  RATE_LIMIT_PER_MINUTE: Number(Deno.env.get('AI_RATE_LIMIT_PER_MINUTE') || 10),
+  SEARCH_MIN_QUERY_LEN: Number(Deno.env.get('AI_SEARCH_MIN_QUERY_LEN') || 6),
+} as const;
 
 function clamp(text: string, n: number): string {
   if (!text) return '';
@@ -52,6 +56,7 @@ function needsSearch(messages: ChatMessage[]): boolean {
   if (!lastUser) return false;
   const q = lastUser.content.toLowerCase();
   const jp = lastUser.content;
+  if ((jp || '').length < CONFIG.SEARCH_MIN_QUERY_LEN) return false;
   const keywords = [
     'ニュース',
     '価格',
@@ -127,7 +132,7 @@ function toGeminiContents(systemPrompt: string, history: ChatMessage[]) {
   const parts = [{ role: 'user', parts: [{ text: systemPrompt }] }];
   for (const m of history) {
     const role = m.role === 'assistant' ? 'model' : 'user';
-    parts.push({ role, parts: [{ text: clamp(m.content, MAX_USER_INPUT) }] });
+    parts.push({ role, parts: [{ text: clamp(m.content, CONFIG.MAX_USER_INPUT) }] });
   }
   return parts;
 }
@@ -230,10 +235,18 @@ Deno.serve(async (req) => {
     }
     const userId = userData.user.id;
 
-    const history = messages.slice(-MAX_HISTORY).map(m => ({
+    // Bound history and total input size
+    let history = messages.slice(-CONFIG.MAX_HISTORY).map(m => ({
       role: m.role,
-      content: clamp(m.content || '', MAX_USER_INPUT),
+      content: clamp(m.content || '', CONFIG.MAX_USER_INPUT),
     }));
+    // Ensure total concatenated length stays within ~CONFIG.MAX_HISTORY * MAX_USER_INPUT
+    const MAX_TOTAL = CONFIG.MAX_HISTORY * CONFIG.MAX_USER_INPUT;
+    let sum = 0;
+    history = history.reverse().filter(h => {
+      sum += (h.content || '').length;
+      return sum <= MAX_TOTAL;
+    }).reverse();
 
     // Decide if we should search
     let sources: { title: string; link: string; source: string }[] = [];
@@ -291,10 +304,25 @@ Deno.serve(async (req) => {
         await supabase.from('ai_chat_messages').insert({
           session_id: sessionId,
           role: 'user',
-          content: clamp(lastUser.content, MAX_USER_INPUT),
+          content: clamp(lastUser.content, CONFIG.MAX_USER_INPUT),
         });
       }
     } catch (_) {}
+    // Simple per-user rate limit (messages per minute)
+    try {
+      const since = new Date(Date.now() - 60_000).toISOString();
+      const { count, error: cntErr } = await supabase
+        .from('ai_chat_messages')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', since)
+        .in('session_id',
+          (await supabase.from('ai_chat_sessions').select('id').eq('user_id', userId)).data?.map((s: any) => s.id) || []
+        );
+      if (!cntErr && typeof count === 'number' && count >= CONFIG.RATE_LIMIT_PER_MINUTE) {
+        return json(429, { error: 'rate_limited' }, allowedOrigin);
+      }
+    } catch (_) {}
+
     const raw = await generateWithGemini(GEMINI_API_KEY, contents);
     const formatted = formatWithSources(raw, sources);
 
