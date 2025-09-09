@@ -40,6 +40,9 @@ import UserProfileScreen from '../screens/UserProfileScreen';
 import ChannelScreen from '../screens/ChannelScreen';
 import CreateSpaceScreen from '../screens/CreateSpaceScreen';
 import AnonRoomV2Screen from '../screens/AnonRoomV2Screen';
+import TutorialScreen from '../screens/TutorialScreen';
+import OnboardingPrompt from '../components/OnboardingPrompt';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Sidebar from './Sidebar';
 
@@ -62,7 +65,8 @@ type TabKey =
   | 'profileEdit'
   | 'userProfile'
   | 'devAnonV2'
-  | 'aiChat';
+  | 'aiChat'
+  | 'tutorial';
 
 const tabs = [
   { key: 'me', label: 'あなた', Component: ProfileScreen },
@@ -149,6 +153,22 @@ export default function CustomTabs({
   const { handPreference } = useHandPreference();
   const [active, setActive] = useState<TabKey>('home');
   const [roomsListKey, setRoomsListKey] = useState<number>(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const ONBOARDING_KEY = 'mamapace_onboarding_completed_v1';
+
+  // Show onboarding once after first successful auth
+  useEffect(() => {
+    (async () => {
+      if (!isLoading && isAuthenticated) {
+        try {
+          const flag = await AsyncStorage.getItem(ONBOARDING_KEY);
+          if (!flag) {
+            setShowOnboarding(true);
+          }
+        } catch {}
+      }
+    })();
+  }, [isLoading, isAuthenticated]);
 
   useEffect(() => {
     if (active === 'roomsList') {
@@ -234,6 +254,23 @@ export default function CustomTabs({
   return (
     <AuthGuard>
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <OnboardingPrompt
+          visible={showOnboarding}
+          onGoProfile={async () => {
+            await AsyncStorage.setItem(ONBOARDING_KEY, '1');
+            setShowOnboarding(false);
+            setActive('profileEdit');
+          }}
+          onGoTutorial={async () => {
+            await AsyncStorage.setItem(ONBOARDING_KEY, '1');
+            setShowOnboarding(false);
+            setActive('tutorial');
+          }}
+          onSkip={async () => {
+            await AsyncStorage.setItem(ONBOARDING_KEY, '1');
+            setShowOnboarding(false);
+          }}
+        />
         <Sidebar
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -448,6 +485,8 @@ export default function CustomTabs({
             <ErrorBoundary>
               <AIChatBotScreen onBack={() => setActive('chats')} />
             </ErrorBoundary>
+          ) : active === 'tutorial' ? (
+            <TutorialScreen onClose={() => setActive('home')} />
           ) : (
             <ProfileScreen
               onNavigate={(key: string) => setActive(key as TabKey)}
