@@ -4,6 +4,76 @@
 
 ---
 
+## レビュー反映: 改善項目（優先度付き）
+
+本ドキュメントの初版に対して実装レビューを受領。以下の改善を優先度順に追加します（この節は計画であり、実装はまだ行いません）。
+
+### P1（高）必須対応
+
+- 入力検証の強化（reportService）
+  - 目的: `targetId`/`reasonText` の妥当性検証とサニタイズでインジェクション/不正データ保存を防止。
+  - 方針: 空/長さ超過チェック、許可文字/最大長（例: `targetId`<=255, `reasonText`<=500）を実装。型は UI からの値をそのまま信頼しない。
+  - 影響: `src/services/reportService.ts`
+
+- レースコンディションの解消（useBlock）
+  - 目的: API 失敗時のUI不整合を防ぐ。
+  - 方針: 楽観更新は成功後に反映／あるいは失敗時にロールバック。`loading`/`error` 状態管理を追加。
+  - 影響: `src/hooks/useBlock.ts`
+
+- エラー文脈の付与（サービス層）
+  - 目的: デバッグ・ユーザー通知に十分な文脈を提供。
+  - 方針: 例外にコード/場所/操作名を付与、`notify*` と連携。`throw error` を `throw new Error('Block failed: ' + error.message)` のようにラップ。
+  - 影響: `src/services/blockService.ts`, `src/services/reportService.ts`
+
+- レンダリング中の状態更新を回避（メニュー表示）
+  - 目的: React のレンダリングフェーズルール違反（レンダリング中の `setState`）を回避。
+  - 方針: Alert の発火はハンドラー内または `useEffect` 経由で行い、JSX内の即時IIFEで `setShowMenu(false)` を呼ばない。
+  - 影響: `src/components/PostCard.tsx`, `src/screens/ChatScreen.tsx`
+
+- スキーマの一貫性（reports.target_id）
+  - 目的: 参照整合性/JOIN最適化のために型を統一。
+  - 方針: 可能なら `text` → `uuid` に変更（移行手順: `alter table ... alter column target_id type uuid using target_id::uuid`）。対象IDがすべてUUIDでない要件がある場合は、当面 `text` 維持＋入力検証/インデックス最適化で代替。
+  - 影響: `supabase/sql/2025-09-10_block_and_report.sql`（後続マイグレーションで変更）
+
+### P2（中）推奨対応
+
+- ブロック状態チェック/キャッシュの最適化
+  - 目的: N+1 クエリ回避とパフォーマンス改善。
+  - 方針: `useBlockedList()` でTTL付きキャッシュ/メモ化、`isBlocked` の個別問い合わせを避ける。必要ならサーバ側でビュー化し `NOT EXISTS` を共通化。
+  - 影響: `src/hooks/useBlock.ts`, 将来的にビュー/RLS
+
+- デバウンス/レート制限
+  - 目的: 連打によるAPIスパムと状態不整合を防止。
+  - 方針: クライアント側で 300ms デバウンス＋操作中ボタン無効化。サーバ側（Edge Function採用時）はIP/ユーザー単位レート制限を追加。
+  - 影響: UI各所、（任意で）Edge Functions
+
+- UX向上（確認/ローディング/Undo）
+  - 目的: 誤操作/不明瞭な状態を防止。
+  - 方針: ブロック実行前に確認ダイアログ、送信中ローディング（ボタン無効化）、完了後に短時間の「元に戻す」導線を表示。
+  - 影響: `PostCard`, `UserProfileScreen`, `ChatScreen`
+
+### P3（低〜中）望ましい対応
+
+- フィード/DMの除外のサーバサイド強化
+  - 目的: クライアント以外からの参照経路も遮断し、二重化を回避。
+  - 方針: ビュー or RPC・RLSで `NOT EXISTS (select 1 from block_relationships ...)` を共通化。
+
+- エッジケース整備（多重通報/多重ブロック）
+  - 目的: UI多重送信/重複INSERTの抑制。
+  - 方針: DB一意制約に加え、フロントでの重複実行ガード。
+
+### テスト計画（不足分の補填）
+
+- サービス
+  - `src/services/__tests__/blockService.test.ts`: 正常系/失敗系、エラー文脈の検証
+  - `src/services/__tests__/reportService.test.ts`: 入力検証、INSERT 呼び出しの確認
+- フック
+  - `src/hooks/__tests__/useBlock.test.ts`: 楽観更新・失敗時ロールバック、デバウンス
+- コンポーネント
+  - `src/components/__tests__/PostCard.block.test.tsx`: メニュー表示、確認ダイアログ、ローディング、Undo
+
+---
+
 ## 0. 前提・ブランチ
 
 - [x] 作業ブランチ作成: `feat/block-report`
@@ -139,6 +209,7 @@
 - [ ] クライアントからの `reporter_id`/`blocker_id` はサーバ側で `auth.uid()` 強制
 - [ ] レート制限（Edge Function を使う場合）
 - [ ] PII ログを残さない。`console` ログ禁止（ESLint ルール準拠）
+- [ ] 入力検証の強化（report対象のIDフォーマット・最大長、`reason_text` の最大長/許可文字）
 
 ---
 
@@ -152,6 +223,7 @@
   - [ ] `src/hooks/__tests__/useBlock.test.ts`
 - [ ] フィード/DM リストからブロック相手が除外されることを検証（モックで）
 - [ ] `npm test` / `npm run test:coverage` をパス
+- [ ] レンダー中の状態更新を避ける（メニュー/Alertの発火位置の単体テストで確認）
 
 ---
 
@@ -165,6 +237,9 @@
   - [ ] 解除→再表示を確認
   - [ ] 通報送信→DB 反映・UI フィードバック
 - [ ] ドラフト PR をオープン→セルフレビュー→マージ
+- [ ] （必要なら）`reports.target_id` の型変更マイグレーションを段階適用
+  - 例: `alter table public.reports alter column target_id type uuid using target_id::uuid;`
+  - 事前検証: 既存データのキャスト成功、全参照先がUUIDであること
 
 ---
 
@@ -184,6 +259,7 @@
 - [ ] フィード/DM でブロック相手が非表示
 - [ ] テスト/リンタがグリーン
 - [ ] リリースノート/QA 済み
+- [ ] 上記P1項目がすべて解消、P2項目の主要部分が完了
 
 ---
 
@@ -249,3 +325,92 @@ create index if not exists idx_reports_status on public.reports(status);
 
 1) SQL（テーブル＋RLS）→ 2) サービス → 3) UI 導線 → 4) クライアント側除外 → 5) テスト → 6)（任意）ビュー/RLS強化 → 7) ドキュメント/リリース
 
+---
+
+## ロードマップ（優先度と詳細・新規参加者向け）
+
+この機能群は段階導入で安全にリリースします。下記は優先度順の実行計画と、初見の開発者でも把握できる要点です。
+
+### 0) 現状サマリ（2025-09-10 時点）
+- DB: `block_relationships` と `reports` の作成とRLS適用が完了。`user_profiles_public` は `security_invoker` 化済。
+- クライアント: サービス/フック（blockService, reportService, useBlock, useReport）を追加。Home/DM にクライアント側除外とメニュー導線（通報/ブロック）を実装済み。
+- 既知の改善（P1優先）: 入力検証強化、useBlockのレース解消、サービス層のエラー文脈、レンダー中のsetState回避、`reports.target_id` 型の一貫性検討。
+
+### 1) 検索/フォロー・フォロワー一覧にもブロック除外を適用（最優先）
+- 目的: 体験の一貫性とプライバシー保護を即座に高める（低リスク）。
+- 対象: 検索画面、`FollowersListScreen`、`FollowingListScreen`、（必要があれば）関連一覧。
+- 実装方針:
+  - 既存の `useBlockedList()` を各一覧の描画直前で適用し、`otherUserId` が `blocked` に含まれるアイテムをフィルタ除外。
+  - パフォーマンス: N+1回避のため、一覧単位での一括ロード後に配列フィルタ。将来的にはサーバ側のビュー/RPCに切替予定（後述のStep 3）。
+- 受け入れ基準（AC）:
+  - ブロック相手が検索/フォロー/フォロワーに表示されない。
+  - 解除後は再表示される（手動更新 or 画面再表示でOK）。
+- リスク/対策: 検索結果件数が変動するため、UIの空状態文言が不自然にならないよう確認。
+- テスト: モックで `blocked` にユーザーを含め、除外を検証（ユニット）。
+
+### 2) BlockedUsersListScreen の追加（ブロック管理UI）
+- 目的: 誤ブロックの解除導線を提供し、サポート/運用負荷を削減。
+- 画面仕様（最小）:
+  - 一覧: `listBlockedUsers()` の結果（avatar/名前は必要なら `user_profiles_public` から補完）。
+  - 操作: `解除` ボタン（確認ダイアログ→実行→トースト）。
+  - 遷移: 設定/プロフィールメニューから遷移できるようにする。
+- 技術方針: 新規 `src/screens/BlockedUsersListScreen.tsx` とルーティング追加のみ。サーバ変更は不要。
+- 受け入れ基準（AC）:
+  - ブロック済みユーザーが一覧に表示され、解除できる。
+  - 解除後、他一覧・検索にも反映される（`useBlockedList().refresh()` または再マウント）。
+- テスト: レンダリング/解除操作のユニットテスト。
+
+### 3) サーバ側での除外強化（ビュー＋RLSで相手側表示も遮断）
+- 目的: クライアント外経路も含めて参照を遮断し、データアクセス経路を一元化/堅牢化。
+- 方針（段階ロールアウト）:
+  1. ビュー新設（例）: `posts_filtered`, `user_profiles_public_filtered`, `conversations_filtered` など。
+  2. ビューでの共通条件: `NOT EXISTS (select 1 from public.block_relationships br where br.blocker_id = auth.uid() and br.blocked_id = <対象の所有者ID>)`
+  3. 既存クエリを段階的にビューへ切替（画面ごとにスイッチ）。
+  4. モニタリング: 例外/件数の大幅変動をダッシュボードで確認。
+  5. RLS強化（任意）: ビュー側に寄せた後、テーブルを直接叩く経路をポリシーで制限。
+- 参考SQL（たたき台）:
+```sql
+-- 投稿のフィルタビュー（例）
+create or replace view public.posts_filtered as
+select p.*
+from public.posts p
+where not exists (
+  select 1 from public.block_relationships br
+  where br.blocker_id = auth.uid()
+    and br.blocked_id = p.user_id
+);
+
+-- 公開プロフィールビューのフィルタ（maternal_verifiedの例と組み合わせ）
+create or replace view public.user_profiles_public_filtered as
+select up.*
+from public.user_profiles_public up
+where not exists (
+  select 1 from public.block_relationships br
+  where br.blocker_id = auth.uid()
+    and br.blocked_id = up.id
+);
+```
+- 受け入れ基準（AC）:
+  - ビュー切替後、ブロック相手はAPIレスポンスに含まれない（端末キャッシュのみが残る）。
+  - 主要画面（フィード/検索/DM）のクエリが新ビューを用いてもパフォーマンス良好。
+- ロールバック戦略: ビュー適用を機能フラグで切替可能にし、問題が出た画面のみ迅速に戻せるようにする。
+
+### 4) 通報ワークフロー（Edge Functions：通知・レート制限）
+- 目的: モデレーション運用を可能にし、通報のスパムを抑止。
+- 構成案:
+  - `functions/report-submit`: 入力検証（target存在チェック/フォーマット/長さ）、ユーザー単位・対象単位のクールダウン、モデレーション通知（Slack/Email/Webhook）。
+  - `functions/report-admin`（任意）: `status`/`handled_by` の更新API（管理者のみ）。
+  - 監査ログ: 重要なアクションは `security_audit_log` に記録。
+- 受け入れ基準（AC）:
+  - 連続通報に対し、一定時間で適切に制限/エラー応答する。
+  - 通報が通知先に到達し、管理者が確認できる。
+- テスト/運用: 閾値・通知先を `.env`/Project Settings で変更可能、E2E テストはステージングで実施。
+
+### フィーチャーフラグ / 計測
+- フラグ例: `feature.block_filter_server`, `feature.block_ui_bulk`, `feature.report_edge_function`
+- 計測/ログ: 除外ヒット率、通報回数・レート制限ヒット、ブロック/解除の回数、エラー率。
+
+### リスク管理と段階導入
+- クライアント優先→サーバ強化の順で実施（ロールバック容易性重視）。
+- ビュー切替やRLS強化は画面単位で行い、影響範囲を限定。
+- すべての変更に小さなPRを推奨、CIで `npm test`/`lint` を通過させる。
