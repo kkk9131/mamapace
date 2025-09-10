@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/theme';
+import { useBlockedList } from '../hooks/useBlock';
 
 const tabs = [
   { key: 'users', label: 'ユーザー' },
@@ -41,16 +42,20 @@ export default function SearchScreen() {
   const { colors, radius } = useTheme();
   const [q, setQ] = useState('');
   const [active, setActive] = useState<TabKey>('users');
+  const { blocked } = useBlockedList();
 
-  const data = useMemo(
-    () =>
-      MOCK[active].filter(
-        i =>
-          i.title.toLowerCase().includes(q.toLowerCase()) ||
-          (i.subtitle?.toLowerCase().includes(q.toLowerCase()) ?? false)
-      ),
-    [active, q]
-  );
+  const data = useMemo(() => {
+    const filteredByText = MOCK[active].filter(
+      i =>
+        i.title.toLowerCase().includes(q.toLowerCase()) ||
+        (i.subtitle?.toLowerCase().includes(q.toLowerCase()) ?? false)
+    );
+    // ブロック除外はユーザータブのみ適用（id がユーザーID前提）
+    if (active === 'users') {
+      return filteredByText.filter(i => !blocked.includes(i.id));
+    }
+    return filteredByText;
+  }, [active, q, blocked]);
 
   return (
     <KeyboardAvoidingView

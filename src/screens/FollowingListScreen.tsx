@@ -23,6 +23,7 @@ import { secureLogger } from '../utils/privacyProtection';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { chatService } from '../services/chatService';
 import VerifiedBadge from '../components/VerifiedBadge';
+import { useBlockedList } from '../hooks/useBlock';
 
 interface FollowingListScreenProps {
   onNavigateToChat?: (chatId: string, userName: string) => void;
@@ -50,6 +51,7 @@ export default function FollowingListScreen({
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const { blocked } = useBlockedList();
 
   const loadFollowing = useCallback(
     async (refresh = false) => {
@@ -285,7 +287,7 @@ export default function FollowingListScreen({
       }}
     >
       <FlatList
-        data={following}
+        data={following.filter(f => !blocked.includes(f.user_id))}
         keyExtractor={item => item.user_id}
         contentContainerStyle={{
           padding: theme.spacing(2),

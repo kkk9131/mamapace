@@ -25,6 +25,7 @@ import { secureLogger } from '../utils/privacyProtection';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { chatService } from '../services/chatService';
 import VerifiedBadge from '../components/VerifiedBadge';
+import { useBlockedList } from '../hooks/useBlock';
 
 interface FollowersListScreenProps {
   onNavigateToChat?: (chatId: string, userName: string) => void;
@@ -55,6 +56,8 @@ export default function FollowersListScreen({
   const [followStatus, setFollowStatus] = useState<{ [key: string]: boolean }>(
     {}
   );
+  const { blocked } = useBlockedList();
+  const filteredFollowers = followers.filter(f => !blocked.includes(f.user_id));
 
   const loadFollowers = useCallback(
     async (refresh = false) => {
@@ -308,7 +311,7 @@ export default function FollowersListScreen({
       }}
     >
       <FlatList
-        data={followers}
+        data={filteredFollowers}
         keyExtractor={item => item.user_id}
         contentContainerStyle={{
           padding: theme.spacing(2),
