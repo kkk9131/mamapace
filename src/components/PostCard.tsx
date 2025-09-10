@@ -13,6 +13,7 @@ import { submitReport } from '../services/reportService';
 import { blockUser } from '../services/blockService';
 import { REPORT_REASONS } from '../utils/reportReasons';
 import { notifyError, notifyInfo } from '../utils/notify';
+import { useEffect } from 'react';
 
 export default function PostCard({
   post,
@@ -40,6 +41,57 @@ export default function PostCard({
   const float = useRef(new Animated.Value(0)).current;
   const commentScale = useRef(new Animated.Value(1)).current;
   const [showMenu, setShowMenu] = useState(false);
+
+  useEffect(() => {
+    if (!showMenu || isOwner) return;
+    const run = async () => {
+      setShowMenu(false);
+      Alert.alert('操作を選択', undefined, [
+        {
+          text: '通報する',
+          onPress: () => {
+            Alert.alert(
+              '通報理由を選択',
+              undefined,
+              [
+                ...REPORT_REASONS.map(r => ({
+                  text: r.label,
+                  onPress: async () => {
+                    try {
+                      await submitReport({
+                        targetType: 'post',
+                        targetId: post.id,
+                        reasonCode: r.code,
+                      });
+                      notifyInfo('通報を受け付けました');
+                    } catch (e: any) {
+                      notifyError('通報に失敗しました');
+                    }
+                  },
+                })),
+                { text: 'キャンセル', style: 'cancel' },
+              ],
+            );
+          },
+        },
+        {
+          text: 'ユーザーをブロック',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await blockUser(post.user_id);
+              notifyInfo('ユーザーをブロックしました');
+            } catch (e: any) {
+              notifyError('ブロックに失敗しました');
+            }
+          },
+        },
+        { text: 'キャンセル', style: 'cancel' },
+      ]);
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showMenu]);
 
   const baseReaction = post.reaction_summary || {
     reactedByMe: false,
@@ -416,58 +468,7 @@ export default function PostCard({
         </Pressable>
       </Modal>
 
-      {/* Simple action sheet via Alert when showMenu is true */}
-      {showMenu && !isOwner && (
-        <View>
-          {(() => {
-            setShowMenu(false);
-            Alert.alert('操作を選択', undefined, [
-              {
-                text: '通報する',
-                onPress: () => {
-                  // Select reason
-                  Alert.alert(
-                    '通報理由を選択',
-                    undefined,
-                    [
-                      ...REPORT_REASONS.map(r => ({
-                        text: r.label,
-                        onPress: async () => {
-                          try {
-                            await submitReport({
-                              targetType: 'post',
-                              targetId: post.id,
-                              reasonCode: r.code,
-                            });
-                            notifyInfo('通報を受け付けました');
-                          } catch (e: any) {
-                            notifyError('通報に失敗しました');
-                          }
-                        },
-                      })),
-                      { text: 'キャンセル', style: 'cancel' },
-                    ],
-                  );
-                },
-              },
-              {
-                text: 'ユーザーをブロック',
-                style: 'destructive',
-                onPress: async () => {
-                  try {
-                    await blockUser(post.user_id);
-                    notifyInfo('ユーザーをブロックしました');
-                  } catch (e: any) {
-                    notifyError('ブロックに失敗しました');
-                  }
-                },
-              },
-              { text: 'キャンセル', style: 'cancel' },
-            ]);
-            return null;
-          })()}
-        </View>
-      )}
+      {/* Menu handled via useEffect */}
     </View>
   );
 }

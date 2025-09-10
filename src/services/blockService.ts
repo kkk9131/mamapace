@@ -10,7 +10,9 @@ export async function blockUser(blockedUserId: string) {
     .from('block_relationships')
     .insert({ blocker_id: user.id, blocked_id: blockedUserId });
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(`[blockUser] failed: ${error.message || 'unknown error'}`);
+  }
 }
 
 export async function unblockUser(blockedUserId: string) {
@@ -25,7 +27,9 @@ export async function unblockUser(blockedUserId: string) {
     .eq('blocker_id', user.id)
     .eq('blocked_id', blockedUserId);
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(`[unblockUser] failed: ${error.message || 'unknown error'}`);
+  }
 }
 
 export async function listBlockedUsers(): Promise<string[]> {
@@ -39,7 +43,9 @@ export async function listBlockedUsers(): Promise<string[]> {
     .select('blocked_id')
     .eq('blocker_id', user.id);
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(`[listBlockedUsers] failed: ${error.message || 'unknown error'}`);
+  }
   return (data ?? []).map(r => r.blocked_id);
 }
 
@@ -55,7 +61,8 @@ export async function isBlocked(userId: string): Promise<boolean> {
     .eq('blocker_id', user.id)
     .eq('blocked_id', userId);
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(`[isBlocked] failed: ${error.message || 'unknown error'}`);
+  }
   return (count ?? 0) > 0;
 }
-

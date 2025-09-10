@@ -25,6 +25,7 @@ export async function submitReport(params: SubmitReportParams) {
     metadata: metadata ?? {},
   });
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(`[submitReport] failed: ${error.message || 'unknown error'}`);
+  }
 }
-
