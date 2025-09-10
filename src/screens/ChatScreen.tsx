@@ -30,6 +30,10 @@ import { MessageType, OptimisticMessage } from '../types/chat';
 import { chatService } from '../services/chatService';
 import { getSupabaseClient } from '../services/supabaseClient';
 import VerifiedBadge from '../components/VerifiedBadge';
+import { REPORT_REASONS } from '../utils/reportReasons';
+import { submitReport } from '../services/reportService';
+import { blockUser } from '../services/blockService';
+import { notifyError, notifyInfo } from '../utils/notify';
 
 interface ChatScreenProps {
   chatId?: string;
@@ -96,6 +100,7 @@ export default function ChatScreen({
   );
 
   const otherUserId = chat?.participant_ids?.[0] || null;
+  const [showMenu, setShowMenu] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -1012,6 +1017,23 @@ export default function ChatScreen({
                 </View>
               </Text>
             </View>
+
+            {otherUserId && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="その他の操作"
+                onPress={() => setShowMenu(true)}
+                style={({ pressed }) => ({
+                  marginLeft: 12,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  backgroundColor: pressed ? '#ffffff20' : '#ffffff14',
+                })}
+              >
+                <Text style={{ color: colors.text, fontWeight: '700' }}>⋯</Text>
+              </Pressable>
+            )}
           </View>
         </View>
 
@@ -1231,6 +1253,53 @@ export default function ChatScreen({
           </View>
         )}
       </View>
+
+      {/* Menu actions via Alert */}
+      {showMenu && otherUserId && (
+        <View>
+          {(() => {
+            setShowMenu(false);
+            Alert.alert('操作を選択', undefined, [
+              {
+                text: '通報する',
+                onPress: () =>
+                  Alert.alert('通報理由を選択', undefined, [
+                    ...REPORT_REASONS.map(r => ({
+                      text: r.label,
+                      onPress: async () => {
+                        try {
+                          await submitReport({
+                            targetType: 'user',
+                            targetId: otherUserId,
+                            reasonCode: r.code,
+                          });
+                          notifyInfo('通報を受け付けました');
+                        } catch (e: any) {
+                          notifyError('通報に失敗しました');
+                        }
+                      },
+                    })),
+                    { text: 'キャンセル', style: 'cancel' },
+                  ]),
+              },
+              {
+                text: 'ユーザーをブロック',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await blockUser(otherUserId);
+                    notifyInfo('ユーザーをブロックしました');
+                  } catch (e: any) {
+                    notifyError('ブロックに失敗しました');
+                  }
+                },
+              },
+              { text: 'キャンセル', style: 'cancel' },
+            ]);
+            return null;
+          })()}
+        </View>
+      )}
       {/* Simple image viewer modal */}
       <Modal
         visible={viewer.visible}

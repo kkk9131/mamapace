@@ -29,6 +29,10 @@ import { PublicUserProfile } from '../types/auth';
 import { fetchHomeFeed } from '../services/postService';
 import { secureLogger } from '../utils/privacyProtection';
 import { chatService } from '../services/chatService';
+import { useBlockedList } from '../hooks/useBlock';
+import { submitReport } from '../services/reportService';
+import { REPORT_REASONS } from '../utils/reportReasons';
+import { notifyError, notifyInfo } from '../utils/notify';
 
 interface UserProfileScreenProps {
   userId: string;
@@ -52,6 +56,8 @@ export default function UserProfileScreen({
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState<PostWithMeta[]>([]);
   const [isStartingChat, setIsStartingChat] = useState(false);
+  const { blocked, block, unblock } = useBlockedList();
+  const isBlocked = blocked.includes(userId);
 
   const fade = new Animated.Value(1);
 
@@ -421,6 +427,77 @@ export default function UserProfileScreen({
                       }}
                     >
                       {following ? 'フォロー中' : 'フォロー'}
+                    </Text>
+                  </Pressable>
+
+                  {/* Block/Unblock Button */}
+                  <Pressable
+                    onPress={async () => {
+                      try {
+                        if (isBlocked) {
+                          await unblock(userId);
+                          notifyInfo('ブロックを解除しました');
+                        } else {
+                          await block(userId);
+                          notifyInfo('ユーザーをブロックしました');
+                        }
+                      } catch (e: any) {
+                        notifyError('操作に失敗しました');
+                      }
+                    }}
+                    style={({ pressed }) => [
+                      {
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        backgroundColor: colors.surface,
+                        borderRadius: 999,
+                        transform: [{ scale: pressed ? 0.97 : 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: colors.text, fontWeight: '700' }}>
+                      {isBlocked ? '✅ 解除' : '🚫 ブロック'}
+                    </Text>
+                  </Pressable>
+
+                  {/* Report Button */}
+                  <Pressable
+                    onPress={() => {
+                      Alert.alert(
+                        '通報理由を選択',
+                        undefined,
+                        [
+                          ...REPORT_REASONS.map(r => ({
+                            text: r.label,
+                            onPress: async () => {
+                              try {
+                                await submitReport({
+                                  targetType: 'user',
+                                  targetId: userId,
+                                  reasonCode: r.code,
+                                });
+                                notifyInfo('通報を受け付けました');
+                              } catch (e: any) {
+                                notifyError('通報に失敗しました');
+                              }
+                            },
+                          })),
+                          { text: 'キャンセル', style: 'cancel' },
+                        ]
+                      );
+                    }}
+                    style={({ pressed }) => [
+                      {
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        backgroundColor: colors.surface,
+                        borderRadius: 999,
+                        transform: [{ scale: pressed ? 0.97 : 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: colors.text, fontWeight: '700' }}>
+                      🚩 通報
                     </Text>
                   </Pressable>
                 </View>

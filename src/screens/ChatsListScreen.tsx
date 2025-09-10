@@ -19,6 +19,7 @@ import { ChatWithParticipants } from '../types/chat';
 import { getSupabaseClient } from '../services/supabaseClient';
 // import { chatService } from '../services/chatService';
 import VerifiedBadge from '../components/VerifiedBadge';
+import { useBlockedList } from '../hooks/useBlock';
 
 interface ChatsListScreenProps {
   onOpen?: (chatId: string, userName: string) => void;
@@ -40,6 +41,7 @@ export default function ChatsListScreen({
   const theme = useTheme();
   const { colors } = theme;
   const { user } = useAuth();
+  const { blocked } = useBlockedList();
   // AI FAB icon (fixed)
 
   // 開いたチャットの最終確認時刻を記録（NEWタグ管理用）
@@ -463,6 +465,12 @@ export default function ChatsListScreen({
     );
   }, [isLoading, colors, chats.length, error]);
 
+  // クライアント側でブロック相手を除外
+  const displayedChats = chats.filter(c => {
+    const other = c.participants?.find(p => p.id !== user?.id);
+    return other?.id ? !blocked.includes(other.id) : true;
+  });
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: 48 }}>
       {/* シンプルヘッダー */}
@@ -515,7 +523,7 @@ export default function ChatsListScreen({
       </View>
 
       <FlatList
-        data={chats}
+        data={displayedChats}
         keyExtractor={item => item.id}
         contentContainerStyle={{ flexGrow: 1 }}
         renderItem={renderChatItem}

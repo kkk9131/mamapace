@@ -19,6 +19,7 @@ import { getSupabaseClient } from '../services/supabaseClient';
 import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
+import { useBlockedList } from '../hooks/useBlock';
 
 export default function HomeScreen({
   refreshKey,
@@ -47,6 +48,11 @@ export default function HomeScreen({
   }, [fade]);
 
   const [items, setItems] = useState<PostWithMeta[]>([]);
+  const { blocked } = useBlockedList();
+  const filteredItems = useMemo(
+    () => items.filter(i => !blocked.includes(i.user_id)),
+    [items, blocked]
+  );
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -266,7 +272,7 @@ export default function HomeScreen({
     >
       {/* Removed top quick tabs (元気/眠い/しんどい/幸せ) */}
       <FlatList
-        data={items}
+        data={filteredItems}
         keyExtractor={i => i.id}
         contentContainerStyle={{
           padding: theme.spacing(2),
