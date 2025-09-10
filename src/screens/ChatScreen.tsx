@@ -132,13 +132,22 @@ export default function ChatScreen({
         {
           text: 'ユーザーをブロック',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await blockUser(otherUserId);
-              notifyInfo('ユーザーをブロックしました');
-            } catch (e: any) {
-              notifyError('ブロックに失敗しました');
-            }
+          onPress: () => {
+            Alert.alert('確認', 'このユーザーをブロックしますか？', [
+              { text: 'キャンセル', style: 'cancel' },
+              {
+                text: 'ブロック',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await blockUser(otherUserId);
+                    notifyInfo('ユーザーをブロックしました');
+                  } catch (e: any) {
+                    notifyError('ブロックに失敗しました');
+                  }
+                },
+              },
+            ]);
           },
         },
         { text: 'キャンセル', style: 'cancel' },

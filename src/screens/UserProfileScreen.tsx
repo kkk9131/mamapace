@@ -56,7 +56,7 @@ export default function UserProfileScreen({
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState<PostWithMeta[]>([]);
   const [isStartingChat, setIsStartingChat] = useState(false);
-  const { blocked, block, unblock } = useBlockedList();
+  const { blocked, block, unblock, mutating } = useBlockedList();
   const isBlocked = blocked.includes(userId);
 
   const fade = new Animated.Value(1);
@@ -432,14 +432,40 @@ export default function UserProfileScreen({
 
                   {/* Block/Unblock Button */}
                   <Pressable
+                    disabled={mutating}
                     onPress={async () => {
                       try {
                         if (isBlocked) {
-                          await unblock(userId);
-                          notifyInfo('ブロックを解除しました');
+                          Alert.alert('確認', 'ブロックを解除しますか？', [
+                            { text: 'キャンセル', style: 'cancel' },
+                            {
+                              text: '解除',
+                              onPress: async () => {
+                                try {
+                                  await unblock(userId);
+                                  notifyInfo('ブロックを解除しました');
+                                } catch {
+                                  notifyError('操作に失敗しました');
+                                }
+                              },
+                            },
+                          ]);
                         } else {
-                          await block(userId);
-                          notifyInfo('ユーザーをブロックしました');
+                          Alert.alert('確認', 'このユーザーをブロックしますか？', [
+                            { text: 'キャンセル', style: 'cancel' },
+                            {
+                              text: 'ブロック',
+                              style: 'destructive',
+                              onPress: async () => {
+                                try {
+                                  await block(userId);
+                                  notifyInfo('ユーザーをブロックしました');
+                                } catch {
+                                  notifyError('操作に失敗しました');
+                                }
+                              },
+                            },
+                          ]);
                         }
                       } catch (e: any) {
                         notifyError('操作に失敗しました');
@@ -452,6 +478,7 @@ export default function UserProfileScreen({
                         backgroundColor: colors.surface,
                         borderRadius: 999,
                         transform: [{ scale: pressed ? 0.97 : 1 }],
+                        opacity: mutating ? 0.6 : 1,
                       },
                     ]}
                   >

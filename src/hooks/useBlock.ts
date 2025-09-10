@@ -5,6 +5,8 @@ export function useBlockedList() {
   const [blocked, setBlocked] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [mutating, setMutating] = useState(false);
+  const pending = useRef<Set<string>>(new Set());
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -28,25 +30,34 @@ export function useBlockedList() {
     [blocked]
   );
 
-  const block = useCallback(
-    async (userId: string) => {
+  const block = useCallback(async (userId: string) => {
+    if (!userId || pending.current.has(userId)) return;
+    pending.current.add(userId);
+    setMutating(true);
+    try {
       await blockUser(userId);
       setBlocked(prev => (prev.includes(userId) ? prev : [...prev, userId]));
-    },
-    []
-  );
+    } finally {
+      pending.current.delete(userId);
+      setMutating(false);
+    }
+  }, []);
 
-  const unblock = useCallback(
-    async (userId: string) => {
+  const unblock = useCallback(async (userId: string) => {
+    if (!userId || pending.current.has(userId)) return;
+    pending.current.add(userId);
+    setMutating(true);
+    try {
       await unblockUser(userId);
       setBlocked(prev => prev.filter(id => id !== userId));
-    },
-    []
-  );
+    } finally {
+      pending.current.delete(userId);
+      setMutating(false);
+    }
+  }, []);
 
   return useMemo(
-    () => ({ blocked, loading, error, refresh, isBlocked, block, unblock }),
-    [blocked, loading, error, refresh, isBlocked, block, unblock]
+    () => ({ blocked, loading, error, mutating, refresh, isBlocked, block, unblock }),
+    [blocked, loading, error, mutating, refresh, isBlocked, block, unblock]
   );
 }
-

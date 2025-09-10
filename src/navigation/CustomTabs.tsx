@@ -22,6 +22,7 @@ import { useHandPreference } from '../contexts/HandPreferenceContext';
 import AuthGuard from '../components/AuthGuard';
 import ComposeScreen from '../screens/ComposeScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import BlockedUsersListScreen from '../screens/BlockedUsersListScreen';
 // import AnonFeedScreen from '../screens/AnonFeedScreen'; // Removed - now handled within RoomsScreen
 import RoomsListScreen from '../screens/RoomsListScreen';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -55,6 +56,7 @@ type TabKey =
   | 'anon'
   | 'chat'
   | 'settings'
+  | 'blockedList'
   | 'roomsList'
   | 'comment'
   | 'comments'
@@ -396,6 +398,15 @@ export default function CustomTabs({
               onLogoutNavigate={() => {
                 // Logout will be handled by AuthContext, which will trigger re-render
                 // and show login screen due to !isAuthenticated check above
+              }}
+              onOpenBlockedUsers={() => setActive('blockedList')}
+            />
+          ) : active === 'blockedList' ? (
+            <BlockedUsersListScreen
+              onBack={() => setActive('settings')}
+              onOpenUser={(userId: string) => {
+                setActiveUserId(userId);
+                setActive('userProfile');
               }}
             />
           ) : active === 'roomsList' ? (
