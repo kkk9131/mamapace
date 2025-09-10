@@ -44,7 +44,7 @@ export default function SettingsScreen({
           ? notificationPreferencesService.update(user.id, patch as any)
           : Promise.resolve(false),
       300
-    ),
+    )
   );
 
   useEffect(() => {

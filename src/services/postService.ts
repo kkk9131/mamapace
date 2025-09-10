@@ -85,10 +85,18 @@ export async function fetchHomeFeed(
         .from('user_profiles_public')
         .select('id, maternal_verified')
         .in('id', ids);
-      const map = new Map((pubs || []).map((p: any) => [p.id, !!p.maternal_verified]));
+      const map = new Map(
+        (pubs || []).map((p: any) => [p.id, !!p.maternal_verified]),
+      );
       items = items.map(it =>
         it.user
-          ? { ...it, user: { ...it.user, maternal_verified: map.get(it.user_id) ?? false } }
+          ? {
+              ...it,
+              user: {
+                ...it.user,
+                maternal_verified: map.get(it.user_id) ?? false,
+              },
+            }
           : it,
       );
     }
@@ -160,10 +168,18 @@ export async function fetchMyPosts(options?: {
         .from('user_profiles_public')
         .select('id, maternal_verified')
         .in('id', ids);
-      const map = new Map((pubs || []).map((p: any) => [p.id, !!p.maternal_verified]));
+      const map = new Map(
+        (pubs || []).map((p: any) => [p.id, !!p.maternal_verified]),
+      );
       items = items.map(it =>
         it.user
-          ? { ...it, user: { ...it.user, maternal_verified: map.get(it.user_id) ?? false } }
+          ? {
+              ...it,
+              user: {
+                ...it.user,
+                maternal_verified: map.get(it.user_id) ?? false,
+              },
+            }
           : it,
       );
     }
@@ -235,10 +251,18 @@ export async function fetchLikedPosts(options: {
         .from('user_profiles_public')
         .select('id, maternal_verified')
         .in('id', ids);
-      const map = new Map((pubs || []).map((p: any) => [p.id, !!p.maternal_verified]));
+      const map = new Map(
+        (pubs || []).map((p: any) => [p.id, !!p.maternal_verified]),
+      );
       items = items.map(it =>
         it.user
-          ? { ...it, user: { ...it.user, maternal_verified: map.get(it.user_id) ?? false } }
+          ? {
+              ...it,
+              user: {
+                ...it.user,
+                maternal_verified: map.get(it.user_id) ?? false,
+              },
+            }
           : it,
       );
     }
@@ -365,10 +389,18 @@ export async function fetchComments(
         .from('user_profiles_public')
         .select('id, maternal_verified')
         .in('id', ids);
-      const map = new Map((pubs || []).map((p: any) => [p.id, !!p.maternal_verified]));
+      const map = new Map(
+        (pubs || []).map((p: any) => [p.id, !!p.maternal_verified]),
+      );
       items = items.map(it =>
         it.user
-          ? { ...it, user: { ...it.user, maternal_verified: map.get(it.user_id) ?? false } }
+          ? {
+              ...it,
+              user: {
+                ...it.user,
+                maternal_verified: map.get(it.user_id) ?? false,
+              },
+            }
           : it,
       ) as Comment[];
     }

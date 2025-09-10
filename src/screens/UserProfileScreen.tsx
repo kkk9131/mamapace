@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import VerifiedBadge from '../components/VerifiedBadge';
 
+import VerifiedBadge from '../components/VerifiedBadge';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
@@ -74,7 +74,10 @@ export default function UserProfileScreen({
             .select('maternal_verified')
             .eq('id', userId)
             .maybeSingle();
-          setUserData({ ...(profile as any), maternal_verified: pub?.maternal_verified ?? false });
+          setUserData({
+            ...(profile as any),
+            maternal_verified: pub?.maternal_verified ?? false,
+          });
         } catch {
           setUserData(profile);
         }
@@ -107,7 +110,8 @@ export default function UserProfileScreen({
               .select('maternal_verified')
               .eq('id', userId)
               .maybeSingle();
-            (enriched as any).maternal_verified = pub?.maternal_verified ?? false;
+            (enriched as any).maternal_verified =
+              pub?.maternal_verified ?? false;
           } catch {}
           setUserData(enriched);
         } else {
@@ -130,7 +134,8 @@ export default function UserProfileScreen({
               .select('maternal_verified')
               .eq('id', userId)
               .maybeSingle();
-            (enriched as any).maternal_verified = pub?.maternal_verified ?? false;
+            (enriched as any).maternal_verified =
+              pub?.maternal_verified ?? false;
           } catch {}
           setUserData(enriched);
         }
@@ -322,7 +327,9 @@ export default function UserProfileScreen({
                   </Text>
                 )}
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
                 <Text
                   style={{
                     color: colors.text,

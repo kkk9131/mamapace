@@ -100,7 +100,7 @@ export default function HomeScreen({
                         },
                       }
                     : p
-                ),
+                )
               );
             }
           )
@@ -125,7 +125,7 @@ export default function HomeScreen({
                         },
                       }
                     : p
-                ),
+                )
               );
             }
           )
@@ -151,7 +151,7 @@ export default function HomeScreen({
                         })(),
                       }
                     : p
-                ),
+                )
               );
             }
           )
@@ -180,7 +180,7 @@ export default function HomeScreen({
                         })(),
                       }
                     : p
-                ),
+                )
               );
             }
           )

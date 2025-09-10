@@ -16,7 +16,11 @@ import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { imagesOnlyMediaTypes } from '../utils/imagePickerCompat';
-import { updateMyProfile, updateMyAvatarUrl, setMaternalId } from '../services/profileService';
+import {
+  updateMyProfile,
+  updateMyAvatarUrl,
+  setMaternalId,
+} from '../services/profileService';
 import validationService from '../services/validationService';
 import { uploadAvatarImage } from '../services/storageService';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
@@ -137,7 +141,13 @@ export default function ProfileEditScreen({ navigation }: any) {
           .eq('id', user?.id || '')
           .maybeSingle();
         if (user && typeof pub?.maternal_verified !== 'undefined') {
-          dispatch({ type: 'SET_USER', payload: { ...user, maternal_verified: pub.maternal_verified } as any });
+          dispatch({
+            type: 'SET_USER',
+            payload: {
+              ...user,
+              maternal_verified: pub.maternal_verified,
+            } as any,
+          });
         }
       } catch {}
       Alert.alert('認証済み', '母子手帳の認証が完了しました');
@@ -546,7 +556,10 @@ export default function ProfileEditScreen({ navigation }: any) {
             <BlurView
               intensity={20}
               tint="dark"
-              style={{ padding: theme.spacing(2), backgroundColor: '#ffffff10' }}
+              style={{
+                padding: theme.spacing(2),
+                backgroundColor: '#ffffff10',
+              }}
             >
               <Text
                 style={{
@@ -578,7 +591,9 @@ export default function ProfileEditScreen({ navigation }: any) {
                 }}
                 editable={!verifying}
               />
-              <Text style={{ color: colors.subtext, fontSize: 12, marginTop: 6 }}>
+              <Text
+                style={{ color: colors.subtext, fontSize: 12, marginTop: 6 }}
+              >
                 入力内容はサーバーで安全にハッシュ化され保存されます。
               </Text>
               <View style={{ height: theme.spacing(1.5) }} />
@@ -599,9 +614,11 @@ export default function ProfileEditScreen({ navigation }: any) {
                 accessibilityLabel="母子手帳の認証を実行"
               >
                 {verifying ? (
-                  <ActivityIndicator size="small" color="#fff" />)
-                : (
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>認証する</Text>
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>
+                    認証する
+                  </Text>
                 )}
               </Pressable>
             </BlurView>

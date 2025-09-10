@@ -1,7 +1,17 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { View, Text, Pressable, TextInput, FlatList, Alert, Modal, ActivityIndicator } from 'react-native';
-import { useTheme } from '../theme/theme';
+import {
+  View,
+  Text,
+  Pressable,
+  TextInput,
+  FlatList,
+  Alert,
+  Modal,
+  ActivityIndicator,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useTheme } from '../theme/theme';
 import { sendAIChat } from '../services/aiChatService';
 import {
   listAISessions,
@@ -45,8 +55,14 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
   );
 
   const send = async () => {
-    if (!input.trim() || loading) return;
-    const userMsg: ChatItem = { id: `u_${Date.now()}`, role: 'user', content: input.trim() };
+    if (!input.trim() || loading) {
+      return;
+    }
+    const userMsg: ChatItem = {
+      id: `u_${Date.now()}`,
+      role: 'user',
+      content: input.trim(),
+    };
     setMessages(prev => {
       const next = [...prev, userMsg];
       return next.length > 200 ? next.slice(next.length - 200) : next;
@@ -54,10 +70,20 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
     setInput('');
     setLoading(true);
     try {
-      const convo = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
+      const convo = [...messages, userMsg].map(m => ({
+        role: m.role,
+        content: m.content,
+      }));
       const res = await sendAIChat(convo, sessionId);
-      const content = res.ok && res.text ? res.text : '出力に失敗しました。時間をおいて再試行してください。';
-      const aiMsg: ChatItem = { id: `a_${Date.now() + 1}`, role: 'assistant', content };
+      const content =
+        res.ok && res.text
+          ? res.text
+          : '出力に失敗しました。時間をおいて再試行してください。';
+      const aiMsg: ChatItem = {
+        id: `a_${Date.now() + 1}`,
+        role: 'assistant',
+        content,
+      };
       setMessages(prev => {
         const next = [...prev, aiMsg];
         return next.length > 200 ? next.slice(next.length - 200) : next;
@@ -87,28 +113,33 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
     }
   }, []);
 
-  const handleSelectSession = useCallback(async (id: string) => {
-    try {
-      setSessionsOpen(false);
-      setSessionId(id);
-      const found = sessions.find(s => s.id === id);
-      setCurrentTitle(found?.title || '');
-      setEditingTitle(false);
-      const rows = await fetchAIMessages(id);
-      const mapped: ChatItem[] = rows.map(r => ({
-        id: r.id,
-        role: r.role,
-        content: r.content,
-      }));
-      setMessages(mapped);
-    } catch (e) {
-      Alert.alert('エラー', '履歴の読み込みに失敗しました');
-    }
-  }, [sessions]);
+  const handleSelectSession = useCallback(
+    async (id: string) => {
+      try {
+        setSessionsOpen(false);
+        setSessionId(id);
+        const found = sessions.find(s => s.id === id);
+        setCurrentTitle(found?.title || '');
+        setEditingTitle(false);
+        const rows = await fetchAIMessages(id);
+        const mapped: ChatItem[] = rows.map(r => ({
+          id: r.id,
+          role: r.role,
+          content: r.content,
+        }));
+        setMessages(mapped);
+      } catch (e) {
+        Alert.alert('エラー', '履歴の読み込みに失敗しました');
+      }
+    },
+    [sessions],
+  );
 
   const handleNewSession = useCallback(async () => {
     try {
-      const lastLine = messages.length ? messages[messages.length - 1].content : '';
+      const lastLine = messages.length
+        ? messages[messages.length - 1].content
+        : '';
       const title = lastLine ? lastLine.slice(0, 60) : '新しいチャット';
       const sess = await createAISession(title);
       setSessionId(sess.id);
@@ -212,7 +243,10 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
             タイトル
           </Text>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ color: colors.text, fontWeight: '700', flex: 1 }} numberOfLines={1}>
+            <Text
+              style={{ color: colors.text, fontWeight: '700', flex: 1 }}
+              numberOfLines={1}
+            >
               {currentTitle || '無題'}
             </Text>
             <Pressable
@@ -220,9 +254,16 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
                 setTitleInput(currentTitle || '');
                 setEditingTitle(true);
               }}
-              style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.surface, borderRadius: 8 }}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                backgroundColor: colors.surface,
+                borderRadius: 8,
+              }}
             >
-              <Text style={{ color: colors.text, fontWeight: '700' }}>編集</Text>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>
+                編集
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -258,22 +299,47 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
           <Pressable
             onPress={async () => {
               try {
-                if (!sessionId) return;
-                const updated = await updateAISessionTitle(sessionId, titleInput.trim() || null);
+                if (!sessionId) {
+                  return;
+                }
+                const updated = await updateAISessionTitle(
+                  sessionId,
+                  titleInput.trim() || null,
+                );
                 setCurrentTitle(updated.title || '');
-                setSessions(prev => prev.map(s => (s.id === updated.id ? { ...s, title: updated.title || null, updated_at: updated.updated_at } : s)));
+                setSessions(prev =>
+                  prev.map(s =>
+                    s.id === updated.id
+                      ? {
+                          ...s,
+                          title: updated.title || null,
+                          updated_at: updated.updated_at,
+                        }
+                      : s,
+                  )
+                );
                 setEditingTitle(false);
               } catch (e) {
                 Alert.alert('エラー', 'タイトルの更新に失敗しました');
               }
             }}
-            style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.pink, borderRadius: 8 }}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              backgroundColor: colors.pink,
+              borderRadius: 8,
+            }}
           >
             <Text style={{ color: '#23181D', fontWeight: '800' }}>保存</Text>
           </Pressable>
           <Pressable
             onPress={() => setEditingTitle(false)}
-            style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.surface, borderRadius: 8 }}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              backgroundColor: colors.surface,
+              borderRadius: 8,
+            }}
           >
             <Text style={{ color: colors.text, fontWeight: '800' }}>取消</Text>
           </Pressable>
@@ -364,7 +430,9 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
           }}
           disabled={loading}
         >
-          <Text style={{ color: '#23181D', fontWeight: '800' }}>{loading ? '送信中…' : '送信'}</Text>
+          <Text style={{ color: '#23181D', fontWeight: '800' }}>
+            {loading ? '送信中…' : '送信'}
+          </Text>
         </Pressable>
       </View>
 
@@ -394,7 +462,9 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
                 marginBottom: 8,
               }}
             >
-              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>
+              <Text
+                style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}
+              >
                 セッション一覧
               </Text>
               <View style={{ flexDirection: 'row', gap: 8 as any }}>
@@ -408,7 +478,9 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
                     marginRight: 8,
                   }}
                 >
-                  <Text style={{ color: '#23181D', fontWeight: '700' }}>新規</Text>
+                  <Text style={{ color: '#23181D', fontWeight: '700' }}>
+                    新規
+                  </Text>
                 </Pressable>
                 <Pressable
                   onPress={() => setSessionsOpen(false)}
@@ -419,7 +491,9 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
                     borderRadius: 8,
                   }}
                 >
-                  <Text style={{ color: colors.text, fontWeight: '700' }}>閉じる</Text>
+                  <Text style={{ color: colors.text, fontWeight: '700' }}>
+                    閉じる
+                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -430,7 +504,9 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
               </View>
             ) : sessions.length === 0 ? (
               <View style={{ alignItems: 'center', padding: 16 }}>
-                <Text style={{ color: colors.subtext }}>セッションがありません</Text>
+                <Text style={{ color: colors.subtext }}>
+                  セッションがありません
+                </Text>
               </View>
             ) : (
               <FlatList
@@ -461,7 +537,9 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
                         {item.title || '無題'}
                       </Text>
                       <Text style={{ color: colors.subtext, fontSize: 12 }}>
-                        {new Date(item.updated_at || item.created_at).toLocaleString()}
+                        {new Date(
+                          item.updated_at || item.created_at,
+                        ).toLocaleString()}
                       </Text>
                     </Pressable>
                     <Pressable
@@ -473,7 +551,9 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
                         borderRadius: 8,
                       }}
                     >
-                      <Text style={{ color: '#ff6666', fontWeight: '700' }}>削除</Text>
+                      <Text style={{ color: '#ff6666', fontWeight: '700' }}>
+                        削除
+                      </Text>
                     </Pressable>
                   </View>
                 )}

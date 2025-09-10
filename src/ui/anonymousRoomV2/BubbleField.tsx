@@ -503,7 +503,9 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
         onPanResponderGrant: () => {
           draggingRef.current = true;
           panStartRef.current.base = getAnimatedValue(scrollOffset);
-          (scrollOffset as unknown as { stopAnimation?: () => void }).stopAnimation?.();
+          (
+            scrollOffset as unknown as { stopAnimation?: () => void }
+          ).stopAnimation?.();
         },
         onPanResponderMove: (
           _e: GestureResponderEvent,
@@ -530,7 +532,7 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
         },
         onPanResponderTerminate: () => {
           draggingRef.current = false;
-      panStartRef.current.base = getAnimatedValue(scrollOffset);
+          panStartRef.current.base = getAnimatedValue(scrollOffset);
         },
       }),
     [contentHeight, scrollOffset]
@@ -574,14 +576,18 @@ export default function BubbleField({ posts }: { posts: BubbleFieldPost[] }) {
     setCommentsMap(prev => {
       const next: typeof prev = {} as any;
       for (const [k, v] of Object.entries(prev)) {
-        if (visible.has(k)) next[k] = v as any;
+        if (visible.has(k)) {
+          next[k] = v as any;
+        }
       }
       return next;
     });
     setReactionState(prev => {
       const next: typeof prev = {} as any;
       for (const [k, v] of Object.entries(prev)) {
-        if (visible.has(k)) next[k] = v as any;
+        if (visible.has(k)) {
+          next[k] = v as any;
+        }
       }
       return next;
     });

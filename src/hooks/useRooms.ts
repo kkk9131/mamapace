@@ -354,7 +354,7 @@ export function useChannelMessages(channelId: string | null) {
             (msg as OptimisticRoomMessage).tempId === tempId
               ? { ...msg, error: response.error }
               : msg
-          ),
+          )
         );
         return null;
       }
@@ -411,7 +411,7 @@ export function useChannelMessages(channelId: string | null) {
           setMessages(prev =>
             prev.map(msg =>
               msg.id === updatedMessage.id ? updatedMessage : msg
-            ),
+            )
           );
         }
       )
@@ -675,7 +675,7 @@ export function useChatList() {
           item.channel_id === channelId
             ? { ...item, has_new: false, unread_count: 0 }
             : item
-        ),
+        )
       );
     }
   }, []);

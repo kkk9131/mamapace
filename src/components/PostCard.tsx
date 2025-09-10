@@ -143,7 +143,9 @@ export default function PostCard({
               style={{ flex: 1 }}
               hitSlop={{ top: 8, bottom: 8, left: 0, right: 0 }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+              >
                 <Text
                   style={{
                     color: colors.text,

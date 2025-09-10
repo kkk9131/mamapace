@@ -49,7 +49,10 @@ export default function ProfileScreen({
           .select('maternal_verified')
           .eq('id', user.id)
           .maybeSingle();
-        setProfile({ ...(profileData as any), maternal_verified: pub?.maternal_verified ?? false });
+        setProfile({
+          ...(profileData as any),
+          maternal_verified: pub?.maternal_verified ?? false,
+        });
       } catch {
         setProfile(profileData);
       }
@@ -135,9 +138,15 @@ export default function ProfileScreen({
               )}
             </View>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
                 <Text
-                  style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}
+                  style={{
+                    color: colors.text,
+                    fontSize: 20,
+                    fontWeight: '800',
+                  }}
                 >
                   {profile?.display_name || user?.display_name || 'ママネーム'}
                 </Text>

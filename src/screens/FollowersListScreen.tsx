@@ -99,7 +99,9 @@ export default function FollowersListScreen({
             .select('id, maternal_verified')
             .in('id', ids);
           const bmap: Record<string, boolean> = {};
-          (pubs || []).forEach((p: any) => (bmap[p.id] = !!p.maternal_verified));
+          (pubs || []).forEach(
+            (p: any) => (bmap[p.id] = !!p.maternal_verified),
+          );
           setBadgeMap(prev => ({ ...prev, ...bmap }));
         }
 
@@ -200,7 +202,9 @@ export default function FollowersListScreen({
             }}
             style={{ flex: 1 }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+            >
               <Text style={{ color: colors.text, fontWeight: '700' }}>
                 {displayName}
               </Text>

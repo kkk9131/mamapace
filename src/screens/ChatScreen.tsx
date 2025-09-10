@@ -14,9 +14,13 @@ import {
   Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { imagesOnlyMediaTypes, imageOnlyMediaTypeSingle } from '../utils/imagePickerCompat';
+import { Ionicons } from '@expo/vector-icons';
+
+import {
+  imagesOnlyMediaTypes,
+  imageOnlyMediaTypeSingle,
+} from '../utils/imagePickerCompat';
 import { uploadChatImages } from '../services/storageService';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,8 +29,6 @@ import { useChat } from '../hooks/useChat';
 import { MessageType, OptimisticMessage } from '../types/chat';
 import { chatService } from '../services/chatService';
 import { getSupabaseClient } from '../services/supabaseClient';
-
-import { Ionicons } from '@expo/vector-icons';
 import VerifiedBadge from '../components/VerifiedBadge';
 
 interface ChatScreenProps {
@@ -155,7 +157,9 @@ export default function ChatScreen({
         const {
           data: { user },
         } = await client.auth.getUser();
-        if (!user) {throw new Error('ログインが必要です');}
+        if (!user) {
+          throw new Error('ログインが必要です');
+        }
         attachments = await uploadChatImages(
           user.id,
           images.map(i => i.uri)
@@ -179,7 +183,9 @@ export default function ChatScreen({
   // Auto-scroll to bottom on new messages (LINE style)
   useEffect(() => {
     if (messages.length > 0) {
-      if (msgTimerRef.current) {clearTimeout(msgTimerRef.current);}
+      if (msgTimerRef.current) {
+        clearTimeout(msgTimerRef.current);
+      }
       msgTimerRef.current = setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
@@ -232,9 +238,15 @@ export default function ChatScreen({
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (csTimerRef.current) {clearTimeout(csTimerRef.current);}
-      if (layoutTimerRef.current) {clearTimeout(layoutTimerRef.current);}
-      if (msgTimerRef.current) {clearTimeout(msgTimerRef.current);}
+      if (csTimerRef.current) {
+        clearTimeout(csTimerRef.current);
+      }
+      if (layoutTimerRef.current) {
+        clearTimeout(layoutTimerRef.current);
+      }
+      if (msgTimerRef.current) {
+        clearTimeout(msgTimerRef.current);
+      }
     };
   }, []);
 
@@ -261,7 +273,7 @@ export default function ChatScreen({
           try {
             const client = getSupabaseClient();
 
-          // Get current user
+            // Get current user
             const {
               data: { user },
               error: authError,
@@ -316,7 +328,7 @@ export default function ChatScreen({
             if (channels && channels.length > 0) {
               const channelId = channels[0].id;
 
-            // Add user to channel_members
+              // Add user to channel_members
               const { error: memberError } = await client
                 .from('channel_members')
                 .upsert(
@@ -363,9 +375,9 @@ export default function ChatScreen({
             ? `ルーム「${spaceName}」への招待を受け入れました！`
             : `ルーム「${spaceName}」への招待を辞退しました。`;
 
-      await sendMessage(responseText, MessageType.TEXT);
+        await sendMessage(responseText, MessageType.TEXT);
 
-      if (response === 'accept') {
+        if (response === 'accept') {
           Alert.alert(
             '参加意思表示完了',
             `ルーム「${spaceName}」への参加意思を表明しました。管理者による承認をお待ちください。`
@@ -446,8 +458,9 @@ export default function ChatScreen({
                 accessibilityRole="button"
                 accessibilityLabel={`${senderName}のプロフィールを開く`}
                 onPress={() => {
-                  if (onNavigateToUser && item.sender_id)
-                    {onNavigateToUser(item.sender_id);}
+                  if (onNavigateToUser && item.sender_id) {
+                    onNavigateToUser(item.sender_id);
+                  }
                 }}
                 style={{
                   flexDirection: 'row',
@@ -530,7 +543,9 @@ export default function ChatScreen({
 
               {/* Text content or legacy image-only content */}
               {(() => {
-                if (isDeleted) {return null;}
+                if (isDeleted) {
+                  return null;
+                }
                 const hasAtt =
                   Array.isArray(item.metadata?.attachments) &&
                   item.metadata!.attachments!.length > 0;
@@ -584,7 +599,7 @@ export default function ChatScreen({
                 return null;
               })()}
 
-            {/* Invitation response buttons */}
+              {/* Invitation response buttons */}
               {isInvitation && !isMe && !isDeleted && (
                 <View style={{ flexDirection: 'row', marginTop: 12, gap: 8 }}>
                   <Pressable
@@ -595,7 +610,8 @@ export default function ChatScreen({
                         item.metadata?.space_id,
                         item.metadata?.space_name,
                         item.metadata?.invitation_id,
-                  )}
+                      )
+                    }
                     style={({ pressed }) => [
                       {
                         backgroundColor: colors.pink,
@@ -619,7 +635,7 @@ export default function ChatScreen({
                     </Text>
                   </Pressable>
 
-                <Pressable
+                  <Pressable
                     onPress={() =>
                       handleInvitationResponse(
                         item.id,
@@ -627,7 +643,8 @@ export default function ChatScreen({
                         item.metadata?.space_id,
                         item.metadata?.space_name,
                         item.metadata?.invitation_id,
-                  )}
+                      )
+                    }
                     style={({ pressed }) => [
                       {
                         backgroundColor: '#ffffff20',
@@ -655,8 +672,7 @@ export default function ChatScreen({
                 </View>
               )}
 
-
-            {item.is_edited && !isDeleted && (
+              {item.is_edited && !isDeleted && (
                 <Text
                   style={{ color: colors.subtext, fontSize: 10, marginTop: 2 }}
                 >
@@ -686,7 +702,9 @@ export default function ChatScreen({
 
   // Render typing indicator with animation
   const renderTypingIndicator = useCallback(() => {
-    if (typingUsers.length === 0) {return null;}
+    if (typingUsers.length === 0) {
+      return null;
+    }
 
     const [dot1] = useState(new Animated.Value(0));
     const [dot2] = useState(new Animated.Value(0));
@@ -815,8 +833,6 @@ export default function ChatScreen({
     );
   }
 
-
-
   // Show loading state while chat is being loaded
   if (isLoading && messages.length === 0) {
     return (
@@ -859,8 +875,9 @@ export default function ChatScreen({
               accessibilityRole="button"
               accessibilityLabel="ユーザープロフィールを開く"
               onPress={() => {
-                if (otherUserId && onNavigateToUser)
+                if (otherUserId && onNavigateToUser) {
                   onNavigateToUser(otherUserId);
+                }
               }}
               style={{ flexDirection: 'row', alignItems: 'center' }}
             >
@@ -882,8 +899,16 @@ export default function ChatScreen({
               <Text
                 style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                >
+                  <Text
+                    style={{
+                      color: colors.text,
+                      fontSize: 16,
+                      fontWeight: '700',
+                    }}
+                  >
                     {headerName || 'チャット'}
                   </Text>
                   {headerVerified && <VerifiedBadge size={16} />}
@@ -971,8 +996,16 @@ export default function ChatScreen({
               <Text
                 style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                >
+                  <Text
+                    style={{
+                      color: colors.text,
+                      fontSize: 16,
+                      fontWeight: '700',
+                    }}
+                  >
                     {headerName || 'チャット'}
                   </Text>
                   {headerVerified && <VerifiedBadge size={16} />}
@@ -1006,14 +1039,18 @@ export default function ChatScreen({
           }
           onContentSizeChange={() => {
             // Scroll to bottom when new messages are added
-            if (csTimerRef.current) {clearTimeout(csTimerRef.current);}
+            if (csTimerRef.current) {
+              clearTimeout(csTimerRef.current);
+            }
             csTimerRef.current = setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: true });
             }, 100);
           }}
           onLayout={() => {
             // Scroll to bottom on initial layout
-            if (layoutTimerRef.current) {clearTimeout(layoutTimerRef.current);}
+            if (layoutTimerRef.current) {
+              clearTimeout(layoutTimerRef.current);
+            }
             layoutTimerRef.current = setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: false });
             }, 100);
@@ -1059,7 +1096,9 @@ export default function ChatScreen({
                     selectionLimit: 4,
                     quality: 1,
                   });
-                  if (res.canceled) {return;}
+                  if (res.canceled) {
+                    return;
+                  }
                   const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
                   setImages(prev => [...prev, ...picked].slice(0, 4));
                 } catch {}
@@ -1090,7 +1129,9 @@ export default function ChatScreen({
                     mediaTypes: imageOnlyMediaTypeSingle(),
                     quality: 1,
                   });
-                  if (res.canceled) {return;}
+                  if (res.canceled) {
+                    return;
+                  }
                   const picked = res.assets?.map(a => ({ uri: a.uri })) || [];
                   setImages(prev => [...prev, ...picked].slice(0, 4));
                 } catch {}

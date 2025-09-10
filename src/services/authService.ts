@@ -505,10 +505,9 @@ class AuthService {
    */
   async refreshToken(): Promise<boolean> {
     await this.ensureInitialized();
-    if (
-      appConfig.useServerHashing ||
-      (appConfig as any).disableClientEncryption
-    ) {
+    
+    // Phase 2: disableClientEncryption mode
+    if ((appConfig as any).disableClientEncryption) {
       try {
         const sess = await secureSessionStore.getSession();
         if (!sess.refreshToken) {
@@ -535,6 +534,44 @@ class AuthService {
         return false;
       }
     }
+    
+    // Phase 1: useServerHashing mode
+    if (appConfig.useServerHashing) {
+      try {
+        if (!this.phase1Session?.refreshToken) {
+          secureLogger.warn('No refresh token available (Phase 1)');
+          return false;
+        }
+
+        const client = supabaseClient.getClient();
+        const { data, error } = await client.rpc('refresh_session_token', {
+          p_refresh_token: this.phase1Session.refreshToken,
+        });
+
+        if (error || !data?.success) {
+          secureLogger.error('Token refresh RPC error (Phase 1)', { error });
+          // Clear invalid session
+          this.phase1Session = null;
+          return false;
+        }
+
+        // Update phase1 session with new tokens
+        this.phase1Session = {
+          sessionToken: data.session_token,
+          refreshToken: data.refresh_token,
+          expiresAt: data.expires_at,
+        };
+
+        secureLogger.security('Token refresh successful (Phase 1)');
+        return true;
+      } catch (error) {
+        secureLogger.error('Token refresh exception (Phase 1)', { error });
+        this.phase1Session = null;
+        return false;
+      }
+    }
+
+    // Default: Full session manager mode
     try {
       const refreshToken = sessionManager.getCurrentRefreshToken();
 
