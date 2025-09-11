@@ -37,6 +37,9 @@ export function useBlockedList() {
     try {
       await blockUser(userId);
       setBlocked(prev => (prev.includes(userId) ? prev : [...prev, userId]));
+    } catch (e) {
+      setError(e);
+      throw e;
     } finally {
       pending.current.delete(userId);
       setMutating(false);
@@ -50,6 +53,9 @@ export function useBlockedList() {
     try {
       await unblockUser(userId);
       setBlocked(prev => prev.filter(id => id !== userId));
+    } catch (e) {
+      setError(e);
+      throw e;
     } finally {
       pending.current.delete(userId);
       setMutating(false);
