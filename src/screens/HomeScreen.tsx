@@ -14,12 +14,19 @@ import { useTheme } from '../theme/theme';
 import PostCard from '../components/PostCard';
 import { PostSkeletonCard } from '../components/Skeleton';
 import { PostWithMeta } from '../types/post';
-import { fetchHomeFeed, toggleReaction } from '../services/postService';
+import {
+  fetchHomeFeed,
+  fetchHomeFeedFiltered,
+  toggleReaction,
+} from '../services/postService';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { useBlockedList } from '../hooks/useBlock';
+
+import { getFeatureFlag } from '../services/featureFlagService';
+import appConfig from '../config/appConfig';
 
 export default function HomeScreen({
   refreshKey,
@@ -47,6 +54,34 @@ export default function HomeScreen({
     }).start();
   }, [fade]);
 
+  // Resolve feature flag (local override or remote) for filtered views
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const v = await getFeatureFlag(
+          'useFilteredViews',
+          appConfig.useFilteredViews,
+        );
+        if (mounted) {
+          setUseFiltered(v);
+        }
+      } catch {}
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Re-fetch when feature flag changes to ensure server-side filtering is applied
+  useEffect(() => {
+    // Reset and reload using the latest flag
+    setCursor(null);
+    setItems([]);
+    load({ refresh: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useFiltered]);
+
   const [items, setItems] = useState<PostWithMeta[]>([]);
   const { blocked } = useBlockedList();
   const filteredItems = useMemo(
@@ -54,6 +89,9 @@ export default function HomeScreen({
     [items, blocked]
   );
   const [cursor, setCursor] = useState<string | null>(null);
+  const [useFiltered, setUseFiltered] = useState<boolean>(
+    appConfig.useFilteredViews,
+  );
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const endReached = useRef(false);
@@ -68,7 +106,9 @@ export default function HomeScreen({
     setLoading(true);
     try {
       const before = opts?.refresh ? null : cursor;
-      const res = await fetchHomeFeed({ before });
+      const res = useFiltered
+        ? await fetchHomeFeedFiltered({ before })
+        : await fetchHomeFeed({ before });
       setItems(prev => (opts?.refresh ? res.items : [...prev, ...res.items]));
       setCursor(res.nextCursor);
     } finally {

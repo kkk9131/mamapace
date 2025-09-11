@@ -104,6 +104,90 @@ export async function fetchHomeFeed(
   return { items, nextCursor: computeNextCursor(items) };
 }
 
+export async function fetchHomeFeedFiltered(
+  options: { before?: string | null; limit?: number } = {}
+): Promise<PaginatedResult<PostWithMeta>> {
+  const client = getSupabaseClient();
+  const before = options.before ?? null;
+  const limit = options.limit ?? PAGE_SIZE_DEFAULT;
+  const { data, error } = await client.rpc('get_home_feed_v2_filtered', {
+    p_offset_time: before,
+    p_limit: limit,
+  });
+  if (error) {
+    throw error;
+  }
+  const rows = (data ?? []) as any[];
+  let items: PostWithMeta[] = rows.map(row => ({
+    id: row.id,
+    user_id: row.user_id,
+    body: row.body,
+    created_at: row.created_at,
+    attachments: row.attachments || [],
+    reaction_summary: {
+      count: Number(row.reaction_count ?? 0),
+      reactedByMe: false,
+    },
+    comment_summary: { count: Number(row.comment_count ?? 0) },
+    user: {
+      id: row.user_id,
+      // DB function returns display_name/avatar_emoji; avatar_url is filled below
+      username: row.user_username ?? row.username ?? '',
+      display_name: row.user_display_name ?? row.display_name ?? null,
+      avatar_emoji: row.user_avatar_emoji ?? row.avatar_emoji ?? null,
+      avatar_url: row.user_avatar_url ?? row.avatar_url ?? null,
+    },
+  }));
+
+  // Fill missing avatar_url in batch
+  const missingAvatarUsers = Array.from(
+    new Set(items.filter(it => !it.user?.avatar_url).map(it => it.user_id))
+  );
+  if (missingAvatarUsers.length > 0) {
+    const { data: profiles } = await client
+      .from('user_profiles')
+      .select('id, avatar_url')
+      .in('id', missingAvatarUsers);
+    const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
+    items = items.map(it =>
+      it.user
+        ? {
+            ...it,
+            user: {
+              ...it.user,
+              avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null,
+            },
+          }
+        : it
+    );
+  }
+  // Fill maternal_verified from public view
+  {
+    const ids = Array.from(new Set(items.map(it => it.user_id)));
+    if (ids.length > 0) {
+      const { data: pubs } = await client
+        .from('user_profiles_public')
+        .select('id, maternal_verified')
+        .in('id', ids);
+      const map = new Map(
+        (pubs || []).map((p: any) => [p.id, !!p.maternal_verified])
+      );
+      items = items.map(it =>
+        it.user
+          ? {
+              ...it,
+              user: {
+                ...it.user,
+                maternal_verified: map.get(it.user_id) ?? false,
+              },
+            }
+          : it
+      );
+    }
+  }
+  return { items, nextCursor: computeNextCursor(items) };
+}
+
 export async function fetchMyPosts(options?: {
   before?: string | null;
   limit?: number;

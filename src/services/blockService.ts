@@ -1,11 +1,13 @@
-import { getSupabaseClient } from './supabaseClient';
 import { ServiceError } from '../utils/errors';
+import { getSupabaseClient } from './supabaseClient';
 
 export async function blockUser(blockedUserId: string) {
   const supabase = getSupabaseClient();
   const { data: userRes } = await supabase.auth.getUser();
   const user = userRes?.user;
-  if (!user) throw new ServiceError('NOT_AUTHENTICATED', 'Not authenticated');
+  if (!user) {
+    throw new ServiceError('NOT_AUTHENTICATED', 'Not authenticated');
+  }
 
   const { error } = await supabase
     .from('block_relationships')
@@ -20,7 +22,9 @@ export async function unblockUser(blockedUserId: string) {
   const supabase = getSupabaseClient();
   const { data: userRes } = await supabase.auth.getUser();
   const user = userRes?.user;
-  if (!user) throw new ServiceError('NOT_AUTHENTICATED', 'Not authenticated');
+  if (!user) {
+    throw new ServiceError('NOT_AUTHENTICATED', 'Not authenticated');
+  }
 
   const { error } = await supabase
     .from('block_relationships')
@@ -37,7 +41,9 @@ export async function listBlockedUsers(): Promise<string[]> {
   const supabase = getSupabaseClient();
   const { data: userRes } = await supabase.auth.getUser();
   const user = userRes?.user;
-  if (!user) throw new ServiceError('NOT_AUTHENTICATED', 'Not authenticated');
+  if (!user) {
+    throw new ServiceError('NOT_AUTHENTICATED', 'Not authenticated');
+  }
 
   const { data, error } = await supabase
     .from('block_relationships')
@@ -72,7 +78,9 @@ export async function isBlockedBatch(userIds: string[]): Promise<Set<string>> {
   const supabase = getSupabaseClient();
   const { data: userRes } = await supabase.auth.getUser();
   const user = userRes?.user;
-  if (!user || userIds.length === 0) return new Set();
+  if (!user || userIds.length === 0) {
+    return new Set();
+  }
 
   const { data, error } = await supabase
     .from('block_relationships')

@@ -27,12 +27,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { useChat } from '../hooks/useChat';
 import { MessageType, OptimisticMessage } from '../types/chat';
-import { chatService } from '../services/chatService';
+// import removed: chatService was unused
 import { getSupabaseClient } from '../services/supabaseClient';
 import VerifiedBadge from '../components/VerifiedBadge';
 import { REPORT_REASONS } from '../utils/reportReasons';
 import { submitReport } from '../services/reportService';
 import { blockUser } from '../services/blockService';
+import { useBlockedList } from '../hooks/useBlock';
 import { notifyError, notifyInfo } from '../utils/notify';
 
 interface ChatScreenProps {
@@ -100,6 +101,8 @@ export default function ChatScreen({
   );
 
   const otherUserId = chat?.participant_ids?.[0] || null;
+  const { isBlocked: isBlockedFn, unblock, mutating } = useBlockedList();
+  const chatBlocked = isBlockedFn(otherUserId);
   const handleMenuPress = () => {
     if (!otherUserId) return;
     Alert.alert('操作を選択', undefined, [
@@ -1218,6 +1221,51 @@ export default function ChatScreen({
             >
               <Ionicons name="camera-outline" size={18} color={colors.text} />
             </Pressable>
+            {chatBlocked && (
+              <View
+                style={{
+                  padding: 8,
+                  marginBottom: 6,
+                  backgroundColor: '#ffffff14',
+                  borderRadius: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                  ブロック中の相手にはメッセージを送信できません。
+                </Text>
+                {otherUserId && (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={async () => {
+                      try {
+                        await unblock(otherUserId);
+                      } catch {}
+                    }}
+                    disabled={mutating}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 999,
+                      backgroundColor: pressed ? '#ffffff30' : '#ffffff22',
+                      opacity: mutating ? 0.5 : 1,
+                    })}
+                  >
+                    <Text
+                      style={{
+                        color: colors.text,
+                        fontWeight: '700',
+                        fontSize: 12,
+                      }}
+                    >
+                      解除
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
             <TextInput
               placeholder="メッセージを入力"
               placeholderTextColor={colors.subtext}
@@ -1229,12 +1277,14 @@ export default function ChatScreen({
               returnKeyType="send"
               multiline
               maxLength={1000}
-              editable={!isSending}
+              editable={!isSending && !chatBlocked}
             />
             <Pressable
               onPress={handleSendMessage}
               disabled={
-                (!inputMessage.trim() && images.length === 0) || isSending
+                (!inputMessage.trim() && images.length === 0) ||
+                isSending ||
+                chatBlocked
               }
               style={({ pressed }) => ({
                 ...(handPreference === 'left'
