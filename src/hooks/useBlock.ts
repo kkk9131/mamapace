@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { blockUser, unblockUser, listBlockedUsers } from '../services/blockService';
 
+// Simple TTL cache (module-scoped) to avoid frequent reloads across screens
+let cachedBlocked: string[] | null = null;
+let cachedAt = 0;
+const BLOCKED_TTL_MS = 60 * 1000; // 60s
+
 export function useBlockedList() {
   const [blocked, setBlocked] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -14,6 +19,8 @@ export function useBlockedList() {
     try {
       const ids = await listBlockedUsers();
       setBlocked(ids);
+      cachedBlocked = ids;
+      cachedAt = Date.now();
     } catch (e) {
       setError(e);
     } finally {
@@ -22,6 +29,11 @@ export function useBlockedList() {
   }, []);
 
   useEffect(() => {
+    // Serve from cache if fresh
+    if (cachedBlocked && Date.now() - cachedAt < BLOCKED_TTL_MS) {
+      setBlocked(cachedBlocked);
+      return;
+    }
     void refresh();
   }, [refresh]);
 
@@ -36,7 +48,12 @@ export function useBlockedList() {
     setMutating(true);
     try {
       await blockUser(userId);
-      setBlocked(prev => (prev.includes(userId) ? prev : [...prev, userId]));
+      setBlocked(prev => {
+        const next = prev.includes(userId) ? prev : [...prev, userId];
+        cachedBlocked = next;
+        cachedAt = Date.now();
+        return next;
+      });
     } catch (e) {
       setError(e);
       throw e;
@@ -52,7 +69,12 @@ export function useBlockedList() {
     setMutating(true);
     try {
       await unblockUser(userId);
-      setBlocked(prev => prev.filter(id => id !== userId));
+      setBlocked(prev => {
+        const next = prev.filter(id => id !== userId);
+        cachedBlocked = next;
+        cachedAt = Date.now();
+        return next;
+      });
     } catch (e) {
       setError(e);
       throw e;

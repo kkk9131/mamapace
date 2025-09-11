@@ -1,5 +1,6 @@
 import { getSupabaseClient } from './supabaseClient';
 import { ReportReasonCode, ReportTargetType } from '../types/Report';
+import { ServiceError } from '../utils/errors';
 
 type SubmitReportParams = {
   targetType: ReportTargetType;
@@ -13,16 +14,16 @@ export async function submitReport(params: SubmitReportParams) {
   const { targetType, targetId, reasonCode, reasonText, metadata } = params;
   // Runtime input validation (defense-in-depth)
   if (!targetId || typeof targetId !== 'string' || !targetId.trim()) {
-    throw new Error('[submitReport] invalid targetId');
+    throw new ServiceError('REPORT_INVALID_INPUT', '[submitReport] invalid targetId');
   }
   if (targetId.length > 255) {
-    throw new Error('[submitReport] targetId too long');
+    throw new ServiceError('REPORT_INVALID_INPUT', '[submitReport] targetId too long');
   }
   if (!targetType) {
-    throw new Error('[submitReport] invalid targetType');
+    throw new ServiceError('REPORT_INVALID_INPUT', '[submitReport] invalid targetType');
   }
   if (!reasonCode || (typeof reasonCode === 'string' && reasonCode.trim().length === 0)) {
-    throw new Error('[submitReport] invalid reasonCode');
+    throw new ServiceError('REPORT_INVALID_INPUT', '[submitReport] invalid reasonCode');
   }
   const safeReasonText =
     typeof reasonText === 'string'
@@ -31,7 +32,7 @@ export async function submitReport(params: SubmitReportParams) {
   const supabase = getSupabaseClient();
   const { data: userRes } = await supabase.auth.getUser();
   const user = userRes?.user;
-  if (!user) throw new Error('Not authenticated');
+  if (!user) throw new ServiceError('NOT_AUTHENTICATED', 'Not authenticated');
 
   const { error } = await supabase.from('reports').insert({
     reporter_id: user.id,
@@ -43,6 +44,6 @@ export async function submitReport(params: SubmitReportParams) {
   });
 
   if (error) {
-    throw new Error(`[submitReport] failed: ${error.message || 'unknown error'}`);
+    throw new ServiceError('REPORT_INSERT_FAILED', error.message || 'report insert failed', error);
   }
 }
