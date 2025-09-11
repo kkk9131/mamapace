@@ -13,7 +13,6 @@ import { submitReport } from '../services/reportService';
 import { blockUser } from '../services/blockService';
 import { REPORT_REASONS } from '../utils/reportReasons';
 import { notifyError, notifyInfo } from '../utils/notify';
-import { useEffect } from 'react';
 
 export default function PostCard({
   post,
@@ -40,67 +39,60 @@ export default function PostCard({
   const likeScale = useRef(new Animated.Value(1)).current;
   const float = useRef(new Animated.Value(0)).current;
   const commentScale = useRef(new Animated.Value(1)).current;
-  const [showMenu, setShowMenu] = useState(false);
-
-  useEffect(() => {
-    if (!showMenu || isOwner) return;
-    const run = async () => {
-      setShowMenu(false);
-      Alert.alert('操作を選択', undefined, [
-        {
-          text: '通報する',
-          onPress: () => {
-            Alert.alert(
-              '通報理由を選択',
-              undefined,
-              [
-                ...REPORT_REASONS.map(r => ({
-                  text: r.label,
-                  onPress: async () => {
-                    try {
-                      await submitReport({
-                        targetType: 'post',
-                        targetId: post.id,
-                        reasonCode: r.code,
-                      });
-                      notifyInfo('通報を受け付けました');
-                    } catch (e: any) {
-                      notifyError('通報に失敗しました');
-                    }
-                  },
-                })),
-                { text: 'キャンセル', style: 'cancel' },
-              ],
-            );
-          },
-        },
-        {
-          text: 'ユーザーをブロック',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('確認', 'このユーザーをブロックしますか？', [
-              { text: 'キャンセル', style: 'cancel' },
-              {
-                text: 'ブロック',
-                style: 'destructive',
+  const handleMenuPress = () => {
+    if (isOwner) return;
+    Alert.alert('操作を選択', undefined, [
+      {
+        text: '通報する',
+        onPress: () => {
+          Alert.alert(
+            '通報理由を選択',
+            undefined,
+            [
+              ...REPORT_REASONS.map(r => ({
+                text: r.label,
                 onPress: async () => {
                   try {
-                    await blockUser(post.user_id);
-                    notifyInfo('ユーザーをブロックしました');
+                    await submitReport({
+                      targetType: 'post',
+                      targetId: post.id,
+                      reasonCode: r.code,
+                    });
+                    notifyInfo('通報を受け付けました');
                   } catch (e: any) {
-                    notifyError('ブロックに失敗しました');
+                    notifyError('通報に失敗しました');
                   }
                 },
-              },
-            ]);
-          },
+              })),
+              { text: 'キャンセル', style: 'cancel' },
+            ],
+          );
         },
-        { text: 'キャンセル', style: 'cancel' },
-      ]);
-    };
-    run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showMenu]);
+      },
+      {
+        text: 'ユーザーをブロック',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert('確認', 'このユーザーをブロックしますか？', [
+            { text: 'キャンセル', style: 'cancel' },
+            {
+              text: 'ブロック',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await blockUser(post.user_id);
+                  notifyInfo('ユーザーをブロックしました');
+                } catch (e: any) {
+                  notifyError('ブロックに失敗しました');
+                }
+              },
+            },
+          ]);
+        },
+      },
+      { text: 'キャンセル', style: 'cancel' },
+    ]);
+  };
 
   const baseReaction = post.reaction_summary || {
     reactedByMe: false,
@@ -239,7 +231,7 @@ export default function PostCard({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="その他の操作"
-                onPress={() => setShowMenu(true)}
+                onPress={handleMenuPress}
                 style={({ pressed }) => ({
                   paddingHorizontal: 10,
                   paddingVertical: 6,
@@ -477,7 +469,7 @@ export default function PostCard({
         </Pressable>
       </Modal>
 
-      {/* Menu handled via useEffect */}
+      {/* メニューはボタンハンドラーでAlertを発火 */}
     </View>
   );
 }

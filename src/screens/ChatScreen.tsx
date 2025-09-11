@@ -100,62 +100,55 @@ export default function ChatScreen({
   );
 
   const otherUserId = chat?.participant_ids?.[0] || null;
-  const [showMenu, setShowMenu] = useState(false);
-
-  useEffect(() => {
-    if (!showMenu || !otherUserId) return;
-    const run = async () => {
-      setShowMenu(false);
-      Alert.alert('操作を選択', undefined, [
-        {
-          text: '通報する',
-          onPress: () =>
-            Alert.alert('通報理由を選択', undefined, [
-              ...REPORT_REASONS.map(r => ({
-                text: r.label,
-                onPress: async () => {
-                  try {
-                    await submitReport({
-                      targetType: 'user',
-                      targetId: otherUserId,
-                      reasonCode: r.code,
-                    });
-                    notifyInfo('通報を受け付けました');
-                  } catch (e: any) {
-                    notifyError('通報に失敗しました');
-                  }
-                },
-              })),
-              { text: 'キャンセル', style: 'cancel' },
-            ]),
-        },
-        {
-          text: 'ユーザーをブロック',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('確認', 'このユーザーをブロックしますか？', [
-              { text: 'キャンセル', style: 'cancel' },
-              {
-                text: 'ブロック',
-                style: 'destructive',
-                onPress: async () => {
-                  try {
-                    await blockUser(otherUserId);
-                    notifyInfo('ユーザーをブロックしました');
-                  } catch (e: any) {
-                    notifyError('ブロックに失敗しました');
-                  }
-                },
+  const handleMenuPress = () => {
+    if (!otherUserId) return;
+    Alert.alert('操作を選択', undefined, [
+      {
+        text: '通報する',
+        onPress: () =>
+          Alert.alert('通報理由を選択', undefined, [
+            ...REPORT_REASONS.map(r => ({
+              text: r.label,
+              onPress: async () => {
+                try {
+                  await submitReport({
+                    targetType: 'user',
+                    targetId: otherUserId,
+                    reasonCode: r.code,
+                  });
+                  notifyInfo('通報を受け付けました');
+                } catch (e: any) {
+                  notifyError('通報に失敗しました');
+                }
               },
-            ]);
-          },
+            })),
+            { text: 'キャンセル', style: 'cancel' },
+          ]),
+      },
+      {
+        text: 'ユーザーをブロック',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert('確認', 'このユーザーをブロックしますか？', [
+            { text: 'キャンセル', style: 'cancel' },
+            {
+              text: 'ブロック',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await blockUser(otherUserId);
+                  notifyInfo('ユーザーをブロックしました');
+                } catch (e: any) {
+                  notifyError('ブロックに失敗しました');
+                }
+              },
+            },
+          ]);
         },
-        { text: 'キャンセル', style: 'cancel' },
-      ]);
-    };
-    run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showMenu]);
+      },
+      { text: 'キャンセル', style: 'cancel' },
+    ]);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -1077,7 +1070,7 @@ export default function ChatScreen({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="その他の操作"
-                onPress={() => setShowMenu(true)}
+                onPress={handleMenuPress}
                 style={({ pressed }) => ({
                   marginLeft: 12,
                   paddingHorizontal: 10,
@@ -1309,7 +1302,7 @@ export default function ChatScreen({
         )}
       </View>
 
-      {/* Menu handled via useEffect */}
+      {/* メニューはボタンハンドラーでAlertを発火 */}
       {/* Simple image viewer modal */}
       <Modal
         visible={viewer.visible}
