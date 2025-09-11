@@ -378,23 +378,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: 'SET_LOADING', payload: true });
         dispatch({ type: 'CLEAR_ERROR' });
 
-        // Use a stable native scheme to avoid Expo dev host variations
-        const redirectTo = 'mamapace://auth-callback';
 
-        await supaAuth.signUp({
-          email: params.email,
-          password: params.password,
-          redirectTo,
+        secureLogger.info('Starting Supabase Auth registration', {
+          email: params.email.replace(/^(.{2}).*(@.*)$/, '$1***$2'),
         });
 
-        // If email confirmations are enabled, session may be null. Try explicit sign-in.
-        try {
-          await supaAuth.signIn({
-            email: params.email,
-            password: params.password,
-          });
-        } catch (e) {
-          // If sign-in fails (e.g., email not confirmed), surface a helpful message
+        // Step 1: Sign up with Supabase Auth
+        const signUpResult = await supaAuth.signUp({
+          email: params.email,
+          password: params.password,
+          redirectTo: 'mamapace://auth-callback',
+        });
+
+        secureLogger.info('SignUp result', {
+          hasUser: !!signUpResult.user,
+          hasSession: !!signUpResult.session,
+        });
+
+        // Step 2: Check if email confirmation is required
+        if (!signUpResult.session) {
+          secureLogger.info('Email confirmation required');
           dispatch({
             type: 'SET_ERROR',
             payload: 'メール認証が必要です。受信トレイをご確認ください。',
@@ -406,20 +409,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
         }
 
-        // Ensure profile exists/updated
+        // Step 3: If we have a session, try to get the user profile
+        let profile: PublicUserProfile;
+        try {
+          profile = await getMyProfile();
+          secureLogger.info('Profile retrieved successfully', {
+            profileId: profile.id,
+          });
+        } catch (profileError: any) {
+          secureLogger.warn('Failed to get profile after signup', {
+            error: profileError.message,
+          });
+          // Profile might not exist yet, wait a bit and retry
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          try {
+            profile = await getMyProfile();
+            secureLogger.info('Profile retrieved on retry');
+          } catch (retryError: any) {
+            secureLogger.error('Profile still not found after retry', {
+              error: retryError.message,
+            });
+            dispatch({
+              type: 'SET_ERROR',
+              payload:
+                'プロファイルの作成に失敗しました。もう一度お試しください。',
+            });
+            dispatch({ type: 'SET_LOADING', payload: false });
+            return {
+              success: false,
+              error:
+                'プロファイルの作成に失敗しました。もう一度お試しください。',
+            };
+          }
+        }
+
+        // Step 4: Update profile with additional information if provided
         if (params.display_name || params.bio || params.avatar_emoji) {
           try {
-            await updateMyProfile({
+            secureLogger.info('Updating profile with additional info');
+            profile = await updateMyProfile({
               display_name: params.display_name,
               bio: params.bio,
               avatar_emoji: params.avatar_emoji,
             });
-          } catch {}
+            secureLogger.info('Profile updated successfully');
+          } catch (updateError: any) {
+            secureLogger.warn('Failed to update profile, but continuing', {
+              error: updateError.message,
+            });
+            // Continue even if profile update fails
+          }
         }
 
-        const profile = await getMyProfile();
+        // Step 5: Set user and setup monitoring
         dispatch({ type: 'SET_USER', payload: profile });
         setupSessionMonitoring();
+
+        secureLogger.info('Registration completed successfully', {
+          userId: profile.id,
+        });
+
         return {
           success: true,
           user: profile,
@@ -428,12 +477,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           expires_at: '',
         } as any;
       } catch (error: any) {
-        const msg =
-          (error && (error.message || error.error_description)) ||
-          '登録に失敗しました。もう一度お試しください。';
-        dispatch({ type: 'SET_ERROR', payload: msg });
+        secureLogger.error('Registration failed with error', {
+          error: error.message || String(error),
+          code: error.code,
+        });
+
+        let errorMessage = '登録に失敗しました。もう一度お試しください。';
+
+        // Handle specific Supabase errors
+        if (error.message?.includes('already registered')) {
+          errorMessage = 'このメールアドレスは既に登録されています。';
+        } else if (error.message?.includes('invalid email')) {
+          errorMessage = 'メールアドレスの形式が正しくありません。';
+        } else if (error.message?.includes('weak password')) {
+          errorMessage =
+            'パスワードが弱すぎます。より強いパスワードを設定してください。';
+        } else if (error.message?.includes('rate limit')) {
+          errorMessage = 'しばらく時間をおいてからお試しください。';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        dispatch({ type: 'SET_ERROR', payload: errorMessage });
         dispatch({ type: 'SET_LOADING', payload: false });
-        return { success: false, error: msg };
+        return { success: false, error: errorMessage };
       }
     },
     [setupSessionMonitoring]
@@ -601,20 +668,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      secureLogger.info('AuthContext: Refreshing token');
+      secureLogger.info('AuthContext: Attempting token refresh');
       const success = await authService.refreshToken();
 
-      if (!success) {
-        secureLogger.warn('AuthContext: Token refresh failed, logging out');
+      if (success) {
+        secureLogger.info('AuthContext: Token refresh successful');
+        return true;
+      } else {
+        secureLogger.warn('AuthContext: Token refresh failed - invalid refresh token');
+        // Clear error state and logout gracefully
+        dispatch({ type: 'CLEAR_ERROR' });
+        await logout();
+        return false;
+      }
+    } catch (error: any) {
+      secureLogger.error('AuthContext: Token refresh exception', { 
+        error: error.message || error 
+      });
+
+      // Handle specific Supabase auth errors
+      if (error.message?.includes('Invalid Refresh Token') || 
+          error.message?.includes('Refresh Token Not Found')) {
+        secureLogger.warn('AuthContext: Refresh token is invalid, clearing session');
+        dispatch({ type: 'CLEAR_ERROR' });
         await logout();
       } else {
-        secureLogger.info('AuthContext: Token refresh successful');
+        // For other errors, set error state but don't logout immediately
+        dispatch({ 
+          type: 'SET_ERROR', 
+          payload: 'セッションの更新に失敗しました。再ログインが必要な場合があります。' 
+        });
       }
 
-      return success;
-    } catch (error) {
-      secureLogger.error('AuthContext: Token refresh error', { error });
-      await logout();
       return false;
     }
   }, [state.isInitialized, logout]);

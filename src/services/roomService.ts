@@ -263,7 +263,9 @@ export class RoomService {
       // Fetch owner profiles separately
       const { data: ownerProfiles, error: profileError } = await supabase
         .from('user_profiles_public')
-        .select('id, username, display_name, avatar_emoji, avatar_url, maternal_verified')
+        .select(
+          'id, username, display_name, avatar_emoji, avatar_url, maternal_verified',
+        )
         .in('id', ownerIds);
 
       if (profileError) {

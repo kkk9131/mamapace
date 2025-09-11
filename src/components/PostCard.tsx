@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, Animated, Image, Modal } from 'react-native';
+import { View, Text, Pressable, Animated, Image, Modal, Alert } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 
@@ -9,6 +9,10 @@ import { PostWithMeta } from '../types/post';
 
 import ExpandableText from './ExpandableText';
 import VerifiedBadge from './VerifiedBadge';
+import { submitReport } from '../services/reportService';
+import { blockUser } from '../services/blockService';
+import { REPORT_REASONS } from '../utils/reportReasons';
+import { notifyError, notifyInfo } from '../utils/notify';
 
 export default function PostCard({
   post,
@@ -35,6 +39,60 @@ export default function PostCard({
   const likeScale = useRef(new Animated.Value(1)).current;
   const float = useRef(new Animated.Value(0)).current;
   const commentScale = useRef(new Animated.Value(1)).current;
+  const handleMenuPress = () => {
+    if (isOwner) return;
+    Alert.alert('操作を選択', undefined, [
+      {
+        text: '通報する',
+        onPress: () => {
+          Alert.alert(
+            '通報理由を選択',
+            undefined,
+            [
+              ...REPORT_REASONS.map(r => ({
+                text: r.label,
+                onPress: async () => {
+                  try {
+                    await submitReport({
+                      targetType: 'post',
+                      targetId: post.id,
+                      reasonCode: r.code,
+                    });
+                    notifyInfo('通報を受け付けました');
+                  } catch (e: any) {
+                    notifyError('通報に失敗しました');
+                  }
+                },
+              })),
+              { text: 'キャンセル', style: 'cancel' },
+            ],
+          );
+        },
+      },
+      {
+        text: 'ユーザーをブロック',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert('確認', 'このユーザーをブロックしますか？', [
+            { text: 'キャンセル', style: 'cancel' },
+            {
+              text: 'ブロック',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await blockUser(post.user_id);
+                  notifyInfo('ユーザーをブロックしました');
+                } catch (e: any) {
+                  notifyError('ブロックに失敗しました');
+                }
+              },
+            },
+          ]);
+        },
+      },
+      { text: 'キャンセル', style: 'cancel' },
+    ]);
+  };
 
   const baseReaction = post.reaction_summary || {
     reactedByMe: false,
@@ -102,7 +160,7 @@ export default function PostCard({
         tint="dark"
         style={{ padding: theme.spacing(2), backgroundColor: '#ffffff0E' }}
       >
-        {/* TOP SECTION: Avatar + Username and Time */}
+        {/* TOP SECTION: Avatar + Username and Time + Menu */}
         <View
           style={{
             flexDirection: 'row',
@@ -143,7 +201,9 @@ export default function PostCard({
               style={{ flex: 1 }}
               hitSlop={{ top: 8, bottom: 8, left: 0, right: 0 }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+              >
                 <Text
                   style={{
                     color: colors.text,
@@ -158,15 +218,32 @@ export default function PostCard({
               </View>
             </Pressable>
           </View>
-          <Text
-            style={{
-              color: colors.subtext,
-              fontSize: 14,
-              marginLeft: theme.spacing(1),
-            }}
-          >
-            {new Date(post.created_at).toLocaleString()}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text
+              style={{
+                color: colors.subtext,
+                fontSize: 14,
+              }}
+            >
+              {new Date(post.created_at).toLocaleString()}
+            </Text>
+            {!isOwner && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="その他の操作"
+                onPress={handleMenuPress}
+                style={({ pressed }) => ({
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  backgroundColor: pressed ? '#ffffff20' : colors.surface,
+                })}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={{ color: colors.text, fontWeight: '700' }}>⋯</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {/* CONTENT SECTION: Post Body (hide placeholder when attachments-only) */}
@@ -391,6 +468,8 @@ export default function PostCard({
           ) : null}
         </Pressable>
       </Modal>
+
+      {/* メニューはボタンハンドラーでAlertを発火 */}
     </View>
   );
 }

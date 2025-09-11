@@ -68,9 +68,13 @@ export async function fetchLiveMessages(): Promise<AnonV2Message[]> {
 export async function getCurrentAnonSlotId(): Promise<string | null> {
   const client = getSupabaseClient();
   const { data, error } = await client.rpc('get_or_create_current_anon_room');
-  if (error || !data) return null;
+  if (error || !data) {
+    return null;
+  }
   const d = data as Record<string, unknown>;
-  if (d.error) return null;
+  if (d.error) {
+    return null;
+  }
   return String(d.room_id ?? '');
 }
 
@@ -186,7 +190,9 @@ export interface AnonMessageMeta {
   reacted: boolean;
 }
 
-export async function getAnonMessageMeta(messageId: string): Promise<AnonMessageMeta | null> {
+export async function getAnonMessageMeta(
+  messageId: string,
+): Promise<AnonMessageMeta | null> {
   const client = getSupabaseClient();
   const { data, error } = await client.rpc('get_anonymous_message_meta', {
     p_message_id: messageId,

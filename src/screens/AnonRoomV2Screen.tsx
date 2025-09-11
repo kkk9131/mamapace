@@ -16,7 +16,11 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/theme';
 import { useAuthReady } from '../contexts/AuthContext';
 import BubbleField from '../ui/anonymousRoomV2/BubbleField';
-import { fetchLiveMessages, sendAnonMessage, getCurrentAnonSlotId } from '../services/anonV2Service';
+import {
+  fetchLiveMessages,
+  sendAnonMessage,
+  getCurrentAnonSlotId,
+} from '../services/anonV2Service';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { notifyError } from '../utils/notify';
 
@@ -33,13 +37,15 @@ export default function AnonRoomV2Screen({
   const { colors, spacing, shadow } = useTheme();
   const insets = useSafeAreaInsets();
   const fade = useRef(new Animated.Value(0)).current;
-  const [liveMessages, setLiveMessages] = useState<Array<{
-    id: string;
-    content: string;
-    display_name: string;
-    created_at: string;
-    expires_at?: string;
-  }>>([]);
+  const [liveMessages, setLiveMessages] = useState<
+    Array<{
+      id: string;
+      content: string;
+      display_name: string;
+      created_at: string;
+      expires_at?: string;
+    }>
+  >([]);
   const [messageText, setMessageText] = useState('');
   const inputRef = useRef<TextInput>(null);
   const [inputFocused, setInputFocused] = useState(false);
@@ -51,7 +57,9 @@ export default function AnonRoomV2Screen({
   const [slotId, setSlotId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!servicesReady) return; // Wait until Supabase and services are ready
+    if (!servicesReady) {
+      return;
+    } // Wait until Supabase and services are ready
     let mounted = true;
     const load = async () => {
       const rows = await fetchLiveMessages();
@@ -63,7 +71,9 @@ export default function AnonRoomV2Screen({
     load();
     (async () => {
       const id = await getCurrentAnonSlotId();
-      if (mounted) setSlotId(id);
+      if (mounted) {
+        setSlotId(id);
+      }
     })();
     const t = setInterval(load, 15000);
     Animated.timing(fade, {
@@ -79,9 +89,13 @@ export default function AnonRoomV2Screen({
 
   // Secure realtime subscription scoped to current slot id
   useEffect(() => {
-    if (!slotId) return;
+    if (!slotId) {
+      return;
+    }
     if (realtimeRef.current) {
-      try { getSupabaseClient().removeChannel(realtimeRef.current); } catch {}
+      try {
+        getSupabaseClient().removeChannel(realtimeRef.current);
+      } catch {}
       realtimeRef.current = null;
     }
     const channel = getSupabaseClient()
@@ -104,8 +118,10 @@ export default function AnonRoomV2Screen({
             expires_at: row.expires_at ? String(row.expires_at) : undefined,
           } as const;
           setLiveMessages(prev => {
-            const byId: Record<string, typeof prev[number]> = {};
-            for (const m of prev) byId[String(m.id)] = m;
+            const byId: Record<string, (typeof prev)[number]> = {};
+            for (const m of prev) {
+              byId[String(m.id)] = m;
+            }
             byId[String(msg.id)] = msg;
             return Object.values(byId);
           });
@@ -115,7 +131,9 @@ export default function AnonRoomV2Screen({
     realtimeRef.current = channel;
     return () => {
       if (realtimeRef.current) {
-        try { getSupabaseClient().removeChannel(realtimeRef.current); } catch {}
+        try {
+          getSupabaseClient().removeChannel(realtimeRef.current);
+        } catch {}
         realtimeRef.current = null;
       }
     };

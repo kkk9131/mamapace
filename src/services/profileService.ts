@@ -114,15 +114,22 @@ export async function setMaternalId(id: string): Promise<boolean> {
   if (trimmed.length < 6) {
     throw new Error('母子手帳番号の形式が正しくありません');
   }
-  const { data, error } = await client.rpc('set_maternal_id', { p_id: trimmed });
+  const { data, error } = await client.rpc('set_maternal_id', {
+    p_id: trimmed,
+  });
   if (error) {
     const raw = error.message || '';
     secureLogger.error('Failed to set maternal ID:', error);
-    if (raw.includes('not authenticated') || raw.includes('permission denied')) {
+    if (
+      raw.includes('not authenticated') ||
+      raw.includes('permission denied')
+    ) {
       throw new Error('この操作にはログインが必要です');
     }
     if (raw.includes('profile not found')) {
-      throw new Error('プロフィールが見つかりません。再ログイン後にお試しください');
+      throw new Error(
+        'プロフィールが見つかりません。再ログイン後にお試しください',
+      );
     }
     throw new Error('認証に失敗しました。しばらくしてからお試しください');
   }

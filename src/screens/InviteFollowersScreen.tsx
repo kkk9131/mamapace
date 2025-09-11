@@ -85,7 +85,9 @@ export default function InviteFollowersScreen({
             .select('id, maternal_verified')
             .in('id', ids);
           const bmap: Record<string, boolean> = {};
-          (pubs || []).forEach((p: any) => (bmap[p.id] = !!p.maternal_verified));
+          (pubs || []).forEach(
+            (p: any) => (bmap[p.id] = !!p.maternal_verified),
+          );
           setBadgeMap(bmap);
         }
       } catch {}
@@ -104,7 +106,7 @@ export default function InviteFollowersScreen({
         follower.id === userId
           ? { ...follower, selected: !follower.selected }
           : follower
-      ),
+      )
     );
   };
 
@@ -256,7 +258,9 @@ export default function InviteFollowersScreen({
 
               {/* User info */}
               <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                >
                   <Text
                     style={{
                       color: colors.text,

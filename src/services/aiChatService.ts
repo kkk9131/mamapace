@@ -1,6 +1,9 @@
 import { getSupabaseClient } from './supabaseClient';
 
-export type AIMessage = { role: 'user' | 'assistant' | 'system'; content: string };
+export type AIMessage = {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+};
 
 export interface AIChatSuccessResponse {
   ok: true;
@@ -29,7 +32,12 @@ export async function sendAIChat(
       const msg = (error as any)?.message || 'invoke_error';
       return { ok: false, error: msg };
     }
-    const d = data as { ok?: boolean; text?: string; session_id?: string; error?: string };
+    const d = data as {
+      ok?: boolean;
+      text?: string;
+      session_id?: string;
+      error?: string;
+    };
     if (!d || d.ok !== true || !d.text) {
       return { ok: false, error: d?.error || 'internal_error' };
     }

@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import VerifiedBadge from '../components/VerifiedBadge';
 
+import VerifiedBadge from '../components/VerifiedBadge';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
@@ -29,6 +29,10 @@ import { PublicUserProfile } from '../types/auth';
 import { fetchHomeFeed } from '../services/postService';
 import { secureLogger } from '../utils/privacyProtection';
 import { chatService } from '../services/chatService';
+import { useBlockedList } from '../hooks/useBlock';
+import { submitReport } from '../services/reportService';
+import { REPORT_REASONS } from '../utils/reportReasons';
+import { notifyError, notifyInfo } from '../utils/notify';
 
 interface UserProfileScreenProps {
   userId: string;
@@ -52,6 +56,8 @@ export default function UserProfileScreen({
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState<PostWithMeta[]>([]);
   const [isStartingChat, setIsStartingChat] = useState(false);
+  const { blocked, block, unblock, mutating } = useBlockedList();
+  const isBlocked = blocked.includes(userId);
 
   const fade = new Animated.Value(1);
 
@@ -74,7 +80,10 @@ export default function UserProfileScreen({
             .select('maternal_verified')
             .eq('id', userId)
             .maybeSingle();
-          setUserData({ ...(profile as any), maternal_verified: pub?.maternal_verified ?? false });
+          setUserData({
+            ...(profile as any),
+            maternal_verified: pub?.maternal_verified ?? false,
+          });
         } catch {
           setUserData(profile);
         }
@@ -107,7 +116,8 @@ export default function UserProfileScreen({
               .select('maternal_verified')
               .eq('id', userId)
               .maybeSingle();
-            (enriched as any).maternal_verified = pub?.maternal_verified ?? false;
+            (enriched as any).maternal_verified =
+              pub?.maternal_verified ?? false;
           } catch {}
           setUserData(enriched);
         } else {
@@ -130,7 +140,8 @@ export default function UserProfileScreen({
               .select('maternal_verified')
               .eq('id', userId)
               .maybeSingle();
-            (enriched as any).maternal_verified = pub?.maternal_verified ?? false;
+            (enriched as any).maternal_verified =
+              pub?.maternal_verified ?? false;
           } catch {}
           setUserData(enriched);
         }
@@ -322,7 +333,9 @@ export default function UserProfileScreen({
                   </Text>
                 )}
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
                 <Text
                   style={{
                     color: colors.text,
@@ -414,6 +427,104 @@ export default function UserProfileScreen({
                       }}
                     >
                       {following ? 'フォロー中' : 'フォロー'}
+                    </Text>
+                  </Pressable>
+
+                  {/* Block/Unblock Button */}
+                  <Pressable
+                    disabled={mutating}
+                    onPress={async () => {
+                      try {
+                        if (isBlocked) {
+                          Alert.alert('確認', 'ブロックを解除しますか？', [
+                            { text: 'キャンセル', style: 'cancel' },
+                            {
+                              text: '解除',
+                              onPress: async () => {
+                                try {
+                                  await unblock(userId);
+                                  notifyInfo('ブロックを解除しました');
+                                } catch {
+                                  notifyError('操作に失敗しました');
+                                }
+                              },
+                            },
+                          ]);
+                        } else {
+                          Alert.alert('確認', 'このユーザーをブロックしますか？', [
+                            { text: 'キャンセル', style: 'cancel' },
+                            {
+                              text: 'ブロック',
+                              style: 'destructive',
+                              onPress: async () => {
+                                try {
+                                  await block(userId);
+                                  notifyInfo('ユーザーをブロックしました');
+                                } catch {
+                                  notifyError('操作に失敗しました');
+                                }
+                              },
+                            },
+                          ]);
+                        }
+                      } catch (e: any) {
+                        notifyError('操作に失敗しました');
+                      }
+                    }}
+                    style={({ pressed }) => [
+                      {
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        backgroundColor: colors.surface,
+                        borderRadius: 999,
+                        transform: [{ scale: pressed ? 0.97 : 1 }],
+                        opacity: mutating ? 0.6 : 1,
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: colors.text, fontWeight: '700' }}>
+                      {isBlocked ? '✅ 解除' : '🚫 ブロック'}
+                    </Text>
+                  </Pressable>
+
+                  {/* Report Button */}
+                  <Pressable
+                    onPress={() => {
+                      Alert.alert(
+                        '通報理由を選択',
+                        undefined,
+                        [
+                          ...REPORT_REASONS.map(r => ({
+                            text: r.label,
+                            onPress: async () => {
+                              try {
+                                await submitReport({
+                                  targetType: 'user',
+                                  targetId: userId,
+                                  reasonCode: r.code,
+                                });
+                                notifyInfo('通報を受け付けました');
+                              } catch (e: any) {
+                                notifyError('通報に失敗しました');
+                              }
+                            },
+                          })),
+                          { text: 'キャンセル', style: 'cancel' },
+                        ]
+                      );
+                    }}
+                    style={({ pressed }) => [
+                      {
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        backgroundColor: colors.surface,
+                        borderRadius: 999,
+                        transform: [{ scale: pressed ? 0.97 : 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: colors.text, fontWeight: '700' }}>
+                      🚩 通報
                     </Text>
                   </Pressable>
                 </View>

@@ -22,11 +22,15 @@ export async function listAISessions(): Promise<AIChatSession[]> {
     .select('id, title, created_at, updated_at')
     .order('updated_at', { ascending: false })
     .limit(50);
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message);
+  }
   return (data || []) as AIChatSession[];
 }
 
-export async function fetchAIMessages(sessionId: string): Promise<AIChatMessage[]> {
+export async function fetchAIMessages(
+  sessionId: string,
+): Promise<AIChatMessage[]> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('ai_chat_messages')
@@ -34,7 +38,9 @@ export async function fetchAIMessages(sessionId: string): Promise<AIChatMessage[
     .eq('session_id', sessionId)
     .order('created_at', { ascending: true })
     .limit(500);
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message);
+  }
   return (data || []) as AIChatMessage[];
 }
 
@@ -52,7 +58,9 @@ export async function createAISession(title?: string): Promise<AIChatSession> {
     .insert({ user_id: user.id, title: title ?? null })
     .select('id, title, created_at, updated_at')
     .single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message);
+  }
   return data as AIChatSession;
 }
 
@@ -62,7 +70,9 @@ export async function deleteAISession(sessionId: string): Promise<void> {
     .from('ai_chat_sessions')
     .delete()
     .eq('id', sessionId);
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export async function updateAISessionTitle(
@@ -76,17 +86,23 @@ export async function updateAISessionTitle(
     .eq('id', sessionId)
     .select('id, title, created_at, updated_at')
     .single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message);
+  }
   return data as AIChatSession;
 }
 
-export async function getAISession(sessionId: string): Promise<AIChatSession | null> {
+export async function getAISession(
+  sessionId: string,
+): Promise<AIChatSession | null> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('ai_chat_sessions')
     .select('id, title, created_at, updated_at')
     .eq('id', sessionId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message);
+  }
   return (data as AIChatSession) || null;
 }

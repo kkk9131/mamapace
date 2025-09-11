@@ -25,6 +25,7 @@ import { secureLogger } from '../utils/privacyProtection';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { chatService } from '../services/chatService';
 import VerifiedBadge from '../components/VerifiedBadge';
+import { useBlockedList } from '../hooks/useBlock';
 
 interface FollowersListScreenProps {
   onNavigateToChat?: (chatId: string, userName: string) => void;
@@ -55,6 +56,8 @@ export default function FollowersListScreen({
   const [followStatus, setFollowStatus] = useState<{ [key: string]: boolean }>(
     {}
   );
+  const { blocked } = useBlockedList();
+  const filteredFollowers = followers.filter(f => !blocked.includes(f.user_id));
 
   const loadFollowers = useCallback(
     async (refresh = false) => {
@@ -99,7 +102,9 @@ export default function FollowersListScreen({
             .select('id, maternal_verified')
             .in('id', ids);
           const bmap: Record<string, boolean> = {};
-          (pubs || []).forEach((p: any) => (bmap[p.id] = !!p.maternal_verified));
+          (pubs || []).forEach(
+            (p: any) => (bmap[p.id] = !!p.maternal_verified),
+          );
           setBadgeMap(prev => ({ ...prev, ...bmap }));
         }
 
@@ -200,7 +205,9 @@ export default function FollowersListScreen({
             }}
             style={{ flex: 1 }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+            >
               <Text style={{ color: colors.text, fontWeight: '700' }}>
                 {displayName}
               </Text>
@@ -304,7 +311,7 @@ export default function FollowersListScreen({
       }}
     >
       <FlatList
-        data={followers}
+        data={filteredFollowers}
         keyExtractor={item => item.user_id}
         contentContainerStyle={{
           padding: theme.spacing(2),

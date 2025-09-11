@@ -21,8 +21,10 @@ import { createBatchUpdater } from '../utils/batchUpdate';
 
 export default function SettingsScreen({
   onLogoutNavigate,
+  onOpenBlockedUsers,
 }: {
   onLogoutNavigate?: () => void;
+  onOpenBlockedUsers?: () => void;
 }) {
   const theme = useTheme();
   const { colors } = theme;
@@ -44,7 +46,7 @@ export default function SettingsScreen({
           ? notificationPreferencesService.update(user.id, patch as any)
           : Promise.resolve(false),
       300
-    ),
+    )
   );
 
   useEffect(() => {
@@ -267,6 +269,27 @@ export default function SettingsScreen({
             >
               <Text style={{ color: colors.text, fontWeight: '700' }}>
                 使い方を見る（チュートリアル）
+              </Text>
+            </Pressable>
+          </Section>
+          <View style={{ height: theme.spacing(4) }} />
+
+          <Section title="プライバシー">
+            <Pressable
+              onPress={() => onOpenBlockedUsers && onOpenBlockedUsers()}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: colors.surface,
+                  borderRadius: theme.radius.md,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  ...theme.shadow.card,
+                },
+              ]}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700' }}>
+                ブロックしたユーザーを管理
               </Text>
             </Pressable>
           </Section>
