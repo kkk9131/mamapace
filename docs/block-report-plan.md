@@ -263,6 +263,144 @@
 
 ---
 
+## 次フェーズ詳細計画（実装順のガイド）
+
+この章では「サーバ側除外 → DM RLS → UI抑止 → 通報ワークフロー（Edge） → 追加テスト」の順に、設計/下書きSQL/AC（受け入れ基準）を簡潔にまとめます。実装は段階的に小さなPRで進めます。
+
+### 1) サーバ側除外（ビュー＋RLS）→ 主要画面から段階切替（高）
+
+- 目的: クライアント以外の経路も含めて参照を遮断し、データアクセスの一貫性と安全性を高める。
+- 方針（段階導入）
+  1. フィルタビューを新設（Security Invoker）
+     - posts_filtered, user_profiles_public_filtered, conversations_filtered（必要に応じて messages_filtered 等）
+     - 共通条件: `NOT EXISTS (select 1 from public.block_relationships br where br.blocker_id = auth.uid() and br.blocked_id = <対象所有者ID>)`
+  2. 主要画面（ホーム/検索/DMリスト/通知など）のクエリをビューへ切替（1画面ずつ）
+  3. モニタリング: 件数変動/例外の監視（暫定でログ/ダッシュボード）
+  4. 最終的にベーステーブルへの直接参照を閉じる（必要なRLS/権限調整を別PRで）
+
+- 参考SQL（たたき台）
+```sql
+-- 投稿: 所有者がブロック対象なら除外
+create or replace view public.posts_filtered as
+select p.*
+from public.posts p
+where not exists (
+  select 1 from public.block_relationships br
+  where br.blocker_id = auth.uid()
+    and br.blocked_id = p.user_id
+);
+
+-- 公開プロフィールのフィルタ
+create or replace view public.user_profiles_public_filtered as
+select up.*
+from public.user_profiles_public up
+where not exists (
+  select 1 from public.block_relationships br
+  where br.blocker_id = auth.uid()
+    and br.blocked_id = up.id
+);
+
+-- DM一覧（例）: other_participant_id は実スキーマに合わせてJOIN/関数で抽出
+create or replace view public.conversations_filtered as
+select c.*
+from public.conversations c
+where not exists (
+  select 1 from public.block_relationships br
+  where br.blocker_id = auth.uid()
+    and br.blocked_id = (case when c.participant_1_id = auth.uid() then c.participant_2_id else c.participant_1_id end)
+);
+
+-- 必要に応じて: security_invoker
+alter view public.posts_filtered set (security_invoker = true);
+alter view public.user_profiles_public_filtered set (security_invoker = true);
+alter view public.conversations_filtered set (security_invoker = true);
+```
+
+- 受け入れ基準（AC）
+  - ビューへの切替後、ブロック相手がAPIレスポンスに含まれない（キャッシュを除く）
+  - 主要画面（ホーム/検索/DM）でUXが保持されパフォーマンスも許容範囲
+
+### 2) DM作成・送信のRLS拒否（高）
+
+- 目的: ブロック状態での新規DM作成やメッセージ送信をサーバ側で拒否。
+- 方針
+  - シンプルなアプローチ: 会話IDから相手IDを解決し、ブロック関係があれば `messages` への INSERT を拒否。
+  - パフォーマンス/可読性のため、関数化推奨。
+
+- 参考SQL（たたき台）
+```sql
+-- 会話相手がブロック対象ならfalse
+create or replace function can_send_message(p_conversation_id uuid)
+returns boolean language sql stable as $$
+  select not exists (
+    select 1
+    from public.conversations c
+    join public.block_relationships br
+      on br.blocker_id = auth.uid()
+     and br.blocked_id = (case when c.participant_1_id = auth.uid() then c.participant_2_id else c.participant_1_id end)
+   where c.id = p_conversation_id
+  );
+$$;
+
+-- RLS（messagesテーブル）: 送信者本人かつ can_send_message= true のときのみ許可
+alter table public.messages enable row level security;
+drop policy if exists messages_insert_policy on public.messages;
+create policy messages_insert_policy on public.messages
+  for insert with check (
+    auth.uid() = sender_id
+    and can_send_message(conversation_id)
+  );
+```
+
+- 受け入れ基準（AC）
+  - ブロック状態でのDM送信がサーバ側で拒否される（クライアント改変で回避不可）
+  - 解除後は送信可能
+
+### 3) UIのインタラクション抑止（中）
+
+- 目的: サーバ側拒否に先行・補完する形でUXを向上させ、無駄な操作/エラーを減らす。
+- 方針/対象
+  - プロフィール: isBlocked＝true なら「フォロー/チャット」無効化（mutatingはスピナー）
+  - チャット画面: ブロック状態なら入力欄/送信ボタンを無効化し、案内文言を表示
+  - メンション・サジェスト: ブロック相手を候補から除外
+  - Undo: ブロック直後に短時間「元に戻す（解除）」導線
+
+- 受け入れ基準（AC）
+  - ブロック状態時に主要なインタラクションが無効化され、誤操作が減る
+
+### 4) Edge Functions 通報ワークフロー（レート制限＋通知）（中）
+
+- 目的: 通報運用の実効性を高め、スパム通報を抑止。
+- 構成案
+  - `functions/report-submit`: 入力検証（ID/型/長さ）、ユーザー・対象単位のクールダウン（例: 1分/1回, 日次上限）、通知（Slack/Email/Webhook）
+  - `functions/report-admin`（任意）: `status`/`handled_by` 更新
+  - 監査ログ: 重要な通報を `security_audit_log` に記録
+
+- 参考の擬似フロー
+```ts
+// report-submit (pseudo)
+validate(auth.uid(), body);
+assertNotRateLimited(auth.uid(), body.targetType, body.targetId);
+insert into public.reports (...);
+notifyModerators(...);
+```
+
+- 受け入れ基準（AC）
+  - 連続通報が一定時間で制限される
+  - 通報が通知先に到達し、管理者が確認できる
+
+### 5) 追加テスト（新機能部位に絞る）（中）
+
+- サーバ側除外
+  - ビュー切替後にブロック相手が含まれないこと（モック/API層の単体）
+  - DM送信RLS: ブロック時に拒否（関数の単体テスト or シミュレーション）
+- UI抑止
+  - プロフィール/チャットの無効化と案内文言の表示
+  - Undo導線の表示/動作
+- Edge Functions
+  - 通報入力検証、レート制限ヒット、通知の発火（ステージングでE2E）
+
+
 ## 付録：SQL のたたき台（参考）
 
 > 実際の SQL は `supabase/sql/2025-09-__block_and_report.sql` に配置してください。
