@@ -7,6 +7,7 @@ import {
 } from '../types/post';
 
 import { getSupabaseClient } from './supabaseClient';
+import { fillMissingAvatarUrls, fillMaternalVerified } from '../utils/profileCompletion';
 
 const PAGE_SIZE_DEFAULT = 20;
 
@@ -55,52 +56,8 @@ export async function fetchHomeFeed(
     },
   }));
 
-  // avatar_url が欠けている場合は一括で取得して補完
-  const missingAvatarUsers = Array.from(
-    new Set(items.filter(it => !it.user?.avatar_url).map(it => it.user_id))
-  );
-  if (missingAvatarUsers.length > 0) {
-    const { data: profiles } = await client
-      .from('user_profiles')
-      .select('id, avatar_url')
-      .in('id', missingAvatarUsers);
-    const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
-    items = items.map(it =>
-      it.user
-        ? {
-            ...it,
-            user: {
-              ...it.user,
-              avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null,
-            },
-          }
-        : it
-    );
-  }
-  // maternal_verified を公開ビューから補完
-  {
-    const ids = Array.from(new Set(items.map(it => it.user_id)));
-    if (ids.length > 0) {
-      const { data: pubs } = await client
-        .from('user_profiles_public')
-        .select('id, maternal_verified')
-        .in('id', ids);
-      const map = new Map(
-        (pubs || []).map((p: any) => [p.id, !!p.maternal_verified]),
-      );
-      items = items.map(it =>
-        it.user
-          ? {
-              ...it,
-              user: {
-                ...it.user,
-                maternal_verified: map.get(it.user_id) ?? false,
-              },
-            }
-          : it,
-      );
-    }
-  }
+  items = await fillMissingAvatarUrls(client, items);
+  items = await fillMaternalVerified(client, items);
   return { items, nextCursor: computeNextCursor(items) };
 }
 
@@ -139,52 +96,8 @@ export async function fetchHomeFeedFiltered(
     },
   }));
 
-  // Fill missing avatar_url in batch
-  const missingAvatarUsers = Array.from(
-    new Set(items.filter(it => !it.user?.avatar_url).map(it => it.user_id))
-  );
-  if (missingAvatarUsers.length > 0) {
-    const { data: profiles } = await client
-      .from('user_profiles')
-      .select('id, avatar_url')
-      .in('id', missingAvatarUsers);
-    const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
-    items = items.map(it =>
-      it.user
-        ? {
-            ...it,
-            user: {
-              ...it.user,
-              avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null,
-            },
-          }
-        : it
-    );
-  }
-  // Fill maternal_verified from public view
-  {
-    const ids = Array.from(new Set(items.map(it => it.user_id)));
-    if (ids.length > 0) {
-      const { data: pubs } = await client
-        .from('user_profiles_public')
-        .select('id, maternal_verified')
-        .in('id', ids);
-      const map = new Map(
-        (pubs || []).map((p: any) => [p.id, !!p.maternal_verified])
-      );
-      items = items.map(it =>
-        it.user
-          ? {
-              ...it,
-              user: {
-                ...it.user,
-                maternal_verified: map.get(it.user_id) ?? false,
-              },
-            }
-          : it
-      );
-    }
-  }
+  items = await fillMissingAvatarUrls(client, items);
+  items = await fillMaternalVerified(client, items);
   return { items, nextCursor: computeNextCursor(items) };
 }
 
@@ -222,52 +135,8 @@ export async function fetchMyPosts(options?: {
       avatar_url: row.user_avatar_url ?? row.avatar_url ?? null,
     },
   }));
-  {
-    const missing = Array.from(
-      new Set(items.filter(it => !it.user?.avatar_url).map(it => it.user_id))
-    );
-    if (missing.length > 0) {
-      const { data: profiles } = await client
-        .from('user_profiles')
-        .select('id, avatar_url')
-        .in('id', missing);
-      const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
-      items = items.map(it =>
-        it.user
-          ? {
-              ...it,
-              user: {
-                ...it.user,
-                avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null,
-              },
-            }
-          : it
-      );
-    }
-  }
-  {
-    const ids = Array.from(new Set(items.map(it => it.user_id)));
-    if (ids.length > 0) {
-      const { data: pubs } = await client
-        .from('user_profiles_public')
-        .select('id, maternal_verified')
-        .in('id', ids);
-      const map = new Map(
-        (pubs || []).map((p: any) => [p.id, !!p.maternal_verified]),
-      );
-      items = items.map(it =>
-        it.user
-          ? {
-              ...it,
-              user: {
-                ...it.user,
-                maternal_verified: map.get(it.user_id) ?? false,
-              },
-            }
-          : it,
-      );
-    }
-  }
+  items = await fillMissingAvatarUrls(client, items);
+  items = await fillMaternalVerified(client, items);
   return { items, nextCursor: computeNextCursor(items) };
 }
 
@@ -305,52 +174,8 @@ export async function fetchLikedPosts(options: {
       avatar_url: row.user_avatar_url ?? row.avatar_url ?? null,
     },
   }));
-  {
-    const missing = Array.from(
-      new Set(items.filter(it => !it.user?.avatar_url).map(it => it.user_id))
-    );
-    if (missing.length > 0) {
-      const { data: profiles } = await client
-        .from('user_profiles')
-        .select('id, avatar_url')
-        .in('id', missing);
-      const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
-      items = items.map(it =>
-        it.user
-          ? {
-              ...it,
-              user: {
-                ...it.user,
-                avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null,
-              },
-            }
-          : it
-      );
-    }
-  }
-  {
-    const ids = Array.from(new Set(items.map(it => it.user_id)));
-    if (ids.length > 0) {
-      const { data: pubs } = await client
-        .from('user_profiles_public')
-        .select('id, maternal_verified')
-        .in('id', ids);
-      const map = new Map(
-        (pubs || []).map((p: any) => [p.id, !!p.maternal_verified]),
-      );
-      items = items.map(it =>
-        it.user
-          ? {
-              ...it,
-              user: {
-                ...it.user,
-                maternal_verified: map.get(it.user_id) ?? false,
-              },
-            }
-          : it,
-      );
-    }
-  }
+  items = await fillMissingAvatarUrls(client, items);
+  items = await fillMaternalVerified(client, items);
   return { items, nextCursor: computeNextCursor(items) };
 }
 
