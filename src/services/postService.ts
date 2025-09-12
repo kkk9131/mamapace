@@ -267,53 +267,12 @@ export async function fetchComments(
       avatar_url: row.user_avatar_url ?? row.avatar_url ?? null,
     },
   })) as Comment[];
-  {
-    const missing = Array.from(
-      new Set(items.filter(it => !it.user?.avatar_url).map(it => it.user_id))
-    );
-    if (missing.length > 0) {
-      const { data: profiles } = await client
-        .from('user_profiles')
-        .select('id, avatar_url')
-        .in('id', missing);
-      const map = new Map((profiles || []).map(p => [p.id, p.avatar_url]));
-      items = items.map(it =>
-        it.user
-          ? {
-              ...it,
-              user: {
-                ...it.user,
-                avatar_url: it.user.avatar_url ?? map.get(it.user_id) ?? null,
-              },
-            }
-          : it
-      ) as Comment[];
-    }
-  }
-  // maternal_verified 補完
-  {
-    const ids = Array.from(new Set(items.map(it => it.user_id)));
-    if (ids.length > 0) {
-      const { data: pubs } = await client
-        .from('user_profiles_public')
-        .select('id, maternal_verified')
-        .in('id', ids);
-      const map = new Map(
-        (pubs || []).map((p: any) => [p.id, !!p.maternal_verified]),
-      );
-      items = items.map(it =>
-        it.user
-          ? {
-              ...it,
-              user: {
-                ...it.user,
-                maternal_verified: map.get(it.user_id) ?? false,
-              },
-            }
-          : it,
-      ) as Comment[];
-    }
-  }
+  // 補完処理を共通ユーティリティで適用
+  // Comment型との整合性のため一度PostWithMetaに型合わせしてから戻す
+  let postsLike = (items as unknown) as PostWithMeta[];
+  postsLike = await fillMissingAvatarUrls(client, postsLike);
+  postsLike = await fillMaternalVerified(client, postsLike);
+  items = (postsLike as unknown) as Comment[];
   return { items, nextCursor: computeNextCursor(items) };
 }
 
