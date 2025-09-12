@@ -15,6 +15,13 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+async function sha256(input: string): Promise<string> {
+  const enc = new TextEncoder().encode(input);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  const arr = Array.from(new Uint8Array(buf));
+  return arr.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'Method Not Allowed' }, 405);
@@ -103,14 +110,18 @@ Deno.serve(async (req) => {
   try {
     const ua = req.headers.get('user-agent') || null;
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || null;
+    const hashed_ip = ip ? await sha256(ip) : null;
     await supabase.from('report_events').insert({
       reporter_id: user.id,
       target_type: payload.target_type,
       target_id: payload.target_id,
       reason_code: payload.reason_code || null,
-      metadata: { ua, ip },
+      metadata: { ua, hashed_ip },
     });
-  } catch (_) {}
+  } catch (e) {
+    // Emit a lightweight error log for visibility; do not block the response
+    console.error('report_events audit insert failed', e);
+  }
 
   return jsonResponse({ ok: true });
 });
