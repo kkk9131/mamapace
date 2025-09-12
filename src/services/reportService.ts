@@ -10,6 +10,8 @@ type SubmitReportParams = {
   metadata?: Record<string, unknown>;
 };
 
+const REPORT_FUNCTION_TIMEOUT_MS = 5000; // Extracted config
+
 export async function submitReport(params: SubmitReportParams) {
   const { targetType, targetId, reasonCode, reasonText, metadata } = params;
   // Runtime input validation (defense-in-depth)
@@ -42,7 +44,7 @@ export async function submitReport(params: SubmitReportParams) {
       | undefined;
     if (typeof invoker === 'function') {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
+      const timeout = setTimeout(() => controller.abort(), REPORT_FUNCTION_TIMEOUT_MS);
       const { data, error } = await (supabase as any).functions.invoke(
         'submit-report',
         {
@@ -73,8 +75,17 @@ export async function submitReport(params: SubmitReportParams) {
       }
     }
   } catch (e: any) {
-    // AbortError / network / other exceptions -> fallback
-    shouldFallback = true;
+    // Distinguish AbortError vs client errors that should not fallback
+    const status = (e as any)?.context?.status || (e as any)?.status;
+    if (status && [400, 401, 403].includes(status)) {
+      throw new ServiceError('REPORT_FUNCTION_REJECTED', e?.message || 'submit-report failed', e);
+    }
+    if (e?.name === 'AbortError') {
+      shouldFallback = true;
+    } else {
+      // Network or unexpected errors -> fallback
+      shouldFallback = true;
+    }
   }
 
   if (shouldFallback) {
