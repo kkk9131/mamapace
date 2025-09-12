@@ -36,6 +36,11 @@ Deno.serve(async (req) => {
   if (payload.target_id.length > 255) {
     return jsonResponse({ error: 'target_id too long' }, 400);
   }
+  // UUID v4 format guard for target_id (all supported target types are UUID-backed)
+  const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!UUID_V4_RE.test(payload.target_id)) {
+    return jsonResponse({ error: 'invalid target_id format' }, 400);
+  }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');

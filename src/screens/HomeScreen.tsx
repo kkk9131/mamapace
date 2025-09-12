@@ -74,11 +74,31 @@ export default function HomeScreen({
   }, []);
 
   // Re-fetch when feature flag changes to ensure server-side filtering is applied
+  // Fix race: if a load is in progress when the flag flips, wait for it to settle
+  const loadingRef = useRef<boolean>(false);
   useEffect(() => {
-    // Reset and reload using the latest flag
-    setCursor(null);
-    setItems([]);
-    load({ refresh: true });
+    loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    let active = true;
+    const refreshWithNewFlag = async () => {
+      const start = Date.now();
+      // Wait up to 5s for any in-flight load to complete
+      while (loadingRef.current && Date.now() - start < 5000) {
+        await new Promise(res => setTimeout(res, 50));
+        if (!active) return;
+      }
+      if (!active) return;
+      // Reset and reload using the latest flag
+      setCursor(null);
+      setItems([]);
+      load({ refresh: true });
+    };
+    void refreshWithNewFlag();
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useFiltered]);
 
