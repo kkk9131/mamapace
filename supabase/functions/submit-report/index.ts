@@ -56,6 +56,37 @@ Deno.serve(async (req) => {
   const user = userRes?.user;
   if (!user) return jsonResponse({ error: 'Not authenticated' }, 401);
 
+  // Basic rate limiting (per reporter): max N in sliding 1-minute window
+  const MAX_REPORTS_PER_MINUTE = 10;
+  try {
+    const sinceIso = new Date(Date.now() - 60_000).toISOString();
+    const { count: recentCount, error: countErr } = await supabase
+      .from('reports')
+      .select('*', { head: true, count: 'exact' })
+      .eq('reporter_id', user.id)
+      .gte('created_at', sinceIso);
+    if (!countErr && typeof recentCount === 'number' && recentCount >= MAX_REPORTS_PER_MINUTE) {
+      return jsonResponse({ error: 'rate limited', code: 'RATE_LIMITED' }, 429);
+    }
+  } catch (_) {
+    // On metering failure, proceed (fail-open). DB RLS still protects integrity.
+  }
+
+  // Duplicate guard: prevent the same reporter from reporting the same target repeatedly
+  try {
+    const { count: dupCount } = await supabase
+      .from('reports')
+      .select('*', { head: true, count: 'exact' })
+      .eq('reporter_id', user.id)
+      .eq('target_type', payload.target_type)
+      .eq('target_id', payload.target_id);
+    if ((dupCount ?? 0) > 0) {
+      return jsonResponse({ error: 'already reported', code: 'ALREADY_REPORTED' }, 409);
+    }
+  } catch (_) {
+    // Ignore and continue
+  }
+
   // Insert report (dummy notification can be added later)
   const { error } = await supabase.from('reports').insert({
     reporter_id: user.id,
@@ -65,7 +96,7 @@ Deno.serve(async (req) => {
     reason_text: payload.reason_text || null,
   });
   if (error) {
-    return jsonResponse({ error: error.message }, 400);
+    return jsonResponse({ error: error.message, code: 'REPORT_INSERT_FAILED' }, 400);
   }
 
   return jsonResponse({ ok: true });

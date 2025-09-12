@@ -66,8 +66,8 @@ export async function submitReport(params: SubmitReportParams) {
       if (error) {
         const status = (error as any)?.context?.status || (error as any)?.status;
         const message = (error as any)?.message || 'submit-report failed';
-        // Client error/unauthorized -> do not fallback, surface error
-        if (status && [400, 401, 403].includes(status)) {
+        // Client error/unauthorized/rate-limited/duplicate -> do not fallback, surface error
+        if (status && [400, 401, 403, 409, 429].includes(status)) {
           throw new ServiceError('REPORT_FUNCTION_REJECTED', message, error);
         }
         // Not found or server/network errors -> allow fallback
