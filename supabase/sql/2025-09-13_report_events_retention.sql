@@ -16,8 +16,19 @@ begin
 end;
 $$;
 
-grant execute on function public.cleanup_report_events(int) to authenticated;
+-- Permissions: restrict execution to service role only (no general users)
+do $$
+begin
+  begin
+    revoke execute on function public.cleanup_report_events(int) from authenticated;
+  exception when others then
+    -- ignore if not granted
+    null;
+  end;
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    grant execute on function public.cleanup_report_events(int) to service_role;
+  end if;
+end $$;
 
 -- Note: schedule this via Supabase Scheduler / pg_cron (daily)
 -- Example (pg_cron): select cron.schedule('cleanup_report_events_daily', '0 3 * * *', $$select public.cleanup_report_events(90);$$);
-
