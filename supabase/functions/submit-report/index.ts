@@ -99,5 +99,18 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: error.message, code: 'REPORT_INSERT_FAILED' }, 400);
   }
 
+  // Write audit event (fail-open)
+  try {
+    const ua = req.headers.get('user-agent') || null;
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || null;
+    await supabase.from('report_events').insert({
+      reporter_id: user.id,
+      target_type: payload.target_type,
+      target_id: payload.target_id,
+      reason_code: payload.reason_code || null,
+      metadata: { ua, ip },
+    });
+  } catch (_) {}
+
   return jsonResponse({ ok: true });
 });

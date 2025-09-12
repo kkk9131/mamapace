@@ -14,7 +14,11 @@ export async function blockUser(blockedUserId: string) {
     .insert({ blocker_id: user.id, blocked_id: blockedUserId });
 
   if (error) {
-    throw new ServiceError('BLOCK_INSERT_FAILED', error.message || 'block insert failed', error);
+    throw new ServiceError(
+      'BLOCK_INSERT_FAILED',
+      `[blockUser] ${error.message || 'block insert failed'}`,
+      error
+    );
   }
 }
 
@@ -33,7 +37,11 @@ export async function unblockUser(blockedUserId: string) {
     .eq('blocked_id', blockedUserId);
 
   if (error) {
-    throw new ServiceError('BLOCK_DELETE_FAILED', error.message || 'block delete failed', error);
+    throw new ServiceError(
+      'BLOCK_DELETE_FAILED',
+      `[unblockUser] ${error.message || 'block delete failed'}`,
+      error
+    );
   }
 }
 
@@ -51,7 +59,11 @@ export async function listBlockedUsers(): Promise<string[]> {
     .eq('blocker_id', user.id);
 
   if (error) {
-    throw new ServiceError('BLOCK_LIST_FAILED', error.message || 'block list failed', error);
+    throw new ServiceError(
+      'BLOCK_LIST_FAILED',
+      `[listBlockedUsers] ${error.message || 'block list failed'}`,
+      error
+    );
   }
   return (data ?? []).map(r => r.blocked_id);
 }
@@ -69,7 +81,11 @@ export async function isBlocked(userId: string): Promise<boolean> {
     .eq('blocked_id', userId);
 
   if (error) {
-    throw new ServiceError('BLOCK_CHECK_FAILED', error.message || 'block check failed', error);
+    throw new ServiceError(
+      'BLOCK_CHECK_FAILED',
+      `[isBlocked] ${error.message || 'block check failed'}`,
+      error
+    );
   }
   return (count ?? 0) > 0;
 }
@@ -89,7 +105,11 @@ export async function isBlockedBatch(userIds: string[]): Promise<Set<string>> {
     .in('blocked_id', userIds);
 
   if (error) {
-    throw new ServiceError('BLOCK_CHECK_FAILED', error.message || 'block batch check failed', error);
+    throw new ServiceError(
+      'BLOCK_CHECK_FAILED',
+      `[isBlockedBatch] ${error.message || 'block batch check failed'}`,
+      error
+    );
   }
   return new Set((data ?? []).map((r: any) => r.blocked_id as string));
 }
