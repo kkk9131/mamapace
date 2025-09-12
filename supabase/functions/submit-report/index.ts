@@ -108,15 +108,20 @@ Deno.serve(async (req) => {
 
   // Write audit event (fail-open)
   try {
-    const ua = req.headers.get('user-agent') || null;
-    const ip = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || null;
-    const hashed_ip = ip ? await sha256(ip) : null;
+    const ua = req.headers.get('user-agent') || '';
+    const ip =
+      req.headers.get('x-forwarded-for') ||
+      req.headers.get('cf-connecting-ip') ||
+      '';
+    const ua_hash = ua ? await sha256(ua) : null;
+    const ip_hash = ip ? await sha256(ip) : null;
     await supabase.from('report_events').insert({
       reporter_id: user.id,
       target_type: payload.target_type,
       target_id: payload.target_id,
       reason_code: payload.reason_code || null,
-      metadata: { ua, hashed_ip },
+      // Store only hashed values to minimize PII
+      metadata: { ua_hash: ua_hash, ip_hash: ip_hash },
     });
   } catch (e) {
     // Emit a lightweight error log for visibility; do not block the response
