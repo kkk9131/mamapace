@@ -267,12 +267,9 @@ export async function fetchComments(
       avatar_url: row.user_avatar_url ?? row.avatar_url ?? null,
     },
   })) as Comment[];
-  // 補完処理を共通ユーティリティで適用
-  // Comment型との整合性のため一度PostWithMetaに型合わせしてから戻す
-  let postsLike = (items as unknown) as PostWithMeta[];
-  postsLike = await fillMissingAvatarUrls(client, postsLike);
-  postsLike = await fillMaternalVerified(client, postsLike);
-  items = (postsLike as unknown) as Comment[];
+  // 補完処理を共通ユーティリティで適用（ジェネリック対応で安全に変換）
+  items = await fillMissingAvatarUrls(client, items);
+  items = await fillMaternalVerified(client, items);
   return { items, nextCursor: computeNextCursor(items) };
 }
 
