@@ -9,6 +9,8 @@ export const appConfig = {
   // Phase 2: Server-side encryption; client does not encrypt
   useServerHashing: false,
   disableClientEncryption: true,
+  // Feature rollout: toggle filtered DB views (posts/conversations/profiles)
+  useFilteredViews: false,
 };
 
 export default appConfig;

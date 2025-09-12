@@ -384,19 +384,19 @@ export default function UserProfileScreen({
                         userData?.display_name || 'ユーザー'
                       )
                     }
-                    disabled={isStartingChat}
+                    disabled={isStartingChat || isBlocked}
                     style={({ pressed }) => [
                       {
                         paddingHorizontal: 12,
                         paddingVertical: 8,
-                        backgroundColor: isStartingChat
+                        backgroundColor: isStartingChat || isBlocked
                           ? colors.subtext
                           : colors.surface,
                         borderRadius: 999,
                         transform: [
                           { scale: pressed && !isStartingChat ? 0.97 : 1 },
                         ],
-                        opacity: isStartingChat ? 0.5 : 1,
+                        opacity: isStartingChat || isBlocked ? 0.5 : 1,
                       },
                     ]}
                   >
@@ -404,6 +404,17 @@ export default function UserProfileScreen({
                       {isStartingChat ? '処理中...' : '💬 チャット'}
                     </Text>
                   </Pressable>
+                  {isBlocked && (
+                    <Text
+                      style={{
+                        marginTop: 6,
+                        fontSize: 12,
+                        color: colors.subtext,
+                      }}
+                    >
+                      ブロック中のためチャットできません。「解除」ボタンから変更できます。
+                    </Text>
+                  )}
 
                   {/* Follow Button */}
                   <Pressable

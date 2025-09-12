@@ -437,7 +437,7 @@ class ChatService {
 
       // Send initial message if provided
       if (request.initial_message && request.initial_message.trim()) {
-        await client.rpc('send_message', {
+        await client.rpc('send_message_guarded', {
           p_sender_id: user.id,
           p_recipient_id: request.participant_id,
           p_content: request.initial_message.trim(),
@@ -766,7 +766,7 @@ class ChatService {
             ? '[image]'
             : request.content;
 
-      const { data, error } = await client.rpc('send_message', {
+      const { data, error } = await client.rpc('send_message_guarded', {
         p_sender_id: user.id,
         p_recipient_id: conversation.participant_id,
         p_content: contentToSend,

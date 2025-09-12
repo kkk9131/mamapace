@@ -6,6 +6,7 @@ import { useTheme } from '../theme/theme';
 import { useBlockedList } from '../hooks/useBlock';
 import { getSupabaseClient } from '../services/supabaseClient';
 import VerifiedBadge from '../components/VerifiedBadge';
+import { notifyError } from '../utils/notify';
 
 type ProfileLite = {
   id: string;
@@ -63,7 +64,8 @@ export default function BlockedUsersListScreen({ onBack, onOpenUser }: BlockedUs
       });
       setProfiles(map);
     } catch {
-      // silent; UI will still show IDs at worst
+      // Show minimal feedback and keep degraded display
+      notifyError('プロフィールの読み込みに失敗しました');
     } finally {
       setLoading(false);
     }
@@ -131,14 +133,19 @@ export default function BlockedUsersListScreen({ onBack, onOpenUser }: BlockedUs
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={async () => {
-                setRefreshing(true);
-                await refresh();
-                await loadProfiles();
-                setRefreshing(false);
-              }}
-              tintColor={colors.pink}
-            />
+                onRefresh={async () => {
+                  setRefreshing(true);
+                try {
+                  await refresh();
+                  await loadProfiles();
+                } catch {
+                  notifyError('最新のブロック情報の取得に失敗しました');
+                } finally {
+                  setRefreshing(false);
+                }
+                }}
+                tintColor={colors.pink}
+              />
           }
           contentContainerStyle={{ padding: theme.spacing(2), paddingBottom: theme.spacing(10) }}
           ListEmptyComponent={() => (
@@ -194,4 +201,3 @@ export default function BlockedUsersListScreen({ onBack, onOpenUser }: BlockedUs
     </View>
   );
 }
-
