@@ -195,19 +195,24 @@ export function useChat(chatId: string) {
       // Remove optimistic message after timeout if not confirmed
       setTimeout(() => {
         setState(prev => {
-          const stillOptimistic = prev.messages.find(
-            m =>
-              'tempId' in m &&
-              m.tempId === tempId &&
-              'isOptimistic' in m &&
-              m.isOptimistic
-          );
+          const stillOptimistic = prev.messages.find(m => {
+            if (!m || typeof m !== 'object') return false;
+            const hasTemp = 'tempId' in (m as any);
+            const hasOpt = 'isOptimistic' in (m as any);
+            return (
+              hasTemp &&
+              (m as any).tempId === tempId &&
+              hasOpt &&
+              (m as any).isOptimistic
+            );
+          });
           if (stillOptimistic) {
             return {
               ...prev,
-              messages: prev.messages.filter(
-                m => !('tempId' in m) || m.tempId !== tempId
-              ),
+              messages: prev.messages.filter(m => {
+                if (!m || typeof m !== 'object') return true;
+                return !('tempId' in (m as any)) || (m as any).tempId !== tempId;
+              }),
             };
           }
           return prev;
@@ -244,13 +249,16 @@ export function useChat(chatId: string) {
               }
 
               // Remove optimistic message with same content if exists
-              const optimisticIndex = prev.messages.findIndex(
-                m =>
-                  'isOptimistic' in m &&
-                  m.isOptimistic &&
-                  m.content === messageEvent.data.content &&
-                  m.sender_id === messageEvent.data.sender_id
-              );
+              const optimisticIndex = prev.messages.findIndex(m => {
+                if (!m || typeof m !== 'object') return false;
+                const obj = m as any;
+                return (
+                  'isOptimistic' in obj &&
+                  obj.isOptimistic &&
+                  obj.content === messageEvent.data.content &&
+                  obj.sender_id === messageEvent.data.sender_id
+                );
+              });
 
               const newMessages = [...prev.messages];
               if (optimisticIndex >= 0) {
@@ -484,11 +492,12 @@ export function useChat(chatId: string) {
 
       if (!content.trim()) {
         // allow empty content if metadata (e.g., attachments) exists
-        if (
-          !metadata ||
-          !('attachments' in metadata) ||
-          !(metadata as any).attachments?.length
-        ) {
+        const hasAttachments =
+          metadata &&
+          typeof metadata === 'object' &&
+          'attachments' in (metadata as any) &&
+          Boolean((metadata as any).attachments?.length);
+        if (!hasAttachments) {
           setError('メッセージを入力してください。');
           return;
         }
@@ -535,11 +544,12 @@ export function useChat(chatId: string) {
           // Replace optimistic message with real message immediately
           setState(prev => ({
             ...prev,
-            messages: prev.messages.map(m =>
-              'tempId' in m && m.tempId === tempId
+            messages: prev.messages.map(m => {
+              if (!m || typeof m !== 'object') return m;
+              return 'tempId' in (m as any) && (m as any).tempId === tempId
                 ? { ...response.data, isOptimistic: false }
-                : m
-            ),
+                : m;
+            }),
           }));
 
           secureLogger.info('Message sent successfully', {
@@ -553,11 +563,12 @@ export function useChat(chatId: string) {
           } as Partial<OptimisticMessage>;
           setState(prev => ({
             ...prev,
-            messages: prev.messages.map(m =>
-              'tempId' in m && m.tempId === tempId
-                ? { ...m, ...errorUpdate, error: response.error }
-                : m
-            ),
+            messages: prev.messages.map(m => {
+              if (!m || typeof m !== 'object') return m;
+              return 'tempId' in (m as any) && (m as any).tempId === tempId
+                ? { ...(m as any), ...errorUpdate, error: response.error }
+                : m;
+            }),
           }));
           setError(response.error);
         }
