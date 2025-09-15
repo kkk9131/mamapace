@@ -9,6 +9,8 @@
 
 # Dependencies
 node_modules/
+package-lock.json
+npm-shrinkwrap.json
 
 # Testing
 coverage/
