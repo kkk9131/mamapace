@@ -70,7 +70,7 @@ export const subscriptionService = {
 
       await RNIap.initConnection();
 
-      // Resolve product and trigger purchase flow (use string API for compatibility)
+      // Resolve product and trigger purchase flow (use options object per RNIap v12)
       try {
         const products = await RNIap.getSubscriptions([productId]).catch(() => []);
         if (!products || !Array.isArray(products) || products.length === 0) {
@@ -79,7 +79,7 @@ export const subscriptionService = {
         if (typeof RNIap.requestSubscription !== 'function') {
           return { ok: false, error: 'requestSubscription not available' };
         }
-        await RNIap.requestSubscription(productId);
+        await RNIap.requestSubscription({ sku: String(productId) });
       } catch (e: any) {
         return { ok: false, error: String(e?.message || e) };
       }
