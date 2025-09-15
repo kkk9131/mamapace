@@ -73,8 +73,15 @@ export const subscriptionService = {
       // Resolve product and trigger purchase flow (use options object per RNIap v12)
       try {
         const products = await RNIap.getSubscriptions([productId]).catch(() => []);
-        if (!products || !Array.isArray(products) || products.length === 0) {
-          // Proceed anyway, some environments still allow direct request by SKU
+        if (!products || !Array.isArray(products)) {
+          return { ok: false, error: 'IAP products not available' };
+        }
+        if (products.length === 0) {
+          return {
+            ok: false,
+            error:
+              'App Storeに対象商品が見つかりません。Product IDとアプリの関連付け・ローカライズ・価格設定を確認してください。',
+          };
         }
         if (typeof RNIap.requestSubscription !== 'function') {
           return { ok: false, error: 'requestSubscription not available' };
