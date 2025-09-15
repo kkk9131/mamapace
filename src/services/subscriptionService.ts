@@ -70,19 +70,16 @@ export const subscriptionService = {
 
       await RNIap.initConnection();
 
-      // Trigger purchase flow
+      // Resolve product and trigger purchase flow (use string API for compatibility)
       try {
-        // API signature varies by version; try both styles
-        if (typeof RNIap.requestSubscription === 'function') {
-          // Newer versions accept object; older accept string
-          try {
-            await RNIap.requestSubscription({ sku: productId });
-          } catch (_) {
-            await RNIap.requestSubscription(productId);
-          }
-        } else {
+        const products = await RNIap.getSubscriptions([productId]).catch(() => []);
+        if (!products || !Array.isArray(products) || products.length === 0) {
+          // Proceed anyway, some environments still allow direct request by SKU
+        }
+        if (typeof RNIap.requestSubscription !== 'function') {
           return { ok: false, error: 'requestSubscription not available' };
         }
+        await RNIap.requestSubscription(productId);
       } catch (e: any) {
         return { ok: false, error: String(e?.message || e) };
       }
