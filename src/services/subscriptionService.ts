@@ -1,0 +1,149 @@
+import { getSupabaseClient } from './supabaseClient';
+import { Platform as RNPlatform } from 'react-native';
+import type {
+  SubscriptionPlan,
+  UserSubscription,
+  SubscriptionStatus,
+} from '../types/Subscription';
+
+export type Platform = 'apple' | 'google';
+
+export type PurchaseResult = {
+  ok: boolean;
+  error?: string;
+};
+
+// Placeholder: this will be wired to react-native-iap later
+export const subscriptionService = {
+  async listPlans(): Promise<SubscriptionPlan[]> {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('subscription_plans')
+      .select('id, code, display_name, product_id, price_cents, currency, period, trial_days')
+      .eq('active', true);
+    if (error) return [];
+    return (data as SubscriptionPlan[]) || [];
+  },
+
+  async getMySubscription(): Promise<UserSubscription | null> {
+    const supabase = getSupabaseClient();
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return null;
+    const { data } = await supabase
+      .from('user_subscriptions')
+      .select('plan_id, status, current_period_end')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle();
+    return (data as any) || null;
+  },
+
+  async verifyReceipt(platform: Platform, productId: string, receipt: string) {
+    // send to Edge Function for server-side verification (stubbed)
+    const supabase = getSupabaseClient();
+    const url = `${process.env.EXPO_PUBLIC_SUPABASE_FUNCTIONS_URL || (supabase as any).functionsUrl || ''}/iap/verify`;
+    const token = (await supabase.auth.getSession()).data.session?.access_token;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ platform, productId, receipt }),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      return { ok: false, error: j?.error || `HTTP ${res.status}` } as PurchaseResult;
+    }
+    return { ok: true } as PurchaseResult;
+  },
+
+  // iOS IAP purchase using react-native-iap
+  async purchase(productId: string): Promise<PurchaseResult> {
+    try {
+      if (RNPlatform.OS !== 'ios') {
+        return { ok: false, error: 'Unsupported platform' };
+      }
+      // Dynamically import to avoid breaking tests/web
+      const RNIap: any = await import('react-native-iap').catch(() => null);
+      if (!RNIap) return { ok: false, error: 'IAP module not available' };
+
+      await RNIap.initConnection();
+
+      // Trigger purchase flow
+      try {
+        // API signature varies by version; try both styles
+        if (typeof RNIap.requestSubscription === 'function') {
+          // Newer versions accept object; older accept string
+          try {
+            await RNIap.requestSubscription({ sku: productId });
+          } catch (_) {
+            await RNIap.requestSubscription(productId);
+          }
+        } else {
+          return { ok: false, error: 'requestSubscription not available' };
+        }
+      } catch (e: any) {
+        return { ok: false, error: String(e?.message || e) };
+      }
+
+      // After purchase, read available purchases to obtain originalTransactionId
+      let purchases: any[] = [];
+      try {
+        purchases = (await RNIap.getAvailablePurchases()) || [];
+      } catch (e: any) {
+        return { ok: false, error: 'Failed to fetch purchases' };
+      }
+
+      // Prefer the purchase that matches productId, fallback to latest iOS purchase
+      const target = purchases
+        .filter(p => p?.productId === productId || p?.productId === String(productId))
+        .sort((a, b) => Number(b.transactionDate || 0) - Number(a.transactionDate || 0))[0] ||
+        purchases.sort((a, b) => Number(b.transactionDate || 0) - Number(a.transactionDate || 0))[0];
+
+      const origTxId: string | undefined =
+        target?.originalTransactionIdentifierIOS || target?.transactionId || target?.originalTransactionId;
+
+      if (!origTxId) {
+        return { ok: false, error: 'Could not resolve transaction' };
+      }
+
+      const verified = await this.verifyReceipt('apple', productId, origTxId);
+      return verified;
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message || e) };
+    }
+  },
+
+  // iOS restore
+  async restore(): Promise<PurchaseResult> {
+    try {
+      if (RNPlatform.OS !== 'ios') {
+        return { ok: false, error: 'Unsupported platform' };
+      }
+      const RNIap: any = await import('react-native-iap').catch(() => null);
+      if (!RNIap) return { ok: false, error: 'IAP module not available' };
+      await RNIap.initConnection();
+
+      const purchases: any[] = (await RNIap.getAvailablePurchases()) || [];
+      if (!purchases.length) {
+        return { ok: false, error: 'No purchases found' };
+      }
+      // If multiple, verify the most recent subscription-like purchase
+      const latest = purchases.sort((a, b) => Number(b.transactionDate || 0) - Number(a.transactionDate || 0))[0];
+      const productId = latest?.productId || 'com.mamapace.premium.monthly';
+      const origTxId: string | undefined =
+        latest?.originalTransactionIdentifierIOS || latest?.transactionId || latest?.originalTransactionId;
+      if (!origTxId) return { ok: false, error: 'Could not resolve transaction' };
+
+      const verified = await this.verifyReceipt('apple', String(productId), origTxId);
+      return verified;
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message || e) };
+    }
+  },
+  hasEntitlement(_key: string, status?: SubscriptionStatus | null): boolean {
+    // For now, simple rule: active or in_trial has all entitlements
+    return status === 'active' || status === 'in_trial' || status === 'in_grace';
+  },
+};

@@ -22,9 +22,13 @@ import { createBatchUpdater } from '../utils/batchUpdate';
 export default function SettingsScreen({
   onLogoutNavigate,
   onOpenBlockedUsers,
+  onOpenPaywall,
+  onOpenManageSubscription,
 }: {
   onLogoutNavigate?: () => void;
   onOpenBlockedUsers?: () => void;
+  onOpenPaywall?: () => void;
+  onOpenManageSubscription?: () => void;
 }) {
   const theme = useTheme();
   const { colors } = theme;
@@ -292,6 +296,46 @@ export default function SettingsScreen({
                 ブロックしたユーザーを管理
               </Text>
             </Pressable>
+          </Section>
+          <View style={{ height: theme.spacing(4) }} />
+
+          <Section title="サブスクリプション">
+            <View style={{ gap: 8 }}>
+              <Pressable
+                onPress={() => onOpenPaywall && onOpenPaywall()}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: colors.surface,
+                    borderRadius: theme.radius.md,
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                    ...theme.shadow.card,
+                  },
+                ]}
+              >
+                <Text style={{ color: colors.text, fontWeight: '700' }}>
+                  プレミアムにアップグレード
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => onOpenManageSubscription && onOpenManageSubscription()}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: colors.surface,
+                    borderRadius: theme.radius.md,
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                    ...theme.shadow.card,
+                  },
+                ]}
+              >
+                <Text style={{ color: colors.text, fontWeight: '700' }}>
+                  サブスクリプションを管理
+                </Text>
+              </Pressable>
+            </View>
           </Section>
           <View style={{ height: theme.spacing(4) }} />
 
