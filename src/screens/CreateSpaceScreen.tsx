@@ -100,7 +100,7 @@ export default function CreateSpaceScreen({
     if (!isPublic && !canCreatePrivateSpaces) {
       Alert.alert(
         'プレミアム限定',
-        '非公開ルームの作成はプレミアム会員限定の機能です。',
+        '非公開ルームの作成はプレミアム会員限定の機能です。'
       );
       return;
     }
@@ -129,7 +129,7 @@ export default function CreateSpaceScreen({
     if (!nextPublic && !canCreatePrivateSpaces) {
       Alert.alert(
         'プレミアム限定',
-        '非公開ルームの作成はプレミアム会員限定の機能です。',
+        '非公開ルームの作成はプレミアム会員限定の機能です。'
       );
       return;
     }
@@ -433,11 +433,11 @@ export default function CreateSpaceScreen({
               公開設定
             </Text>
 
-          <View style={{ flexDirection: 'row' }}>
-            <Pressable
-              onPress={() => handleSelectVisibility(true)}
-              style={({ pressed }) => [
-                {
+            <View style={{ flexDirection: 'row' }}>
+              <Pressable
+                onPress={() => handleSelectVisibility(true)}
+                style={({ pressed }) => [
+                  {
                     flex: 1,
                     borderRadius: theme.radius.lg,
                     overflow: 'hidden',

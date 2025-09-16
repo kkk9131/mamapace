@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,6 @@ import {
   createAISession,
   deleteAISession,
   AIChatSession,
-  AIChatMessage,
   updateAISessionTitle,
   getAISession,
 } from '../services/aiChatSessionService';
@@ -53,11 +52,6 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
   const [titleInput, setTitleInput] = useState<string>('');
   const [freeLimitReached, setFreeLimitReached] = useState(false);
 
-  const placeholderReply = useMemo(
-    () => 'これはプレースホルダーのAI応答です。',
-    []
-  );
-
   useEffect(() => {
     if (isPremium) {
       setFreeLimitReached(false);
@@ -67,12 +61,16 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
   const showFreeLimitAlert = useCallback(() => {
     Alert.alert(
       'AIチャットの無料枠',
-      '無料プランではAIチャットは1日3通までご利用いただけます。プレミアムにアップグレードすると無制限にご利用いただけます。',
+      '無料プランではAIチャットは1日3通までご利用いただけます。プレミアムにアップグレードすると無制限にご利用いただけます。'
     );
   }, []);
 
   const send = async () => {
     if (!input.trim() || loading) {
+      return;
+    }
+    if (!isPremium && freeLimitReached) {
+      showFreeLimitAlert();
       return;
     }
     const userMsg: ChatItem = {
@@ -137,7 +135,7 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
     try {
       const list = await listAISessions();
       setSessions(list);
-    } catch (e) {
+    } catch {
       Alert.alert('エラー', 'セッション一覧の取得に失敗しました');
     } finally {
       setSessionsLoading(false);
@@ -159,11 +157,11 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
           content: r.content,
         }));
         setMessages(mapped);
-      } catch (e) {
+      } catch {
         Alert.alert('エラー', '履歴の読み込みに失敗しました');
       }
     },
-    [sessions],
+    [sessions]
   );
 
   const handleNewSession = useCallback(async () => {
@@ -178,7 +176,7 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
       setEditingTitle(false);
       setMessages([]);
       setSessionsOpen(false);
-    } catch (e) {
+    } catch {
       Alert.alert('エラー', '新規セッションの作成に失敗しました');
     }
   }, [messages]);
@@ -202,7 +200,7 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
                 const list = await listAISessions();
                 setSessions(list);
               }
-            } catch (e) {
+            } catch {
               Alert.alert('エラー', 'セッションの削除に失敗しました');
             }
           },
@@ -335,7 +333,7 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
                 }
                 const updated = await updateAISessionTitle(
                   sessionId,
-                  titleInput.trim() || null,
+                  titleInput.trim() || null
                 );
                 setCurrentTitle(updated.title || '');
                 setSessions(prev =>
@@ -346,11 +344,11 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
                           title: updated.title || null,
                           updated_at: updated.updated_at,
                         }
-                      : s,
-                  ),
+                      : s
+                  )
                 );
                 setEditingTitle(false);
-              } catch (e) {
+              } catch {
                 Alert.alert('エラー', 'タイトルの更新に失敗しました');
               }
             }}
@@ -569,7 +567,7 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
                       </Text>
                       <Text style={{ color: colors.subtext, fontSize: 12 }}>
                         {new Date(
-                          item.updated_at || item.created_at,
+                          item.updated_at || item.created_at
                         ).toLocaleString()}
                       </Text>
                     </Pressable>

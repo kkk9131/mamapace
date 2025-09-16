@@ -1,28 +1,24 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, Alert, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/theme';
-import { subscriptionService } from '../services/subscriptionService';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { useAuth } from '../contexts/AuthContext';
+
+const PREMIUM_BENEFITS = [
+  'AIチャットの利用制限なし（無料版は1日3通まで）',
+  'AIコメントをいつでもリクエスト可能（無料版は1日1回まで）',
+  '非公開ルームの作成・参加が可能',
+];
 
 export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
   const theme = useTheme();
   const { colors } = theme;
-  const { status, plan, purchase, restore } = useSubscription();
+  const { plan, purchase, restore } = useSubscription();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const insets = useSafeAreaInsets();
-
-  const premiumBenefits = useMemo(
-    () => [
-      'AIチャットの利用制限なし（無料版は1日3通まで）',
-      'AIコメントをいつでもリクエスト可能（無料版は1日1回まで）',
-      '非公開ルームの作成・参加が可能',
-    ],
-    [],
-  );
 
   const priceDisplay = useMemo(() => {
     if (!plan || !plan.price_cents || plan.price_cents <= 0) {
@@ -36,10 +32,6 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
     }
   }, [plan]);
 
-  useEffect(() => {
-    // no-op; plans are loaded by context
-  }, []);
-
   const eligible = user?.maternal_verified;
 
   const handlePurchase = async () => {
@@ -49,7 +41,7 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
     if (!eligible) {
       Alert.alert(
         '申込要件を満たしていません',
-        '母子手帳認証バッジが必要です。設定またはプロフィールから認証を完了してください。',
+        '母子手帳認証バッジが必要です。設定またはプロフィールから認証を完了してください。'
       );
       return;
     }
@@ -111,11 +103,16 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
           <Text style={{ color: colors.subtext }}>
             月額で自動更新（いつでも管理から解約可能）。
           </Text>
-          <View style={{ marginTop: theme.spacing(1), gap: theme.spacing(0.75) }}>
+          <View
+            style={{
+              marginTop: theme.spacing(1),
+              gap: theme.spacing(0.75),
+            }}
+          >
             <Text style={{ color: colors.text, fontWeight: '700' }}>
               プレミアムで解放される機能
             </Text>
-            {premiumBenefits.map(item => (
+            {PREMIUM_BENEFITS.map(item => (
               <Text key={item} style={{ color: colors.subtext }}>
                 • {item}
               </Text>

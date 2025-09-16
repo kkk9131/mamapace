@@ -1,7 +1,6 @@
 import {
   View,
   TextInput,
-  TouchableOpacity,
   Text,
   Pressable,
   Animated,
@@ -52,7 +51,7 @@ export default function ComposeScreen({
     if (!isPremium && aiCommentLimitReached) {
       Alert.alert(
         'AIコメントの無料枠',
-        '無料プランではAIコメントは1日1回までご利用いただけます。',
+        '無料プランではAIコメントは1日1回までご利用いただけます。'
       );
       return;
     }
@@ -275,8 +274,7 @@ export default function ComposeScreen({
                       borderRadius: 999,
                       paddingVertical: 6,
                       paddingHorizontal: 10,
-                      opacity:
-                        !isPremium && aiCommentLimitReached ? 0.4 : 1,
+                      opacity: !isPremium && aiCommentLimitReached ? 0.4 : 1,
                       transform: [{ scale: pressed ? 0.97 : 1 }],
                     },
                   ]}
@@ -388,7 +386,7 @@ export default function ComposeScreen({
                 if (images.length > 0) {
                   attachments = await uploadPostImages(
                     user.id,
-                    images.map(i => i.uri),
+                    images.map(i => i.uri)
                   );
                 }
                 const created = await createPost(body.trim(), attachments);
@@ -406,7 +404,7 @@ export default function ComposeScreen({
                         setAiOn(false);
                         Alert.alert(
                           'AIコメントの無料枠',
-                          '本日の無料AIコメントは既にご利用済みです。プレミアムにアップグレードすると無制限にご利用いただけます。',
+                          '本日の無料AIコメントは既にご利用済みです。プレミアムにアップグレードすると無制限にご利用いただけます。'
                         );
                       }
                     })
@@ -414,8 +412,8 @@ export default function ComposeScreen({
                 }
                 if (onPosted) {
                   onPosted();
-                } else {
-                  onClose && onClose();
+                } else if (onClose) {
+                  onClose();
                 }
               } catch (e: any) {
                 await Haptics.notificationAsync(
