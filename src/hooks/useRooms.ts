@@ -32,6 +32,7 @@ import {
   OptimisticRoomMessage,
   getCurrentAnonymousSlotId,
 } from '../types/room';
+import { useSubscription } from '../contexts/SubscriptionContext';
 
 // =====================================================
 // SPACE HOOKS
@@ -167,9 +168,18 @@ export function useSpaceOperations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { hasEntitlement } = useSubscription();
+  const isPremium = hasEntitlement('premium');
+
   const createSpace = useCallback(async (request: CreateSpaceRequest) => {
     setLoading(true);
     setError(null);
+
+    if (request.is_public === false && !isPremium) {
+      setLoading(false);
+      setError('非公開ルームの作成はプレミアム会員限定です');
+      return null;
+    }
 
     const response = await roomService.createSpace(request);
     setLoading(false);
@@ -180,7 +190,7 @@ export function useSpaceOperations() {
     }
 
     return response.data;
-  }, []);
+  }, [isPremium]);
 
   const joinSpace = useCallback(async (spaceId: string) => {
     setLoading(true);
@@ -354,7 +364,7 @@ export function useChannelMessages(channelId: string | null) {
             (msg as OptimisticRoomMessage).tempId === tempId
               ? { ...msg, error: response.error }
               : msg
-          )
+          ),
         );
         return null;
       }
@@ -411,7 +421,7 @@ export function useChannelMessages(channelId: string | null) {
           setMessages(prev =>
             prev.map(msg =>
               msg.id === updatedMessage.id ? updatedMessage : msg
-            )
+            ),
           );
         }
       )
@@ -675,7 +685,7 @@ export function useChatList() {
           item.channel_id === channelId
             ? { ...item, has_new: false, unread_count: 0 }
             : item
-        )
+        ),
       );
     }
   }, []);
@@ -702,8 +712,13 @@ export function useChatList() {
  * Hook for space creation permission - now always returns true
  */
 export function useSpacePermissions() {
+  const { hasEntitlement } = useSubscription();
+  const isPremium = hasEntitlement('premium');
+
   return {
     canCreateSpaces: true,
+    canCreatePrivateSpaces: isPremium,
+    canJoinPrivateSpaces: isPremium,
     loading: false,
     error: null,
   };

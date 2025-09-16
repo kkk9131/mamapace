@@ -48,7 +48,7 @@ export default function CreateSpaceScreen({
 
   // Hooks
   const { loading, error, createSpace } = useSpaceOperations();
-  const { canCreateSpaces } = useSpacePermissions();
+  const { canCreatePrivateSpaces } = useSpacePermissions();
 
   // Animation
   useEffect(() => {
@@ -97,6 +97,14 @@ export default function CreateSpaceScreen({
       return;
     }
 
+    if (!isPublic && !canCreatePrivateSpaces) {
+      Alert.alert(
+        'プレミアム限定',
+        '非公開ルームの作成はプレミアム会員限定の機能です。',
+      );
+      return;
+    }
+
     const request: CreateSpaceRequest = {
       name: name.trim(),
       description: description.trim() || undefined,
@@ -116,6 +124,17 @@ export default function CreateSpaceScreen({
   };
 
   // All users can create spaces - no restriction needed
+
+  const handleSelectVisibility = (nextPublic: boolean) => {
+    if (!nextPublic && !canCreatePrivateSpaces) {
+      Alert.alert(
+        'プレミアム限定',
+        '非公開ルームの作成はプレミアム会員限定の機能です。',
+      );
+      return;
+    }
+    setIsPublic(nextPublic);
+  };
 
   return (
     <Animated.View
@@ -414,11 +433,11 @@ export default function CreateSpaceScreen({
               公開設定
             </Text>
 
-            <View style={{ flexDirection: 'row' }}>
-              <Pressable
-                onPress={() => setIsPublic(true)}
-                style={({ pressed }) => [
-                  {
+          <View style={{ flexDirection: 'row' }}>
+            <Pressable
+              onPress={() => handleSelectVisibility(true)}
+              style={({ pressed }) => [
+                {
                     flex: 1,
                     borderRadius: theme.radius.lg,
                     overflow: 'hidden',
@@ -465,13 +484,15 @@ export default function CreateSpaceScreen({
               </Pressable>
 
               <Pressable
-                onPress={() => setIsPublic(false)}
+                onPress={() => handleSelectVisibility(false)}
+                disabled={!canCreatePrivateSpaces}
                 style={({ pressed }) => [
                   {
                     flex: 1,
                     borderRadius: theme.radius.lg,
                     overflow: 'hidden',
                     marginLeft: 8,
+                    opacity: !canCreatePrivateSpaces ? 0.4 : 1,
                     transform: [{ scale: pressed ? 0.98 : 1 }],
                   },
                 ]}
@@ -513,6 +534,17 @@ export default function CreateSpaceScreen({
                 </BlurView>
               </Pressable>
             </View>
+            {!canCreatePrivateSpaces && (
+              <Text
+                style={{
+                  color: colors.subtext,
+                  fontSize: 12,
+                  marginTop: 8,
+                }}
+              >
+                非公開ルームはプレミアム会員のみ作成できます。
+              </Text>
+            )}
           </View>
 
           {/* Max Members (Optional) */}

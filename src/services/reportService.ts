@@ -1,6 +1,7 @@
-import { getSupabaseClient } from './supabaseClient';
 import { ReportReasonCode, ReportTargetType } from '../types/Report';
 import { ServiceError } from '../utils/errors';
+
+import { getSupabaseClient } from './supabaseClient';
 
 type SubmitReportParams = {
   targetType: ReportTargetType;
@@ -16,16 +17,31 @@ export async function submitReport(params: SubmitReportParams) {
   const { targetType, targetId, reasonCode, reasonText, metadata } = params;
   // Runtime input validation (defense-in-depth)
   if (!targetId || typeof targetId !== 'string' || !targetId.trim()) {
-    throw new ServiceError('REPORT_INVALID_INPUT', '[submitReport] invalid targetId');
+    throw new ServiceError(
+      'REPORT_INVALID_INPUT',
+      '[submitReport] invalid targetId',
+    );
   }
   if (targetId.length > 255) {
-    throw new ServiceError('REPORT_INVALID_INPUT', '[submitReport] targetId too long');
+    throw new ServiceError(
+      'REPORT_INVALID_INPUT',
+      '[submitReport] targetId too long',
+    );
   }
   if (!targetType) {
-    throw new ServiceError('REPORT_INVALID_INPUT', '[submitReport] invalid targetType');
+    throw new ServiceError(
+      'REPORT_INVALID_INPUT',
+      '[submitReport] invalid targetType',
+    );
   }
-  if (!reasonCode || (typeof reasonCode === 'string' && reasonCode.trim().length === 0)) {
-    throw new ServiceError('REPORT_INVALID_INPUT', '[submitReport] invalid reasonCode');
+  if (
+    !reasonCode ||
+    (typeof reasonCode === 'string' && reasonCode.trim().length === 0)
+  ) {
+    throw new ServiceError(
+      'REPORT_INVALID_INPUT',
+      '[submitReport] invalid reasonCode',
+    );
   }
   const safeReasonText =
     typeof reasonText === 'string'
@@ -34,7 +50,9 @@ export async function submitReport(params: SubmitReportParams) {
   const supabase = getSupabaseClient();
   const { data: userRes } = await supabase.auth.getUser();
   const user = userRes?.user;
-  if (!user) throw new ServiceError('NOT_AUTHENTICATED', 'Not authenticated');
+  if (!user) {
+    throw new ServiceError('NOT_AUTHENTICATED', 'Not authenticated');
+  }
 
   // Prefer Edge Function submit-report; fallback to direct insert if unavailable or network issue
   let shouldFallback = true;
@@ -44,7 +62,10 @@ export async function submitReport(params: SubmitReportParams) {
       | undefined;
     if (typeof invoker === 'function') {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), REPORT_FUNCTION_TIMEOUT_MS);
+      const timeout = setTimeout(
+        () => controller.abort(),
+        REPORT_FUNCTION_TIMEOUT_MS,
+      );
       const { data, error } = await (supabase as any).functions.invoke(
         'submit-report',
         {
@@ -64,7 +85,8 @@ export async function submitReport(params: SubmitReportParams) {
         return;
       }
       if (error) {
-        const status = (error as any)?.context?.status || (error as any)?.status;
+        const status =
+          (error as any)?.context?.status || (error as any)?.status;
         const message = (error as any)?.message || 'submit-report failed';
         // Client error/unauthorized/rate-limited/duplicate -> do not fallback, surface error
         if (status && [400, 401, 403, 409, 429].includes(status)) {
@@ -78,7 +100,11 @@ export async function submitReport(params: SubmitReportParams) {
     // Distinguish AbortError vs client errors that should not fallback
     const status = (e as any)?.context?.status || (e as any)?.status;
     if (status && [400, 401, 403].includes(status)) {
-      throw new ServiceError('REPORT_FUNCTION_REJECTED', e?.message || 'submit-report failed', e);
+      throw new ServiceError(
+        'REPORT_FUNCTION_REJECTED',
+        e?.message || 'submit-report failed',
+        e,
+      );
     }
     if (e?.name === 'AbortError') {
       shouldFallback = true;

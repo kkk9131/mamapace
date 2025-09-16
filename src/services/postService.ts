@@ -5,9 +5,12 @@ import {
   Comment,
   Attachment,
 } from '../types/post';
+import {
+  fillMissingAvatarUrls,
+  fillMaternalVerified,
+} from '../utils/profileCompletion';
 
 import { getSupabaseClient } from './supabaseClient';
-import { fillMissingAvatarUrls, fillMaternalVerified } from '../utils/profileCompletion';
 
 const PAGE_SIZE_DEFAULT = 20;
 

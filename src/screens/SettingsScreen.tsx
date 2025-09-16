@@ -50,7 +50,7 @@ export default function SettingsScreen({
           ? notificationPreferencesService.update(user.id, patch as any)
           : Promise.resolve(false),
       300
-    )
+    ),
   );
 
   useEffect(() => {
@@ -319,7 +319,9 @@ export default function SettingsScreen({
                 </Text>
               </Pressable>
               <Pressable
-                onPress={() => onOpenManageSubscription && onOpenManageSubscription()}
+                onPress={() =>
+                  onOpenManageSubscription && onOpenManageSubscription()
+                }
                 style={({ pressed }) => [
                   {
                     backgroundColor: colors.surface,

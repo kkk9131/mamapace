@@ -18,4 +18,3 @@ export class ServiceError extends Error {
     this.cause = cause;
   }
 }
-

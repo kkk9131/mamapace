@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { useTheme } from '../theme/theme';
 
 export default function TutorialScreen({ onClose }: { onClose: () => void }) {
@@ -27,8 +28,12 @@ export default function TutorialScreen({ onClose }: { onClose: () => void }) {
         <Text style={{ color: colors.subtext }}>
           Mamapaceへようこそ。以下のポイントから始めるとスムーズです。
         </Text>
-        <Text style={{}}>{'• プロフィールを設定して、他のユーザーに知ってもらいましょう。'}</Text>
-        <Text style={{}}>{'• ホーム/ルームで投稿やコメントに参加しましょう。'}</Text>
+        <Text style={{}}>
+          {'• プロフィールを設定して、他のユーザーに知ってもらいましょう。'}
+        </Text>
+        <Text style={{}}>
+          {'• ホーム/ルームで投稿やコメントに参加しましょう。'}
+        </Text>
         <Text style={{}}>{'• 通知タブで反応をキャッチ。'}</Text>
         <Text style={{}}>{'• あなたタブから自分の投稿を一覧できます。'}</Text>
         <Text style={{ color: colors.subtext }}>
@@ -52,4 +57,3 @@ export default function TutorialScreen({ onClose }: { onClose: () => void }) {
     </View>
   );
 }
-

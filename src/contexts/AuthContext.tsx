@@ -378,7 +378,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: 'SET_LOADING', payload: true });
         dispatch({ type: 'CLEAR_ERROR' });
 
-
         secureLogger.info('Starting Supabase Auth registration', {
           email: params.email.replace(/^(.{2}).*(@.*)$/, '$1***$2'),
         });
@@ -675,28 +674,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         secureLogger.info('AuthContext: Token refresh successful');
         return true;
       } else {
-        secureLogger.warn('AuthContext: Token refresh failed - invalid refresh token');
+        secureLogger.warn(
+          'AuthContext: Token refresh failed - invalid refresh token',
+        );
         // Clear error state and logout gracefully
         dispatch({ type: 'CLEAR_ERROR' });
         await logout();
         return false;
       }
     } catch (error: any) {
-      secureLogger.error('AuthContext: Token refresh exception', { 
-        error: error.message || error 
+      secureLogger.error('AuthContext: Token refresh exception', {
+        error: error.message || error,
       });
 
       // Handle specific Supabase auth errors
-      if (error.message?.includes('Invalid Refresh Token') || 
-          error.message?.includes('Refresh Token Not Found')) {
-        secureLogger.warn('AuthContext: Refresh token is invalid, clearing session');
+      if (
+        error.message?.includes('Invalid Refresh Token') ||
+        error.message?.includes('Refresh Token Not Found')
+      ) {
+        secureLogger.warn(
+          'AuthContext: Refresh token is invalid, clearing session',
+        );
         dispatch({ type: 'CLEAR_ERROR' });
         await logout();
       } else {
         // For other errors, set error state but don't logout immediately
-        dispatch({ 
-          type: 'SET_ERROR', 
-          payload: 'セッションの更新に失敗しました。再ログインが必要な場合があります。' 
+        dispatch({
+          type: 'SET_ERROR',
+          payload:
+            'セッションの更新に失敗しました。再ログインが必要な場合があります。',
         });
       }
 

@@ -505,7 +505,7 @@ class AuthService {
    */
   async refreshToken(): Promise<boolean> {
     await this.ensureInitialized();
-    
+
     // Phase 2: disableClientEncryption mode
     if ((appConfig as any).disableClientEncryption) {
       try {
@@ -534,7 +534,7 @@ class AuthService {
         return false;
       }
     }
-    
+
     // Phase 1: useServerHashing mode
     if (appConfig.useServerHashing) {
       try {

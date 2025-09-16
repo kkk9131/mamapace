@@ -44,7 +44,13 @@ jest.mock('../../hooks/useRooms', () => ({
     error: null,
     joinSpace: jest.fn(async () => ({ channel_id: 'c1' })),
   }),
-  useSpacePermissions: () => ({ canCreateSpaces: () => true }),
+  useSpacePermissions: () => ({
+    canCreateSpaces: true,
+    canCreatePrivateSpaces: true,
+    canJoinPrivateSpaces: true,
+    loading: false,
+    error: null,
+  }),
 }));
 
 describe('RoomsScreen join flow', () => {

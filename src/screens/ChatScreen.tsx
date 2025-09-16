@@ -104,7 +104,9 @@ export default function ChatScreen({
   const { isBlocked: isBlockedFn, unblock, mutating } = useBlockedList();
   const chatBlocked = isBlockedFn(otherUserId);
   const handleMenuPress = () => {
-    if (!otherUserId) return;
+    if (!otherUserId) {
+      return;
+    }
     Alert.alert('操作を選択', undefined, [
       {
         text: '通報する',

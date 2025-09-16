@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { blockUser, unblockUser, listBlockedUsers } from '../services/blockService';
+
+import {
+  blockUser,
+  unblockUser,
+  listBlockedUsers,
+} from '../services/blockService';
 
 // Simple TTL cache (module-scoped) to avoid frequent reloads across screens
 let cachedBlocked: string[] | null = null;
@@ -38,12 +43,14 @@ export function useBlockedList() {
   }, [refresh]);
 
   const isBlocked = useCallback(
-    (userId?: string | null) => (!!userId ? blocked.includes(userId) : false),
+    (userId?: string | null) => (userId ? blocked.includes(userId) : false),
     [blocked]
   );
 
   const block = useCallback(async (userId: string) => {
-    if (!userId || pending.current.has(userId)) return;
+    if (!userId || pending.current.has(userId)) {
+      return;
+    }
     pending.current.add(userId);
     setMutating(true);
     try {
@@ -64,7 +71,9 @@ export function useBlockedList() {
   }, []);
 
   const unblock = useCallback(async (userId: string) => {
-    if (!userId || pending.current.has(userId)) return;
+    if (!userId || pending.current.has(userId)) {
+      return;
+    }
     pending.current.add(userId);
     setMutating(true);
     try {
@@ -85,7 +94,16 @@ export function useBlockedList() {
   }, []);
 
   return useMemo(
-    () => ({ blocked, loading, error, mutating, refresh, isBlocked, block, unblock }),
+    () => ({
+      blocked,
+      loading,
+      error,
+      mutating,
+      refresh,
+      isBlocked,
+      block,
+      unblock,
+    }),
     [blocked, loading, error, mutating, refresh, isBlocked, block, unblock]
   );
 }

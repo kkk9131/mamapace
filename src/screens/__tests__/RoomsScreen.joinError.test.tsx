@@ -44,7 +44,13 @@ jest.mock('../../hooks/useRooms', () => ({
     error: 'エラー発生',
     joinSpace: jest.fn(async () => null),
   }),
-  useSpacePermissions: () => ({ canCreateSpaces: () => true }),
+  useSpacePermissions: () => ({
+    canCreateSpaces: true,
+    canCreatePrivateSpaces: true,
+    canJoinPrivateSpaces: true,
+    loading: false,
+    error: null,
+  }),
 }));
 
 describe('RoomsScreen join error flow', () => {

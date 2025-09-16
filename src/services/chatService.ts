@@ -975,7 +975,7 @@ class ChatService {
         const missing = Array.from(
           new Set(
             messages.filter(m => !m.sender?.avatar_url).map(m => m.sender_id),
-          ),
+          )
         );
         if (missing.length > 0) {
           const { data: profiles } = await client

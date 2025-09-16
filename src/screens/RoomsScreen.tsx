@@ -83,7 +83,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
     error: operationError,
     joinSpace,
   } = useSpaceOperations();
-  const { canCreateSpaces } = useSpacePermissions();
+  const { canJoinPrivateSpaces } = useSpacePermissions();
   // Joined rooms list is no longer shown on this screen
 
   // Animation - smart animation handling to prevent blank screen on back navigation
@@ -125,6 +125,13 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
 
   // Handle join space
   const handleJoinSpace = async (space: SpaceWithOwner) => {
+    if (!space.is_public && !canJoinPrivateSpaces) {
+      Alert.alert(
+        'プレミアム限定',
+        '非公開ルームへの参加はプレミアム会員限定の機能です。',
+      );
+      return;
+    }
     if (!space.can_join) {
       Alert.alert('参加できません', 'このルームは満員かすでに参加済みです');
       return;
@@ -418,20 +425,24 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
         ItemSeparatorComponent={() => (
           <View style={{ height: theme.spacing(1.5) }} />
         )}
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() => handleJoinSpace(item)}
-            disabled={operationLoading}
-            style={({ pressed }) => [
-              {
-                borderRadius: theme.radius.lg,
-                overflow: 'hidden',
-                transform: [{ scale: pressed ? 0.98 : 1 }],
-                ...theme.shadow.card,
-                opacity: operationLoading ? 0.6 : 1,
-              },
-            ]}
-          >
+        renderItem={({ item }) => {
+          const isPremiumOnly = !item.is_public;
+          const canJoinSpace = item.can_join && (item.is_public || canJoinPrivateSpaces);
+          return (
+            <Pressable
+              onPress={() => handleJoinSpace(item)}
+              disabled={operationLoading || !canJoinSpace}
+              style={({ pressed }) => [
+                {
+                  borderRadius: theme.radius.lg,
+                  overflow: 'hidden',
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  ...theme.shadow.card,
+                  opacity:
+                    operationLoading || !canJoinSpace ? 0.5 : 1,
+                },
+              ]}
+            >
             <BlurView
               intensity={30}
               tint="dark"
@@ -492,7 +503,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
 
                 <View
                   style={{
-                    backgroundColor: item.can_join
+                    backgroundColor: canJoinSpace
                       ? colors.pinkSoft
                       : colors.subtext + '40',
                     borderRadius: theme.radius.sm,
@@ -502,12 +513,16 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                 >
                   <Text
                     style={{
-                      color: item.can_join ? '#302126' : colors.subtext,
+                      color: canJoinSpace ? '#302126' : colors.subtext,
                       fontSize: 12,
                       fontWeight: 'bold',
                     }}
                   >
-                    {item.can_join ? '参加' : '満員'}
+                    {isPremiumOnly && !canJoinPrivateSpaces
+                      ? 'プレミアム限定'
+                      : canJoinSpace
+                        ? '参加'
+                        : '満員'}
                   </Text>
                 </View>
               </View>
@@ -540,8 +555,9 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                 </View>
               )}
             </BlurView>
-          </Pressable>
-        )}
+            </Pressable>
+          );
+        }}
         ListEmptyComponent={() => (
           <View style={{ alignItems: 'center', marginTop: 40 }}>
             <Text style={{ color: colors.subtext, fontSize: 16 }}>
@@ -696,28 +712,32 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                 tintColor={colors.text}
               />
             }
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => handleJoinSpace(item)}
-                disabled={operationLoading}
-                style={({ pressed }) => [
-                  {
-                    borderRadius: theme.radius.lg,
-                    overflow: 'hidden',
-                    transform: [{ scale: pressed ? 0.98 : 1 }],
-                    ...theme.shadow.card,
-                  },
-                ]}
-              >
-                <BlurView
-                  intensity={30}
-                  tint="dark"
-                  style={{
-                    padding: theme.spacing(1.75),
-                    backgroundColor: '#ffffff10',
-                    opacity: operationLoading ? 0.6 : 1,
-                  }}
+            renderItem={({ item }) => {
+              const isPremiumOnly = !item.is_public;
+              const canJoinSpace = item.can_join && (item.is_public || canJoinPrivateSpaces);
+              return (
+                <Pressable
+                  onPress={() => handleJoinSpace(item)}
+                  disabled={operationLoading || !canJoinSpace}
+                  style={({ pressed }) => [
+                    {
+                      borderRadius: theme.radius.lg,
+                      overflow: 'hidden',
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                      ...theme.shadow.card,
+                      opacity:
+                        operationLoading || !canJoinSpace ? 0.5 : 1,
+                    },
+                  ]}
                 >
+                  <BlurView
+                    intensity={30}
+                    tint="dark"
+                    style={{
+                      padding: theme.spacing(1.75),
+                      backgroundColor: '#ffffff10',
+                    }}
+                  >
                   <View
                     style={{
                       flexDirection: 'row',
@@ -764,7 +784,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
 
                     <View
                       style={{
-                        backgroundColor: item.can_join
+                        backgroundColor: canJoinSpace
                           ? colors.pinkSoft
                           : colors.subtext + '40',
                         borderRadius: theme.radius.sm,
@@ -774,12 +794,16 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                     >
                       <Text
                         style={{
-                          color: item.can_join ? '#302126' : colors.subtext,
+                          color: canJoinSpace ? '#302126' : colors.subtext,
                           fontSize: 12,
                           fontWeight: 'bold',
                         }}
                       >
-                        {item.can_join ? '参加' : '満員'}
+                        {isPremiumOnly && !canJoinPrivateSpaces
+                          ? 'プレミアム限定'
+                          : canJoinSpace
+                            ? '参加'
+                            : '満員'}
                       </Text>
                     </View>
                   </View>
@@ -812,8 +836,9 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                     </View>
                   )}
                 </BlurView>
-              </Pressable>
-            )}
+                </Pressable>
+              );
+            }}
             ListEmptyComponent={() => (
               <View style={{ alignItems: 'center', marginTop: 40 }}>
                 <Text

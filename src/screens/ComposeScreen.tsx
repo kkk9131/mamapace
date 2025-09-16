@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Alert,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
@@ -26,6 +27,7 @@ import {
 } from '../utils/imagePickerCompat';
 import { uploadPostImages } from '../services/storageService';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 
 export default function ComposeScreen({
   onClose,
@@ -36,12 +38,33 @@ export default function ComposeScreen({
 }) {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { hasEntitlement } = useSubscription();
+  const isPremium = hasEntitlement('premium');
   const [aiOn, setAiOn] = useState(false);
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [images, setImages] = useState<{ uri: string }[]>([]);
+  const [aiCommentLimitReached, setAiCommentLimitReached] = useState(false);
   const fade = useRef(new Animated.Value(0)).current;
+
+  const handleToggleAi = () => {
+    if (!isPremium && aiCommentLimitReached) {
+      Alert.alert(
+        'AIコメントの無料枠',
+        '無料プランではAIコメントは1日1回までご利用いただけます。',
+      );
+      return;
+    }
+    setAiOn(v => !v);
+  };
+
+  useEffect(() => {
+    if (isPremium) {
+      setAiCommentLimitReached(false);
+    }
+  }, [isPremium]);
+
   useEffect(() => {
     Animated.timing(fade, {
       toValue: 1,
@@ -244,13 +267,16 @@ export default function ComposeScreen({
                 }}
               >
                 <Pressable
-                  onPress={() => setAiOn(v => !v)}
+                  onPress={handleToggleAi}
+                  disabled={!isPremium && aiCommentLimitReached}
                   style={({ pressed }) => [
                     {
                       backgroundColor: aiOn ? colors.pink : '#ffffff14',
                       borderRadius: 999,
                       paddingVertical: 6,
                       paddingHorizontal: 10,
+                      opacity:
+                        !isPremium && aiCommentLimitReached ? 0.4 : 1,
                       transform: [{ scale: pressed ? 0.97 : 1 }],
                     },
                   ]}
@@ -265,6 +291,18 @@ export default function ComposeScreen({
                   </Text>
                 </Pressable>
               </View>
+              {!isPremium && (
+                <Text
+                  style={{
+                    color: colors.subtext,
+                    fontSize: 11,
+                    textAlign: 'right',
+                    marginBottom: 4,
+                  }}
+                >
+                  無料プランは1日1回まで。プレミアムで無制限になります。
+                </Text>
+              )}
               <TextInput
                 placeholder="いまの気持ちをシェア"
                 placeholderTextColor={colors.subtext}
@@ -361,7 +399,18 @@ export default function ComposeScreen({
                   triggerCompassionateAiComment({
                     postId: created.id,
                     body: bodyForAi,
-                  }).catch(() => {});
+                  })
+                    .then(res => {
+                      if (res && !res.ok && res.error === 'free_daily_limit') {
+                        setAiCommentLimitReached(true);
+                        setAiOn(false);
+                        Alert.alert(
+                          'AIコメントの無料枠',
+                          '本日の無料AIコメントは既にご利用済みです。プレミアムにアップグレードすると無制限にご利用いただけます。',
+                        );
+                      }
+                    })
+                    .catch(() => {});
                 }
                 if (onPosted) {
                   onPosted();

@@ -47,6 +47,9 @@ const CONFIG = {
 
 const needsSearch = (messages: ChatMessage[]) => needsSearchHelper(messages, CONFIG.SEARCH_MIN_QUERY_LEN);
 
+const PREMIUM_STATUSES = new Set(['active', 'in_trial', 'in_grace']);
+const FREE_CHAT_DAILY_LIMIT = Number(Deno.env.get('AI_FREE_DAILY_LIMIT') || 3);
+
 async function googleSearch(query: string): Promise<{ title: string; link: string; source: string }[]> {
   const key = Deno.env.get('GOOGLE_SEARCH_API_KEY') || '';
   const cx = Deno.env.get('GOOGLE_SEARCH_CX') || '';
@@ -92,6 +95,34 @@ function buildSystemPrompt(): string {
 const toGeminiContents = (systemPrompt: string, history: ChatMessage[]) => toContents(systemPrompt, history, CONFIG.MAX_USER_INPUT);
 
 const formatWithSources = (text: string, sources: { title: string; source: string }[]) => formatSources(text, sources);
+
+async function userHasPremiumSubscription(supabase: any, userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('user_subscriptions')
+      .select('status, current_period_end')
+      .eq('user_id', userId)
+      .order('current_period_end', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return false;
+    const status = String(data.status || '').toLowerCase();
+    if (!PREMIUM_STATUSES.has(status)) return false;
+    const endAt = data.current_period_end ? Date.parse(data.current_period_end) : null;
+    if (Number.isFinite(endAt) && endAt !== null && endAt < Date.now()) {
+      return false;
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function startOfTodayIso(): string {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return now.toISOString();
+}
 
 async function generateWithGemini(apiKey: string, contents: any) {
   const payload = {
@@ -178,6 +209,7 @@ Deno.serve(async (req) => {
       return json(401, { error: 'Unauthorized' }, allowedOrigin);
     }
     const userId = userData.user.id;
+    const isPremiumUser = await userHasPremiumSubscription(supabase, userId);
 
     // Bound history and total input size
     let history = messages.slice(-CONFIG.MAX_HISTORY).map(m => ({
@@ -241,6 +273,46 @@ Deno.serve(async (req) => {
       }
     }
 
+    const { data: sessionRows, error: sessionsErr } = await supabase
+      .from('ai_chat_sessions')
+      .select('id')
+      .eq('user_id', userId);
+    if (sessionsErr) throw sessionsErr;
+    const sessionIds = (sessionRows ?? []).map((s: any) => String(s.id));
+    if (!sessionIds.includes(sessionId)) {
+      sessionIds.push(sessionId);
+    }
+
+    if (!isPremiumUser && FREE_CHAT_DAILY_LIMIT > 0 && sessionIds.length > 0) {
+      try {
+        const { count: dailyCount, error: dailyErr } = await supabase
+          .from('ai_chat_messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('role', 'user')
+          .in('session_id', sessionIds)
+          .gte('created_at', startOfTodayIso());
+        if (!dailyErr && typeof dailyCount === 'number' && dailyCount >= FREE_CHAT_DAILY_LIMIT) {
+          return json(200, { ok: false, error: 'free_daily_limit' }, allowedOrigin);
+        }
+      } catch (_) {
+        // Ignore counting errors to avoid blocking the request unexpectedly
+      }
+    }
+
+    if (sessionIds.length > 0) {
+      try {
+        const since = new Date(Date.now() - 60_000).toISOString();
+        const { count, error: cntErr } = await supabase
+          .from('ai_chat_messages')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', since)
+          .in('session_id', sessionIds);
+        if (!cntErr && typeof count === 'number' && count >= CONFIG.RATE_LIMIT_PER_MINUTE) {
+          return json(429, { error: 'rate_limited' }, allowedOrigin);
+        }
+      } catch (_) {}
+    }
+
     // Insert the latest user message (best-effort)
     try {
       const lastUser = [...history].reverse().find(m => m.role === 'user');
@@ -250,20 +322,6 @@ Deno.serve(async (req) => {
           role: 'user',
           content: clamp(lastUser.content, CONFIG.MAX_USER_INPUT),
         });
-      }
-    } catch (_) {}
-    // Simple per-user rate limit (messages per minute)
-    try {
-      const since = new Date(Date.now() - 60_000).toISOString();
-      const { count, error: cntErr } = await supabase
-        .from('ai_chat_messages')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', since)
-        .in('session_id',
-          (await supabase.from('ai_chat_sessions').select('id').eq('user_id', userId)).data?.map((s: any) => s.id) || []
-        );
-      if (!cntErr && typeof count === 'number' && count >= CONFIG.RATE_LIMIT_PER_MINUTE) {
-        return json(429, { error: 'rate_limited' }, allowedOrigin);
       }
     } catch (_) {}
 

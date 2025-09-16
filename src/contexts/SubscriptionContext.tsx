@@ -1,7 +1,20 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { AppState } from 'react-native';
+
 import { subscriptionService } from '../services/subscriptionService';
-import type { SubscriptionStatus, UserSubscription, SubscriptionPlan } from '../types/Subscription';
+import type {
+  SubscriptionStatus,
+  UserSubscription,
+  SubscriptionPlan,
+} from '../types/Subscription';
+
 import { useAuth } from './AuthContext';
 
 type SubscriptionState = {
@@ -17,7 +30,11 @@ type SubscriptionState = {
 
 const Ctx = createContext<SubscriptionState | undefined>(undefined);
 
-export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
+export function SubscriptionProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
@@ -38,7 +55,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         subscriptionService.getMySubscription(),
       ]);
       // Choose current plan by subscription if exists; otherwise default to premium_monthly or first active plan
-      let p = mine ? plans.find(pl => pl.id === (mine as any).plan_id) || null : null;
+      let p = mine
+        ? plans.find(pl => pl.id === (mine as any).plan_id) || null
+        : null;
       if (!p) {
         p = plans.find(pl => pl.code === 'premium_monthly') || plans[0] || null;
       }
@@ -62,12 +81,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         if (user) {
           const res = await subscriptionService.restore();
           // Even if restore fails (no purchases), refresh to pick up any server changes
-          if (mounted) await refresh();
+          if (mounted) {
+            await refresh();
+          }
         } else {
           await refresh();
         }
       } catch {
-        if (mounted) await refresh();
+        if (mounted) {
+          await refresh();
+        }
       }
     })();
 
@@ -85,25 +108,53 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     };
   }, [user, refresh]);
 
-  const purchase = useCallback(async (productId: string) => {
-    const res = await subscriptionService.purchase(productId);
-    if (res.ok) await refresh();
-    return res;
-  }, [refresh]);
+  const purchase = useCallback(
+    async (productId: string) => {
+      const res = await subscriptionService.purchase(productId);
+      if (res.ok) {
+        await refresh();
+      }
+      return res;
+    },
+    [refresh],
+  );
 
   const restore = useCallback(async () => {
     const res = await subscriptionService.restore();
-    if (res.ok) await refresh();
+    if (res.ok) {
+      await refresh();
+    }
     return res;
   }, [refresh]);
 
-  const hasEntitlement = useCallback((key: string) => {
-    return subscriptionService.hasEntitlement(key, status);
-  }, [status]);
+  const hasEntitlement = useCallback(
+    (key: string) => {
+      return subscriptionService.hasEntitlement(key, status);
+    },
+    [status],
+  );
 
   const value = useMemo(
-    () => ({ loading, status, plan, expiresAt, refresh, purchase, restore, hasEntitlement }),
-    [loading, status, plan, expiresAt, refresh, purchase, restore, hasEntitlement],
+    () => ({
+      loading,
+      status,
+      plan,
+      expiresAt,
+      refresh,
+      purchase,
+      restore,
+      hasEntitlement,
+    }),
+    [
+      loading,
+      status,
+      plan,
+      expiresAt,
+      refresh,
+      purchase,
+      restore,
+      hasEntitlement,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -111,6 +162,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
 export function useSubscription() {
   const ctx = useContext(Ctx);
-  if (!ctx) throw new Error('useSubscription must be used within SubscriptionProvider');
+  if (!ctx) {
+    throw new Error('useSubscription must be used within SubscriptionProvider');
+  }
   return ctx;
 }

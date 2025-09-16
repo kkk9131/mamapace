@@ -24,7 +24,6 @@ import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { useBlockedList } from '../hooks/useBlock';
-
 import { getFeatureFlag } from '../services/featureFlagService';
 import appConfig from '../config/appConfig';
 
@@ -87,9 +86,13 @@ export default function HomeScreen({
       // Wait up to 5s for any in-flight load to complete
       while (loadingRef.current && Date.now() - start < 5000) {
         await new Promise(res => setTimeout(res, 50));
-        if (!active) return;
+        if (!active) {
+          return;
+        }
       }
-      if (!active) return;
+      if (!active) {
+        return;
+      }
       // Reset and reload using the latest flag
       setCursor(null);
       setItems([]);
@@ -166,7 +169,7 @@ export default function HomeScreen({
                         },
                       }
                     : p
-                )
+                ),
               );
             }
           )
@@ -191,7 +194,7 @@ export default function HomeScreen({
                         },
                       }
                     : p
-                )
+                ),
               );
             }
           )
@@ -217,7 +220,7 @@ export default function HomeScreen({
                         })(),
                       }
                     : p
-                )
+                ),
               );
             }
           )
@@ -246,7 +249,7 @@ export default function HomeScreen({
                         })(),
                       }
                     : p
-                )
+                ),
               );
             }
           )

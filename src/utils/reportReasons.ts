@@ -10,4 +10,3 @@ export const REPORT_REASONS: ReportReason[] = [
   { code: 'nudity', label: '不適切なコンテンツ' },
   { code: 'other', label: 'その他' },
 ];
-

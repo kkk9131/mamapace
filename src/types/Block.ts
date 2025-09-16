@@ -3,4 +3,3 @@ export type BlockRelation = {
   blocked_id: string;
   created_at: string;
 };
-

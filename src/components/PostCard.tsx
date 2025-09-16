@@ -1,18 +1,26 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, Animated, Image, Modal, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  Animated,
+  Image,
+  Modal,
+  Alert,
+} from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 
 import { useTheme } from '../theme/theme';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { PostWithMeta } from '../types/post';
-
-import ExpandableText from './ExpandableText';
-import VerifiedBadge from './VerifiedBadge';
 import { submitReport } from '../services/reportService';
 import { blockUser } from '../services/blockService';
 import { REPORT_REASONS } from '../utils/reportReasons';
 import { notifyError, notifyInfo } from '../utils/notify';
+
+import VerifiedBadge from './VerifiedBadge';
+import ExpandableText from './ExpandableText';
 
 export default function PostCard({
   post,
@@ -40,33 +48,31 @@ export default function PostCard({
   const float = useRef(new Animated.Value(0)).current;
   const commentScale = useRef(new Animated.Value(1)).current;
   const handleMenuPress = () => {
-    if (isOwner) return;
+    if (isOwner) {
+      return;
+    }
     Alert.alert('操作を選択', undefined, [
       {
         text: '通報する',
         onPress: () => {
-          Alert.alert(
-            '通報理由を選択',
-            undefined,
-            [
-              ...REPORT_REASONS.map(r => ({
-                text: r.label,
-                onPress: async () => {
-                  try {
-                    await submitReport({
-                      targetType: 'post',
-                      targetId: post.id,
-                      reasonCode: r.code,
-                    });
-                    notifyInfo('通報を受け付けました');
-                  } catch (e: any) {
-                    notifyError('通報に失敗しました');
-                  }
-                },
-              })),
-              { text: 'キャンセル', style: 'cancel' },
-            ],
-          );
+          Alert.alert('通報理由を選択', undefined, [
+            ...REPORT_REASONS.map(r => ({
+              text: r.label,
+              onPress: async () => {
+                try {
+                  await submitReport({
+                    targetType: 'post',
+                    targetId: post.id,
+                    reasonCode: r.code,
+                  });
+                  notifyInfo('通報を受け付けました');
+                } catch (e: any) {
+                  notifyError('通報に失敗しました');
+                }
+              },
+            })),
+            { text: 'キャンセル', style: 'cancel' },
+          ]);
         },
       },
       {

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+
 import { submitReport } from '../services/reportService';
 import { ReportReasonCode, ReportTargetType } from '../types/Report';
 
@@ -38,4 +39,3 @@ export function useReport() {
 
   return { send, loading, error, success };
 }
-

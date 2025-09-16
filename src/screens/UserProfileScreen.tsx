@@ -389,9 +389,10 @@ export default function UserProfileScreen({
                       {
                         paddingHorizontal: 12,
                         paddingVertical: 8,
-                        backgroundColor: isStartingChat || isBlocked
-                          ? colors.subtext
-                          : colors.surface,
+                        backgroundColor:
+                          isStartingChat || isBlocked
+                            ? colors.subtext
+                            : colors.surface,
                         borderRadius: 999,
                         transform: [
                           { scale: pressed && !isStartingChat ? 0.97 : 1 },
@@ -462,21 +463,25 @@ export default function UserProfileScreen({
                             },
                           ]);
                         } else {
-                          Alert.alert('確認', 'このユーザーをブロックしますか？', [
-                            { text: 'キャンセル', style: 'cancel' },
-                            {
-                              text: 'ブロック',
-                              style: 'destructive',
-                              onPress: async () => {
-                                try {
-                                  await block(userId);
-                                  notifyInfo('ユーザーをブロックしました');
-                                } catch {
-                                  notifyError('操作に失敗しました');
-                                }
+                          Alert.alert(
+                            '確認',
+                            'このユーザーをブロックしますか？',
+                            [
+                              { text: 'キャンセル', style: 'cancel' },
+                              {
+                                text: 'ブロック',
+                                style: 'destructive',
+                                onPress: async () => {
+                                  try {
+                                    await block(userId);
+                                    notifyInfo('ユーザーをブロックしました');
+                                  } catch {
+                                    notifyError('操作に失敗しました');
+                                  }
+                                },
                               },
-                            },
-                          ]);
+                            ],
+                          );
                         }
                       } catch (e: any) {
                         notifyError('操作に失敗しました');
@@ -501,28 +506,24 @@ export default function UserProfileScreen({
                   {/* Report Button */}
                   <Pressable
                     onPress={() => {
-                      Alert.alert(
-                        '通報理由を選択',
-                        undefined,
-                        [
-                          ...REPORT_REASONS.map(r => ({
-                            text: r.label,
-                            onPress: async () => {
-                              try {
-                                await submitReport({
-                                  targetType: 'user',
-                                  targetId: userId,
-                                  reasonCode: r.code,
-                                });
-                                notifyInfo('通報を受け付けました');
-                              } catch (e: any) {
-                                notifyError('通報に失敗しました');
-                              }
-                            },
-                          })),
-                          { text: 'キャンセル', style: 'cancel' },
-                        ]
-                      );
+                      Alert.alert('通報理由を選択', undefined, [
+                        ...REPORT_REASONS.map(r => ({
+                          text: r.label,
+                          onPress: async () => {
+                            try {
+                              await submitReport({
+                                targetType: 'user',
+                                targetId: userId,
+                                reasonCode: r.code,
+                              });
+                              notifyInfo('通報を受け付けました');
+                            } catch (e: any) {
+                              notifyError('通報に失敗しました');
+                            }
+                          },
+                        })),
+                        { text: 'キャンセル', style: 'cancel' },
+                      ]);
                     }}
                     style={({ pressed }) => [
                       {

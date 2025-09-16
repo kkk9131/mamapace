@@ -1,4 +1,5 @@
 import { ServiceError } from '../utils/errors';
+
 import { getSupabaseClient } from './supabaseClient';
 
 export async function blockUser(blockedUserId: string) {
@@ -72,7 +73,9 @@ export async function isBlocked(userId: string): Promise<boolean> {
   const supabase = getSupabaseClient();
   const { data: userRes } = await supabase.auth.getUser();
   const user = userRes?.user;
-  if (!user) return false;
+  if (!user) {
+    return false;
+  }
 
   const { count, error } = await supabase
     .from('block_relationships')

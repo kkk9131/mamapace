@@ -1,5 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, FlatList, Pressable, ActivityIndicator, Alert, Image, RefreshControl } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  ActivityIndicator,
+  Alert,
+  Image,
+  RefreshControl,
+} from 'react-native';
 import { BlurView } from 'expo-blur';
 
 import { useTheme } from '../theme/theme';
@@ -22,7 +31,10 @@ interface BlockedUsersListScreenProps {
   onOpenUser?: (userId: string) => void;
 }
 
-export default function BlockedUsersListScreen({ onBack, onOpenUser }: BlockedUsersListScreenProps) {
+export default function BlockedUsersListScreen({
+  onBack,
+  onOpenUser,
+}: BlockedUsersListScreenProps) {
   const theme = useTheme();
   const { colors } = theme;
   const { blocked, unblock, refresh } = useBlockedList();
@@ -50,7 +62,9 @@ export default function BlockedUsersListScreen({ onBack, onOpenUser }: BlockedUs
         .select('id, maternal_verified')
         .in('id', ids);
       const badgeMap: Record<string, boolean> = {};
-      (pubs || []).forEach((p: any) => (badgeMap[p.id] = !!p.maternal_verified));
+      (pubs || []).forEach(
+        (p: any) => (badgeMap[p.id] = !!p.maternal_verified),
+      );
       const map: Record<string, ProfileLite> = {};
       (base || []).forEach((p: any) => {
         map[p.id] = {
@@ -75,7 +89,10 @@ export default function BlockedUsersListScreen({ onBack, onOpenUser }: BlockedUs
     void loadProfiles();
   }, [loadProfiles]);
 
-  const data = useMemo(() => ids.map(id => profiles[id] || { id }), [ids, profiles]);
+  const data = useMemo(
+    () => ids.map(id => profiles[id] || { id }),
+    [ids, profiles],
+  );
 
   const handleUnblock = useCallback(
     (userId: string, label?: string | null) => {
@@ -115,7 +132,12 @@ export default function BlockedUsersListScreen({ onBack, onOpenUser }: BlockedUs
         {onBack && (
           <Pressable
             onPress={onBack}
-            style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: colors.surface, borderRadius: 999 }}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              backgroundColor: colors.surface,
+              borderRadius: 999,
+            }}
           >
             <Text style={{ color: colors.text, fontWeight: '700' }}>戻る</Text>
           </Pressable>
@@ -123,7 +145,9 @@ export default function BlockedUsersListScreen({ onBack, onOpenUser }: BlockedUs
       </View>
 
       {loading ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <View
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+        >
           <ActivityIndicator size="large" color={colors.pink} />
         </View>
       ) : (
@@ -133,8 +157,8 @@ export default function BlockedUsersListScreen({ onBack, onOpenUser }: BlockedUs
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-                onRefresh={async () => {
-                  setRefreshing(true);
+              onRefresh={async () => {
+                setRefreshing(true);
                 try {
                   await refresh();
                   await loadProfiles();
@@ -143,26 +167,66 @@ export default function BlockedUsersListScreen({ onBack, onOpenUser }: BlockedUs
                 } finally {
                   setRefreshing(false);
                 }
-                }}
-                tintColor={colors.pink}
-              />
+              }}
+              tintColor={colors.pink}
+            />
           }
-          contentContainerStyle={{ padding: theme.spacing(2), paddingBottom: theme.spacing(10) }}
+          contentContainerStyle={{
+            padding: theme.spacing(2),
+            paddingBottom: theme.spacing(10),
+          }}
           ListEmptyComponent={() => (
             <View style={{ padding: theme.spacing(4), alignItems: 'center' }}>
-              <Text style={{ color: colors.subtext }}>ブロックしているユーザーはいません</Text>
+              <Text style={{ color: colors.subtext }}>
+                ブロックしているユーザーはいません
+              </Text>
             </View>
           )}
-          ItemSeparatorComponent={() => <View style={{ height: theme.spacing(1) }} />}
+          ItemSeparatorComponent={() => (
+            <View style={{ height: theme.spacing(1) }} />
+          )}
           renderItem={({ item }) => {
             const displayName = item.display_name || item.username || item.id;
             return (
-              <View style={{ borderRadius: theme.radius.lg, overflow: 'hidden', ...theme.shadow.card }}>
-                <BlurView intensity={30} tint="dark" style={{ padding: theme.spacing(1.25), backgroundColor: '#ffffff10', flexDirection: 'row', alignItems: 'center' }}>
+              <View
+                style={{
+                  borderRadius: theme.radius.lg,
+                  overflow: 'hidden',
+                  ...theme.shadow.card,
+                }}
+              >
+                <BlurView
+                  intensity={30}
+                  tint="dark"
+                  style={{
+                    padding: theme.spacing(1.25),
+                    backgroundColor: '#ffffff10',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                  }}
+                >
                   {item.avatar_url ? (
-                    <Image source={{ uri: item.avatar_url }} style={{ width: 44, height: 44, borderRadius: 22, marginRight: 10 }} />
+                    <Image
+                      source={{ uri: item.avatar_url }}
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        marginRight: 10,
+                      }}
+                    />
                   ) : (
-                    <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                    <View
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        backgroundColor: colors.surface,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 10,
+                      }}
+                    >
                       <Text>{item.avatar_emoji || '👤'}</Text>
                     </View>
                   )}
@@ -172,12 +236,22 @@ export default function BlockedUsersListScreen({ onBack, onOpenUser }: BlockedUs
                     onPress={() => onOpenUser && onOpenUser(item.id)}
                     style={{ flex: 1 }}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={{ color: colors.text, fontWeight: '700' }}>{displayName}</Text>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <Text style={{ color: colors.text, fontWeight: '700' }}>
+                        {displayName}
+                      </Text>
                       {item.maternal_verified && <VerifiedBadge size={16} />}
                     </View>
                     {!!item.username && (
-                      <Text style={{ color: colors.subtext, fontSize: 12 }}>@{item.username}</Text>
+                      <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                        @{item.username}
+                      </Text>
                     )}
                   </Pressable>
                   <Pressable
@@ -190,7 +264,9 @@ export default function BlockedUsersListScreen({ onBack, onOpenUser }: BlockedUs
                       transform: [{ scale: pressed ? 0.97 : 1 }],
                     })}
                   >
-                    <Text style={{ color: colors.text, fontWeight: '700' }}>解除</Text>
+                    <Text style={{ color: colors.text, fontWeight: '700' }}>
+                      解除
+                    </Text>
                   </Pressable>
                 </BlurView>
               </View>

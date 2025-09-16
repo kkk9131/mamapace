@@ -12,6 +12,9 @@ type Env = {
   DAILY_LIMIT?: string; // optional override, default 3
 };
 
+const PREMIUM_STATUSES = new Set(['active', 'in_trial', 'in_grace']);
+const FREE_COMMENT_DAILY_LIMIT = Number(Deno.env.get('AI_COMMENT_FREE_DAILY_LIMIT') || 1);
+
 interface RequestBody {
   postId: string;
   body: string;
@@ -100,6 +103,36 @@ async function generateCompassionateText(apiKey: string, postText: string): Prom
   return clampText((out || '').trim(), 280);
 }
 
+async function userHasPremiumSubscription(supabase: any, userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('user_subscriptions')
+      .select('status, current_period_end')
+      .eq('user_id', userId)
+      .order('current_period_end', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return false;
+    const status = String(data.status || '').toLowerCase();
+    if (!PREMIUM_STATUSES.has(status)) {
+      return false;
+    }
+    const endAt = data.current_period_end ? Date.parse(data.current_period_end) : null;
+    if (Number.isFinite(endAt) && endAt !== null && endAt < Date.now()) {
+      return false;
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function startOfTodayIso(): string {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return now.toISOString();
+}
+
 Deno.serve(async (req) => {
   try {
     if (req.method !== 'POST') {
@@ -147,7 +180,15 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: authz } },
     });
+
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !userData?.user) {
+      return jsonResponse(401, { error: 'Unauthorized' }, allowedOrigin);
+    }
+    const requesterId = userData.user.id;
+    const isPremiumUser = await userHasPremiumSubscription(supabase, requesterId);
 
     const body: RequestBody = await req.json();
     const postId = body?.postId;
@@ -164,6 +205,21 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (postErr) throw new Error(`db_fetch_post: ${postErr.message || JSON.stringify(postErr)}`);
     if (!post) return jsonResponse(404, { error: 'Post not found' }, allowedOrigin);
+
+    if (!isPremiumUser && FREE_COMMENT_DAILY_LIMIT > 0) {
+      try {
+        const { count: usageToday, error: usageErr } = await supabase
+          .from('ai_comment_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('requester_id', requesterId)
+          .gte('created_at', startOfTodayIso());
+        if (!usageErr && typeof usageToday === 'number' && usageToday >= FREE_COMMENT_DAILY_LIMIT) {
+          return jsonResponse(200, { ok: false, error: 'free_daily_limit' }, allowedOrigin);
+        }
+      } catch (_) {
+        // Ignore counting errors to avoid blocking the request unexpectedly
+      }
+    }
 
     // Rate limit: max N AI comments per author per day
     const since = new Date();
@@ -213,6 +269,13 @@ Deno.serve(async (req) => {
       .select('*')
       .single();
     if (insertErr) throw new Error(`db_insert_comment: ${insertErr.message || JSON.stringify(insertErr)}`);
+
+    try {
+      await supabase.from('ai_comment_requests').insert({
+        requester_id: requesterId,
+        post_id: postId,
+      });
+    } catch (_) {}
 
     return jsonResponse(200, { ok: true, comment: newComment }, allowedOrigin);
   } catch (e) {

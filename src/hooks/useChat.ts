@@ -196,7 +196,9 @@ export function useChat(chatId: string) {
       setTimeout(() => {
         setState(prev => {
           const stillOptimistic = prev.messages.find(m => {
-            if (!m || typeof m !== 'object') return false;
+            if (!m || typeof m !== 'object') {
+              return false;
+            }
             const hasTemp = 'tempId' in (m as any);
             const hasOpt = 'isOptimistic' in (m as any);
             return (
@@ -210,8 +212,12 @@ export function useChat(chatId: string) {
             return {
               ...prev,
               messages: prev.messages.filter(m => {
-                if (!m || typeof m !== 'object') return true;
-                return !('tempId' in (m as any)) || (m as any).tempId !== tempId;
+                if (!m || typeof m !== 'object') {
+                  return true;
+                }
+                return (
+                  !('tempId' in (m as any)) || (m as any).tempId !== tempId
+                );
               }),
             };
           }
@@ -250,7 +256,9 @@ export function useChat(chatId: string) {
 
               // Remove optimistic message with same content if exists
               const optimisticIndex = prev.messages.findIndex(m => {
-                if (!m || typeof m !== 'object') return false;
+                if (!m || typeof m !== 'object') {
+                  return false;
+                }
                 const obj = m as any;
                 return (
                   'isOptimistic' in obj &&
@@ -545,7 +553,9 @@ export function useChat(chatId: string) {
           setState(prev => ({
             ...prev,
             messages: prev.messages.map(m => {
-              if (!m || typeof m !== 'object') return m;
+              if (!m || typeof m !== 'object') {
+                return m;
+              }
               return 'tempId' in (m as any) && (m as any).tempId === tempId
                 ? { ...response.data, isOptimistic: false }
                 : m;
@@ -564,7 +574,9 @@ export function useChat(chatId: string) {
           setState(prev => ({
             ...prev,
             messages: prev.messages.map(m => {
-              if (!m || typeof m !== 'object') return m;
+              if (!m || typeof m !== 'object') {
+                return m;
+              }
               return 'tempId' in (m as any) && (m as any).tempId === tempId
                 ? { ...(m as any), ...errorUpdate, error: response.error }
                 : m;

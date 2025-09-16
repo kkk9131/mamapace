@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, Pressable } from 'react-native';
+
 import { useTheme } from '../theme/theme';
 
 type Props = {
@@ -16,7 +17,9 @@ export default function OnboardingPrompt({
   onSkip,
 }: Props) {
   const { colors } = useTheme();
-  if (!visible) return null;
+  if (!visible) {
+    return null;
+  }
 
   return (
     <Modal visible={visible} animationType="fade" transparent>
@@ -100,4 +103,3 @@ export default function OnboardingPrompt({
     </Modal>
   );
 }
-

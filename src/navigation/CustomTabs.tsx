@@ -9,6 +9,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import HomeScreen from '../screens/HomeScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
@@ -43,7 +44,6 @@ import CreateSpaceScreen from '../screens/CreateSpaceScreen';
 import AnonRoomV2Screen from '../screens/AnonRoomV2Screen';
 import TutorialScreen from '../screens/TutorialScreen';
 import OnboardingPrompt from '../components/OnboardingPrompt';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import PaywallScreen from '../screens/PaywallScreen';
 import ManageSubscriptionScreen from '../screens/ManageSubscriptionScreen';
 
