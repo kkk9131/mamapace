@@ -3,59 +3,35 @@ import {
   View,
   TextInput,
   Text,
-  Pressable,
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Image,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/theme';
 import { useBlockedList } from '../hooks/useBlock';
+import { useSearch } from '../hooks/useSearch';
+import type { SearchPostItem, SearchUserItem } from '../services/searchService';
 
-const tabs = [
-  { key: 'users', label: 'ユーザー' },
-  { key: 'rooms', label: 'ルーム' },
-  { key: 'tags', label: 'ハッシュタグ' },
-] as const;
-
-type TabKey = (typeof tabs)[number]['key'];
-
-type Item = { id: string; title: string; subtitle?: string };
-
-const MOCK = {
-  users: [
-    { id: 'u1', title: 'alice', subtitle: 'Alice A.' },
-    { id: 'u2', title: 'bob', subtitle: 'Bob B.' },
-  ],
-  rooms: [
-    { id: 'r1', title: 'General', subtitle: 'みんなで話そう' },
-    { id: 'r2', title: 'Random', subtitle: '雑談' },
-  ],
-  tags: [
-    { id: 't1', title: '#news' },
-    { id: 't2', title: '#reactnative' },
-  ],
-} satisfies Record<TabKey, Item[]>;
-
-export default function SearchScreen() {
+export default function SearchScreen({
+  onOpenUser,
+  onOpenPost,
+}: {
+  onOpenUser?: (userId: string) => void;
+  onOpenPost?: (postId: string) => void;
+}) {
   const { colors, radius } = useTheme();
   const [q, setQ] = useState('');
-  const [active, setActive] = useState<TabKey>('users');
   const { blocked } = useBlockedList();
+  const { status, kind, users, posts, error } = useSearch(q);
 
-  const data = useMemo(() => {
-    const filteredByText = MOCK[active].filter(
-      i =>
-        i.title.toLowerCase().includes(q.toLowerCase()) ||
-        (i.subtitle?.toLowerCase().includes(q.toLowerCase()) ?? false)
-    );
-    // ブロック除外はユーザータブのみ適用（id がユーザーID前提）
-    if (active === 'users') {
-      return filteredByText.filter(i => !blocked.includes(i.id));
-    }
-    return filteredByText;
-  }, [active, q, blocked]);
+  const filteredUsers = useMemo(() => {
+    return users.filter(u => !blocked.includes(u.id));
+  }, [users, blocked]);
 
   return (
     <KeyboardAvoidingView
@@ -76,7 +52,7 @@ export default function SearchScreen() {
         >
           <View style={{ flexDirection: 'row', marginBottom: 12 }}>
             <TextInput
-              placeholder="検索"
+              placeholder="検索（#ハッシュタグ または @ユーザー）"
               placeholderTextColor={colors.subtext}
               value={q}
               onChangeText={setQ}
@@ -95,69 +71,158 @@ export default function SearchScreen() {
               }}
             />
           </View>
-          <View
-            style={{ flexDirection: 'row', gap: 8 as any, marginBottom: 12 }}
-          >
-            {tabs.map(t => (
-              <Pressable
-                key={t.key}
-                accessibilityRole="tab"
-                accessibilityLabel={t.label}
-                onPress={() => setActive(t.key)}
-                style={({ pressed }) => [
-                  {
-                    paddingVertical: 8,
-                    paddingHorizontal: 12,
-                    borderRadius: radius.md,
-                    backgroundColor:
-                      active === t.key
-                        ? colors.pink
-                        : pressed
-                          ? '#ffffff10'
-                          : colors.card,
-                    borderColor: '#22252B',
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color: active === t.key ? '#121418' : colors.text,
-                    fontWeight: '700',
-                  }}
-                >
-                  {t.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          <FlatList
-            keyboardShouldPersistTaps="handled"
-            data={data}
-            keyExtractor={i => i.id}
-            renderItem={({ item }) => (
-              <View
-                style={{
-                  paddingVertical: 12,
-                  paddingHorizontal: 12,
-                  borderRadius: radius.md,
-                  backgroundColor: colors.card,
-                  borderColor: '#22252B',
-                  borderWidth: 1,
-                  marginBottom: 8,
-                }}
-              >
-                <Text style={{ color: colors.text, fontWeight: '700' }}>
-                  {item.title}
-                </Text>
-                {!!item.subtitle && (
-                  <Text style={{ color: colors.subtext }}>{item.subtitle}</Text>
-                )}
-              </View>
-            )}
-          />
+          {status === 'idle' && (
+            <View style={{ paddingTop: 20 }}>
+              <HintRow
+                text="@alice でユーザーを検索"
+                colors={{ text: colors.text, sub: colors.subtext }}
+              />
+              <HintRow
+                text="#music でハッシュタグ検索"
+                colors={{ text: colors.text, sub: colors.subtext }}
+              />
+            </View>
+          )}
+          {status === 'loading' && (
+            <View style={{ paddingTop: 20, alignItems: 'center' }}>
+              <ActivityIndicator color={colors.pink} />
+              <Text style={{ marginTop: 8, color: colors.subtext }}>
+                検索中…
+              </Text>
+            </View>
+          )}
+          {status === 'error' && (
+            <View style={{ paddingTop: 20, alignItems: 'center' }}>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>
+                エラー
+              </Text>
+              <Text style={{ color: colors.subtext, marginTop: 6 }}>
+                {error}
+              </Text>
+            </View>
+          )}
+          {status === 'success' && kind === 'user' && (
+            <FlatList
+              keyboardShouldPersistTaps="handled"
+              data={filteredUsers}
+              keyExtractor={i => i.id}
+              renderItem={({ item }) => (
+                <UserRow
+                  item={item}
+                  onPress={() => onOpenUser && onOpenUser(item.id)}
+                />
+              )}
+            />
+          )}
+          {status === 'success' && kind === 'hashtag' && (
+            <FlatList
+              keyboardShouldPersistTaps="handled"
+              data={posts}
+              keyExtractor={i => i.id}
+              renderItem={({ item }) => (
+                <PostRow
+                  item={item}
+                  onPress={() => onOpenPost && onOpenPost(item.id)}
+                />
+              )}
+            />
+          )}
         </View>
       </SafeAreaView>
     </KeyboardAvoidingView>
+  );
+}
+
+function HintRow({
+  text,
+  colors,
+}: {
+  text: string;
+  colors: { text: string; sub: string };
+}) {
+  return (
+    <View style={{ marginBottom: 10 }}>
+      <Text style={{ color: colors.sub }}>{text}</Text>
+    </View>
+  );
+}
+
+function UserRow({
+  item,
+  onPress,
+}: {
+  item: SearchUserItem;
+  onPress?: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+      }}
+    >
+      {item.avatarUrl ? (
+        <Image
+          source={{ uri: item.avatarUrl }}
+          style={{ width: 36, height: 36, borderRadius: 18, marginRight: 12 }}
+        />
+      ) : item.avatarEmoji ? (
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            marginRight: 12,
+            backgroundColor: '#ffffff10',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ fontSize: 20 }}>{item.avatarEmoji}</Text>
+        </View>
+      ) : (
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            marginRight: 12,
+            backgroundColor: '#ffffff10',
+          }}
+        />
+      )}
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.text, fontWeight: '700' }}>
+          @{item.username}
+        </Text>
+        {!!item.displayName && (
+          <Text style={{ color: colors.subtext }}>{item.displayName}</Text>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+function PostRow({
+  item,
+  onPress,
+}: {
+  item: SearchPostItem;
+  onPress?: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable style={{ paddingVertical: 10 }} onPress={onPress}>
+      <Text style={{ color: colors.text }}>
+        @{item.author.username} ·{' '}
+        {new Date(item.createdAt).toLocaleDateString()}
+      </Text>
+      <Text style={{ color: colors.subtext, marginTop: 4 }}>
+        {item.contentPreview}
+      </Text>
+    </Pressable>
   );
 }
