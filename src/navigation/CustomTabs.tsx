@@ -35,7 +35,7 @@ import AIChatBotScreen from '../screens/AIChatBotScreen';
 import LikedPostsListScreen from '../screens/LikedPostsListScreen';
 import MyPostsListScreen from '../screens/MyPostsListScreen';
 import LoginScreen from '../screens/LoginScreen';
-// import SearchScreen from '../screens/SearchScreen'; // Removed - now handled within RoomsScreen
+import SearchScreen from '../screens/SearchScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import ProfileEditScreen from '../screens/ProfileEditScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
@@ -72,7 +72,8 @@ type TabKey =
   | 'aiChat'
   | 'tutorial'
   | 'paywall'
-  | 'manageSubscription';
+  | 'manageSubscription'
+  | 'search';
 
 const tabs = [
   { key: 'me', label: 'あなた', Component: ProfileScreen },
@@ -301,25 +302,16 @@ export default function CustomTabs({
               }}
             />
           ) : active === 'search' ? (
-            // Redirect to home if search is accessed directly
-            (() => {
-              setActive('home');
-              return (
-                <HomeScreen
-                  refreshKey={homeRefreshKey}
-                  onCompose={() => setActive('compose')}
-                  onOpenPost={postId => {
-                    setActivePostId(postId);
-                    setActive('comments');
-                  }}
-                  onOpenProfileEdit={() => setActive('profileEdit')}
-                  onOpenUser={userId => {
-                    setActiveUserId(userId);
-                    setActive('userProfile');
-                  }}
-                />
-              );
-            })()
+            <SearchScreen
+              onOpenUser={userId => {
+                setActiveUserId(userId);
+                setActive('userProfile');
+              }}
+              onOpenPost={postId => {
+                setActivePostId(postId);
+                setActive('comments');
+              }}
+            />
           ) : active === 'rooms' ? (
             <ErrorBoundary>
               <RoomsScreen />
