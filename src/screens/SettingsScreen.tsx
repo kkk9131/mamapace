@@ -7,6 +7,9 @@ import {
   Alert,
   Image,
   ScrollView,
+  Modal,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
 import { BlurView } from 'expo-blur';
@@ -18,6 +21,7 @@ import { useHandPreference } from '../contexts/HandPreferenceContext';
 import OnboardingTutorial from '../components/OnboardingTutorial';
 import { notificationPreferencesService } from '../services/notificationPreferencesService';
 import { createBatchUpdater } from '../utils/batchUpdate';
+import { accountDeletionService } from '../services/accountDeletionService';
 
 export default function SettingsScreen({
   onLogoutNavigate,
@@ -76,6 +80,10 @@ export default function SettingsScreen({
   };
   const { handPreference, setHandPreference } = useHandPreference();
   const insets = useSafeAreaInsets();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const Section = ({
     title,
@@ -205,7 +213,7 @@ export default function SettingsScreen({
         </View>
 
         <View style={{ gap: theme.spacing(1.25) }}>
-          <Section title="通知" collapsible initialOpen>
+          <Section title="通知" collapsible initialOpen={false}>
             <View style={{ gap: 8 }}>
               <ToggleRow
                 label="メッセージ"
@@ -372,8 +380,146 @@ export default function SettingsScreen({
             </Text>
           </Pressable>
           <View style={{ height: theme.spacing(2) }} />
+          {/* Danger zone: Delete account */}
+          <Pressable
+            onPress={() => setDeleteOpen(true)}
+            style={({ pressed }) => [
+              {
+                backgroundColor: colors.surface,
+                borderRadius: theme.radius.md,
+                paddingVertical: 12,
+                alignItems: 'center',
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+                ...theme.shadow.card,
+              },
+            ]}
+          >
+            <Text style={{ color: colors.danger, fontWeight: '700' }}>
+              アカウントを削除
+            </Text>
+          </Pressable>
+          <View style={{ height: theme.spacing(2) }} />
         </View>
       </ScrollView>
+      {/* Delete Account Modal */}
+      <Modal
+        visible={deleteOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !deleteLoading && setDeleteOpen(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: '#00000088',
+            justifyContent: 'center',
+            padding: theme.spacing(2),
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: theme.radius.lg,
+              padding: theme.spacing(2),
+            }}
+          >
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>
+              アカウント削除
+            </Text>
+            <Text
+              style={{
+                color: colors.subtext,
+                marginTop: 8,
+                lineHeight: 18,
+              }}
+            >
+              この操作は取り消せません。投稿、メッセージ、フォローなど全てのデータが完全に削除されます。続行するにはパスワードを入力してください。
+            </Text>
+
+            <View style={{ height: theme.spacing(1.5) }} />
+            <Text style={{ color: colors.text, fontWeight: '600', marginBottom: 6 }}>
+              パスワード
+            </Text>
+            <TextInput
+              value={deletePassword}
+              onChangeText={t => {
+                setDeletePassword(t);
+                if (deleteError) setDeleteError(null);
+              }}
+              secureTextEntry
+              placeholder="現在のパスワード"
+              placeholderTextColor="#999"
+              editable={!deleteLoading}
+              style={{
+                backgroundColor: '#00000010',
+                color: colors.text,
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+                borderRadius: theme.radius.md,
+              }}
+            />
+
+            {deleteError ? (
+              <Text style={{ color: colors.danger, marginTop: 8 }}>{deleteError}</Text>
+            ) : null}
+
+            <View style={{ height: theme.spacing(2) }} />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Pressable
+                onPress={() => !deleteLoading && setDeleteOpen(false)}
+                style={({ pressed }) => [{
+                  flex: 1,
+                  backgroundColor: '#00000020',
+                  borderRadius: theme.radius.md,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                }]}
+                disabled={deleteLoading}
+              >
+                <Text style={{ color: colors.text, fontWeight: '700' }}>キャンセル</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={async () => {
+                  if (!deletePassword.trim()) {
+                    setDeleteError('パスワードを入力してください');
+                    return;
+                  }
+                  setDeleteLoading(true);
+                  setDeleteError(null);
+                  try {
+                    await accountDeletionService.deleteMyAccount(deletePassword);
+                    await logout();
+                    setDeleteOpen(false);
+                    onLogoutNavigate && onLogoutNavigate();
+                  } catch (e: any) {
+                    setDeleteError(e?.message || '削除に失敗しました');
+                  } finally {
+                    setDeleteLoading(false);
+                  }
+                }}
+                style={({ pressed }) => [{
+                  flex: 1,
+                  backgroundColor: '#ff5a5f',
+                  borderRadius: theme.radius.md,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  opacity: deleteLoading ? 0.8 : 1,
+                }]}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>完全に削除する</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Animated.View>
   );
 }
