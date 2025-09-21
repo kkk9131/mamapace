@@ -9,6 +9,7 @@ import {
   fillMissingAvatarUrls,
   fillMaternalVerified,
 } from '../utils/profileCompletion';
+import { extractHashtagsFromText } from '../utils/hashtag';
 
 import { getSupabaseClient } from './supabaseClient';
 
@@ -184,7 +185,7 @@ export async function fetchLikedPosts(options: {
 
 export async function createPost(
   body: string,
-  attachments?: Attachment[],
+  attachments?: Attachment[]
 ): Promise<Post> {
   if (
     (!body || body.trim().length === 0) &&
@@ -209,7 +210,19 @@ export async function createPost(
   if (error) {
     throw error;
   }
-  return data as Post;
+  const post = data as Post;
+  // 日本語タグ含むハッシュタグを抽出して保存（ベストエフォート）
+  try {
+    const tags = extractHashtagsFromText(bodyToSend);
+    if (post?.id && tags.length) {
+      const rows = tags.map(t => ({ post_id: post.id, tag: t }));
+      // upsert（重複回避）
+      await client.from('post_hashtags').upsert(rows, {
+        onConflict: 'post_id,tag',
+      } as any);
+    }
+  } catch {}
+  return post;
 }
 
 export async function toggleReaction(
@@ -316,7 +329,7 @@ export async function createComment(
     // 代表的なエラー: 関数が無い/引数数が合わない/attachments列が無い
     if (
       /does not exist|No function matches the given name|argument|attachments/i.test(
-        msg,
+        msg
       ) ||
       (res as any).code === '42883'
     ) {

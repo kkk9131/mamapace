@@ -56,6 +56,7 @@ export default function Sidebar({
   const dock = [
     { key: 'rooms', label: 'ルーム' },
     { key: 'chats', label: 'メッセージ' },
+    { key: 'search', label: '検索' },
     { key: 'settings', label: '設定' },
   ];
   const channels: { key: string; label: string }[] = [];
