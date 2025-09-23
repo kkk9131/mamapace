@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
 import { BlurView } from 'expo-blur';
@@ -302,6 +303,62 @@ export default function SettingsScreen({
             >
               <Text style={{ color: colors.text, fontWeight: '700' }}>
                 ブロックしたユーザーを管理
+              </Text>
+            </Pressable>
+
+            <View style={{ height: theme.spacing(1) }} />
+
+            <Pressable
+              onPress={async () => {
+                try {
+                  const url = 'https://mama-pace.com/terms.html';
+                  await Linking.openURL(url);
+                } catch (e) {
+                  Alert.alert('エラー', 'リンクの起動に失敗しました');
+                }
+              }}
+              accessibilityLabel="利用規約を開く"
+              style={({ pressed }) => [
+                {
+                  backgroundColor: colors.surface,
+                  borderRadius: theme.radius.md,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  ...theme.shadow.card,
+                },
+              ]}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700' }}>
+                利用規約
+              </Text>
+            </Pressable>
+
+            <View style={{ height: theme.spacing(1) }} />
+
+            <Pressable
+              onPress={async () => {
+                try {
+                  const url = 'https://mama-pace.com/privacy.html';
+                  await Linking.openURL(url);
+                } catch (e) {
+                  Alert.alert('エラー', 'リンクの起動に失敗しました');
+                }
+              }}
+              accessibilityLabel="プライバシーポリシーを開く"
+              style={({ pressed }) => [
+                {
+                  backgroundColor: colors.surface,
+                  borderRadius: theme.radius.md,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  ...theme.shadow.card,
+                },
+              ]}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700' }}>
+                プライバシーポリシー
               </Text>
             </Pressable>
           </Section>
