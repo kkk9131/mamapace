@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, Alert, ScrollView } from 'react-native';
+import { View, Text, Pressable, Alert, ScrollView, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/theme';
@@ -101,7 +101,17 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
             {priceDisplay}
           </Text>
           <Text style={{ color: colors.subtext }}>
-            月額で自動更新（いつでも管理から解約可能）。
+            期間: 1か月（自動更新）。
+          </Text>
+          <Text style={{ color: colors.subtext }}>
+            価格: 表示価格は月額（税込）。
+          </Text>
+          <Text style={{ color: colors.subtext }}>
+            自動更新: 更新日の24時間前までに解約しない限り自動更新されます。
+          </Text>
+          <Text style={{ color: colors.subtext }}>
+            管理/解約: 購入後はデバイスのアカウント設定（App Storeの「サブスクリプション」）から
+            いつでも管理・解約できます。
           </Text>
           <View
             style={{
@@ -119,6 +129,56 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
             ))}
           </View>
         </View>
+        {/* 必須の機能リンク（EULA/プライバシー） */}
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: theme.radius.md,
+            padding: theme.spacing(1.25),
+            gap: 8,
+          }}
+        >
+          <Text style={{ color: colors.subtext, fontSize: 12 }}>
+            お申し込みにより、以下に同意したものとみなされます：
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Apple標準EULAを開く"
+              onPress={async () => {
+                try {
+                  await Linking.openURL(
+                    'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/'
+                  );
+                } catch {
+                  Alert.alert('エラー', 'リンクの起動に失敗しました');
+                }
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+            >
+              <Text style={{ color: colors.pink, textDecorationLine: 'underline' }}>
+                利用規約（EULA）
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="プライバシーポリシーを開く"
+              onPress={async () => {
+                try {
+                  await Linking.openURL('https://mama-pace.com/privacy.html');
+                } catch {
+                  Alert.alert('エラー', 'リンクの起動に失敗しました');
+                }
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+            >
+              <Text style={{ color: colors.pink, textDecorationLine: 'underline' }}>
+                プライバシーポリシー
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
         <Pressable
           accessibilityRole="button"
           onPress={handlePurchase}
@@ -140,6 +200,10 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
             母子手帳認証バッジをお持ちの方のみ申し込み可能です。
           </Text>
         )}
+        <Text style={{ color: colors.subtext, fontSize: 12, textAlign: 'center' }}>
+          購入代金はApple IDに請求されます。利用規約（EULA）とプライバシー
+          ポリシーに同意のうえお申し込みください。
+        </Text>
         <Pressable
           accessibilityRole="button"
           onPress={handleRestore}

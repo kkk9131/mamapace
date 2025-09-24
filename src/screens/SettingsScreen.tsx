@@ -311,7 +311,8 @@ export default function SettingsScreen({
             <Pressable
               onPress={async () => {
                 try {
-                  const url = 'https://mama-pace.com/terms.html';
+                  const url =
+                    'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
                   await Linking.openURL(url);
                 } catch (e) {
                   Alert.alert('エラー', 'リンクの起動に失敗しました');

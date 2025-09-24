@@ -20,7 +20,7 @@ describe('SettingsScreen - Legal Links', () => {
     fireEvent.press(terms);
 
     expect(Linking.openURL).toHaveBeenCalledWith(
-      'https://mama-pace.com/terms.html',
+      'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/',
     );
   });
 
@@ -35,4 +35,3 @@ describe('SettingsScreen - Legal Links', () => {
     );
   });
 });
-
