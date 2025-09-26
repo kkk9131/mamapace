@@ -7,7 +7,7 @@
 ## プラン仕様（決定事項）
 - プラン名/コード: プレミアム（月額） / `premium_monthly`
 - 価格: ¥500/月（イントロなし）
-  - Product ID（iOS）: `com.mamapace.premium.monthly`
+  - Product ID（iOS）: `com.mamapace.premium.monthly2`
 - 通貨/期間: JPY / 月額
 - トライアル: なし（trial_days=0）
 - 申込要件: 母子手帳認証バッジ保有ユーザーのみ（UI/Edge 両方でガード）
@@ -49,7 +49,7 @@
    - 標準価格: 500 JPY（国別価格で日本を¥500に設定）
    - イントロ: 設定なし（現状は未使用）
 2. `productId` を発行し、DB `subscription_plans.product_id` に反映
-   - 本リポジトリのマイグレーション: `supabase/sql/2025-09-13_subscriptions_set_product_id.sql`
+   - 本リポジトリのマイグレーション: `supabase/sql/2025-09-24_update_premium_monthly_product_id.sql`
 3. Supabase Variables を設定
    - `SUPABASE_SERVICE_ROLE_KEY`
    - Apple: `APPLE_ISSUER_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`

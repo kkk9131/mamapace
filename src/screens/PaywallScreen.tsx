@@ -47,7 +47,9 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
     }
     setLoading(true);
     try {
-      const res = await purchase(plan.product_id || 'premium_monthly');
+      const res = await purchase(
+        plan.product_id || 'com.mamapace.premium.monthly2'
+      );
       if (!res.ok) {
         Alert.alert('購入エラー', res.error || '不明なエラー');
       } else {

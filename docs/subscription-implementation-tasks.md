@@ -8,7 +8,7 @@
 ## プラットフォーム要件
 - iOS（優先）
   - ライブラリ: `react-native-iap`
-  - Product ID: `com.mamapace.premium.monthly`
+  - Product ID: `com.mamapace.premium.monthly2`
   - Store 設定: App Store Connect で日本の標準価格 ¥500、Intro なし
   - 購入/復元: `requestSubscription` / `getAvailablePurchases` を使用
 - Android（後追い）
