@@ -14,6 +14,26 @@ function json(body: unknown, status = 200) {
   });
 }
 
+function logVerificationEvent(event: Record<string, unknown>) {
+  try {
+    console.info('[iap.verify]', JSON.stringify(event));
+  } catch (_err) {
+    console.info('[iap.verify]', String(event));
+  }
+}
+
+async function anonymizeUserId(userId: string | null | undefined) {
+  if (!userId) return 'anon';
+  try {
+    const encoder = new TextEncoder();
+    const digest = await crypto.subtle.digest('SHA-256', encoder.encode(userId));
+    const bytes = Array.from(new Uint8Array(digest).slice(0, 6));
+    return bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (_err) {
+    return 'anon';
+  }
+}
+
 function getServiceClient() {
   const url = Deno.env.get('SUPABASE_URL');
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -97,22 +117,91 @@ async function generateAppleJWT() {
   return token;
 }
 
-async function fetchAppleSubscriptionStatus(originalTransactionId: string) {
+type AppleFetchAttempt = {
+  ok: boolean;
+  status: number;
+  json: any;
+  raw: string;
+};
+
+async function fetchAppleEndpoint(url: string, headers: Record<string, string>): Promise<AppleFetchAttempt> {
+  const response = await fetch(url, { headers });
+  const raw = await response.text().catch(() => '');
+  let parsed: any = null;
+  if (raw) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch (_err) {
+      parsed = null;
+    }
+  }
+  return {
+    ok: response.ok,
+    status: response.status,
+    json: parsed,
+    raw,
+  };
+}
+
+function needsSandboxRetry(attempt: AppleFetchAttempt):
+  | { retry: true; reason: string }
+  | { retry: false } {
+  if (attempt.status === 401 || attempt.status === 403) {
+    return { retry: false };
+  }
+  const statusCode = Number(attempt?.json?.status);
+  if (!Number.isNaN(statusCode) && statusCode === 21007) {
+    return { retry: true, reason: 'status_21007' };
+  }
+  const errorCode = attempt?.json?.errorCode || attempt?.json?.errorReason;
+  if (!attempt.ok && attempt.status === 404) {
+    return { retry: true, reason: String(errorCode || 'not_found') };
+  }
+  return { retry: false };
+}
+
+async function fetchAppleSubscriptionStatus(originalTransactionId: string): Promise<{
+  payload: any;
+  environment: 'production' | 'sandbox';
+  fallbackReason?: string;
+}> {
   const token = await generateAppleJWT();
   const headers = { Authorization: `Bearer ${token}` };
   const prodUrl = `https://api.storekit.itunes.apple.com/inApps/v1/subscriptions/${encodeURIComponent(originalTransactionId)}`;
   const sbxUrl = `https://api.storekit-sandbox.itunes.apple.com/inApps/v1/subscriptions/${encodeURIComponent(originalTransactionId)}`;
-  let res = await fetch(prodUrl, { headers });
-  if (!res.ok) {
-    const sbx = await fetch(sbxUrl, { headers });
-    if (!sbx.ok) {
-      const t1 = await res.text().catch(() => '');
-      const t2 = await sbx.text().catch(() => '');
-      throw new Error(`Apple API failed: ${res.status} ${t1} | SBX ${sbx.status} ${t2}`);
-    }
-    res = sbx;
+
+  const prodAttempt = await fetchAppleEndpoint(prodUrl, headers);
+  let environment: 'production' | 'sandbox' = 'production';
+  let payload = prodAttempt.json;
+  let fallbackReason: string | undefined;
+
+  if (payload?.environment === 'Sandbox') {
+    environment = 'sandbox';
   }
-  return await res.json();
+
+  const retryHint = needsSandboxRetry(prodAttempt);
+  if (retryHint.retry) {
+    fallbackReason = retryHint.reason;
+    const sandboxAttempt = await fetchAppleEndpoint(sbxUrl, headers);
+    if (!sandboxAttempt.ok) {
+      throw new Error(
+        `Apple API failed: ${prodAttempt.status} ${prodAttempt.raw} | SBX ${sandboxAttempt.status} ${sandboxAttempt.raw}`,
+      );
+    }
+    environment = 'sandbox';
+    payload = sandboxAttempt.json;
+    return { payload, environment, fallbackReason };
+  }
+
+  if (!prodAttempt.ok) {
+    throw new Error(`Apple API failed: ${prodAttempt.status} ${prodAttempt.raw}`);
+  }
+
+  if (!payload) {
+    throw new Error('Apple API returned empty body');
+  }
+
+  return { payload, environment, fallbackReason };
 }
 
 function pickLatestTransactionForProduct(statuses: any, targetProductId?: string) {
@@ -158,6 +247,13 @@ async function handleVerify(req: Request) {
   const { data: userRes } = await userScoped.auth.getUser();
   const user = userRes?.user;
   if (!user) return json({ error: 'Not authenticated' }, 401);
+  const userRef = await anonymizeUserId(user.id);
+  logVerificationEvent({
+    stage: 'start',
+    userRef,
+    platform: payload.platform,
+    productId: payload.productId,
+  });
 
   // Maternal badge gating: only allow verified users to subscribe
   try {
@@ -168,9 +264,19 @@ async function handleVerify(req: Request) {
       .eq('id', user.id)
       .single();
     if (pErr || !profile || !profile.maternal_verified) {
+      logVerificationEvent({
+        stage: 'eligibility_blocked',
+        userRef,
+        reason: pErr?.message || 'not_verified',
+      });
       return json({ error: 'SUBSCRIPTION_NOT_ELIGIBLE' }, 403);
     }
-  } catch (_) {
+  } catch (err: any) {
+    logVerificationEvent({
+      stage: 'eligibility_error',
+      userRef,
+      message: String(err?.message || err || ''),
+    });
     return json({ error: 'Eligibility check failed' }, 500);
   }
 
@@ -186,15 +292,50 @@ async function handleVerify(req: Request) {
       .limit(1)
       .single();
 
-    if (!plan) return json({ error: 'Plan not found' }, 404);
+    if (!plan) {
+      logVerificationEvent({
+        stage: 'plan_not_found',
+        userRef,
+        productId: payload.productId,
+      });
+      return json({ error: 'Plan not found' }, 404);
+    }
 
     if (payload.platform === 'apple') {
       const originalTransactionId = payload.receipt; // client sends originalTransactionId
-      if (!originalTransactionId) return json({ error: 'Missing originalTransactionId' }, 400);
+      if (!originalTransactionId) {
+        logVerificationEvent({
+          stage: 'missing_original_transaction',
+          userRef,
+        });
+        return json({ error: 'Missing originalTransactionId' }, 400);
+      }
 
-      const statuses = await fetchAppleSubscriptionStatus(originalTransactionId);
-      const best = pickLatestTransactionForProduct(statuses, plan.product_id || undefined);
-      if (!best) return json({ error: 'No subscription found for product' }, 404);
+      const {
+        payload: statuses,
+        environment: verificationEnvironment,
+        fallbackReason,
+      } = await fetchAppleSubscriptionStatus(originalTransactionId);
+
+      logVerificationEvent({
+        stage: 'apple_fetch',
+        userRef,
+        environment: verificationEnvironment,
+        fallbackReason: fallbackReason || null,
+      });
+
+      const best = pickLatestTransactionForProduct(
+        statuses,
+        plan.product_id || undefined,
+      );
+      if (!best) {
+        logVerificationEvent({
+          stage: 'apple_no_subscription',
+          userRef,
+          environment: verificationEnvironment,
+        });
+        return json({ error: 'No subscription found for product' }, 404);
+      }
 
       const nowMs = Date.now();
       const isActive = best.exp && best.exp > nowMs;
@@ -223,13 +364,32 @@ async function handleVerify(req: Request) {
         },
         { onConflict: 'user_id,plan_id' },
       );
-      if (upsertErr) return json({ error: upsertErr.message }, 400);
+      if (upsertErr) {
+        logVerificationEvent({
+          stage: 'apple_upsert_failed',
+          userRef,
+          environment: verificationEnvironment,
+          error: upsertErr.message,
+        });
+        return json({ error: upsertErr.message }, 400);
+      }
+      logVerificationEvent({
+        stage: 'apple_upsert',
+        userRef,
+        environment: verificationEnvironment,
+        status,
+      });
       return json({ ok: true });
     }
 
     // Google: not implemented yet
     return json({ error: 'Google verification not implemented' }, 400);
   } catch (e: any) {
+    logVerificationEvent({
+      stage: 'error',
+      userRef,
+      message: String(e?.message || e),
+    });
     return json({ error: String(e?.message || e) }, 500);
   }
 }
