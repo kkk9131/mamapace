@@ -7,7 +7,7 @@
 ## プラン仕様（決定事項）
 - プラン名/コード: プレミアム（月額） / `premium_monthly`
 - 価格: ¥500/月（イントロなし）
-  - Product ID（iOS）: `com.mamapace.premium.monthly2`
+  - Product ID（iOS）: `com.mamapace.premium`
 - 通貨/期間: JPY / 月額
 - トライアル: なし（trial_days=0）
 - 申込要件: 母子手帳認証バッジ保有ユーザーのみ（UI/Edge 両方でガード）
