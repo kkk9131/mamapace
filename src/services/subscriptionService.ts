@@ -257,7 +257,7 @@ export const subscriptionService = {
         (a, b) =>
           Number(b.transactionDate || 0) - Number(a.transactionDate || 0),
       )[0];
-      const productId = latest?.productId || 'com.mamapace.premium.monthly2';
+      const productId = latest?.productId || 'com.mamapace.premium';
       const origTxId: string | undefined =
         latest?.originalTransactionIdentifierIOS ||
         latest?.transactionId ||
