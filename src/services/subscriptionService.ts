@@ -8,6 +8,9 @@ import type {
 
 import { getSupabaseClient } from './supabaseClient';
 
+const APPLE_SUBSCRIPTION_PRODUCT_IDS = ['com.mamapace.premium'];
+const DEFAULT_APPLE_PRODUCT_ID = APPLE_SUBSCRIPTION_PRODUCT_IDS[0];
+
 export type Platform = 'apple' | 'google';
 
 export type PurchaseResult = {
@@ -70,7 +73,7 @@ export const subscriptionService = {
   },
 
   // iOS IAP purchase using react-native-iap
-  async purchase(productId: string): Promise<PurchaseResult> {
+  async purchase(productId?: string | null): Promise<PurchaseResult> {
     try {
       if (RNPlatform.OS !== 'ios') {
         return { ok: false, error: 'Unsupported platform' };
@@ -83,8 +86,13 @@ export const subscriptionService = {
 
       await RNIap.initConnection();
 
+      const resolvedProductId =
+        typeof productId === 'string' && productId.trim().length > 0
+          ? productId
+          : DEFAULT_APPLE_PRODUCT_ID;
+
       // Resolve product first to surface configuration issues before showing the sheet
-      const products = await RNIap.getSubscriptions([productId]).catch(
+      const products = await RNIap.getSubscriptions([resolvedProductId]).catch(
         () => [],
       );
       if (!products || !Array.isArray(products)) {
@@ -139,7 +147,7 @@ export const subscriptionService = {
           try {
             const verified = await this.verifyReceipt(
               'apple',
-              String(productId),
+              String(resolvedProductId),
               receiptId,
             );
             if (verified.ok && purchase) {
@@ -170,8 +178,8 @@ export const subscriptionService = {
             }
             const matchesProduct =
               !purchase.productId ||
-              purchase.productId === productId ||
-              String(purchase.productId) === String(productId);
+              purchase.productId === resolvedProductId ||
+              String(purchase.productId) === String(resolvedProductId);
             if (!matchesProduct) {
               return;
             }
@@ -192,8 +200,8 @@ export const subscriptionService = {
               const recent = available
                 .filter(
                   p =>
-                    p?.productId === productId ||
-                    String(p?.productId) === String(productId),
+                    p?.productId === resolvedProductId ||
+                    String(p?.productId) === String(resolvedProductId),
                 )
                 .sort(
                   (a, b) =>
@@ -225,7 +233,7 @@ export const subscriptionService = {
 
         (async () => {
           try {
-            await RNIap.requestSubscription({ sku: String(productId) });
+            await RNIap.requestSubscription({ sku: String(resolvedProductId) });
           } catch (err: any) {
             resolveWith({ ok: false, error: String(err?.message || err) });
           }
@@ -257,7 +265,7 @@ export const subscriptionService = {
         (a, b) =>
           Number(b.transactionDate || 0) - Number(a.transactionDate || 0),
       )[0];
-      const productId = latest?.productId || 'com.mamapace.premium';
+      const productId = latest?.productId || DEFAULT_APPLE_PRODUCT_ID;
       const origTxId: string | undefined =
         latest?.originalTransactionIdentifierIOS ||
         latest?.transactionId ||

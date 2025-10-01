@@ -23,7 +23,9 @@ type SubscriptionState = {
   plan: SubscriptionPlan | null;
   expiresAt: string | null;
   refresh: () => Promise<void>;
-  purchase: (productId: string) => Promise<{ ok: boolean; error?: string }>;
+  purchase: (
+    productId?: string | null,
+  ) => Promise<{ ok: boolean; error?: string }>;
   restore: () => Promise<{ ok: boolean; error?: string }>;
   hasEntitlement: (key: string) => boolean;
 };
@@ -109,7 +111,7 @@ export function SubscriptionProvider({
   }, [user, refresh]);
 
   const purchase = useCallback(
-    async (productId: string) => {
+    async (productId?: string | null) => {
       const res = await subscriptionService.purchase(productId);
       if (res.ok) {
         await refresh();

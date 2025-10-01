@@ -1,5 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, Alert, ScrollView, Linking } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  Alert,
+  ScrollView,
+  Linking,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/theme';
@@ -47,7 +54,7 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
     }
     setLoading(true);
     try {
-      const res = await purchase(plan.product_id || 'com.mamapace.premium');
+      const res = await purchase(plan?.product_id);
       if (!res.ok) {
         Alert.alert('購入エラー', res.error || '不明なエラー');
       } else {
@@ -110,8 +117,8 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
             自動更新: 更新日の24時間前までに解約しない限り自動更新されます。
           </Text>
           <Text style={{ color: colors.subtext }}>
-            管理/解約: 購入後はデバイスのアカウント設定（App Storeの「サブスクリプション」）から
-            いつでも管理・解約できます。
+            管理/解約: 購入後はデバイスのアカウント設定（App
+            Storeの「サブスクリプション」）から いつでも管理・解約できます。
           </Text>
           <View
             style={{
@@ -156,7 +163,9 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
               }}
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
             >
-              <Text style={{ color: colors.pink, textDecorationLine: 'underline' }}>
+              <Text
+                style={{ color: colors.pink, textDecorationLine: 'underline' }}
+              >
                 利用規約（EULA）
               </Text>
             </Pressable>
@@ -172,7 +181,9 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
               }}
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
             >
-              <Text style={{ color: colors.pink, textDecorationLine: 'underline' }}>
+              <Text
+                style={{ color: colors.pink, textDecorationLine: 'underline' }}
+              >
                 プライバシーポリシー
               </Text>
             </Pressable>
@@ -200,7 +211,9 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
             母子手帳認証バッジをお持ちの方のみ申し込み可能です。
           </Text>
         )}
-        <Text style={{ color: colors.subtext, fontSize: 12, textAlign: 'center' }}>
+        <Text
+          style={{ color: colors.subtext, fontSize: 12, textAlign: 'center' }}
+        >
           購入代金はApple IDに請求されます。利用規約（EULA）とプライバシー
           ポリシーに同意のうえお申し込みください。
         </Text>
