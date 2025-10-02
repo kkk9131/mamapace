@@ -1,4 +1,5 @@
 import { Platform as RNPlatform } from 'react-native';
+import type { Product } from 'react-native-iap';
 
 import type {
   SubscriptionPlan,
@@ -8,8 +9,7 @@ import type {
 
 import { getSupabaseClient } from './supabaseClient';
 
-const APPLE_SUBSCRIPTION_PRODUCT_IDS = ['com.mamapace.premium'];
-const DEFAULT_APPLE_PRODUCT_ID = APPLE_SUBSCRIPTION_PRODUCT_IDS[0];
+const PREMIUM_SUBSCRIPTION_PRODUCT_ID = 'com.mamapace.premium';
 
 export type Platform = 'apple' | 'google';
 
@@ -72,6 +72,21 @@ export const subscriptionService = {
     return { ok: true } as PurchaseResult;
   },
 
+  async fetchProducts(): Promise<Product[]> {
+    if (RNPlatform.OS !== 'ios') {
+      return [];
+    }
+    const RNIap: any = await import('react-native-iap').catch(() => null);
+    if (!RNIap) {
+      return [];
+    }
+    await RNIap.initConnection();
+    const products: Product[] = await RNIap.getProducts([
+      PREMIUM_SUBSCRIPTION_PRODUCT_ID,
+    ]).catch(() => []);
+    return Array.isArray(products) ? products : [];
+  },
+
   // iOS IAP purchase using react-native-iap
   async purchase(productId?: string | null): Promise<PurchaseResult> {
     try {
@@ -86,19 +101,10 @@ export const subscriptionService = {
 
       await RNIap.initConnection();
 
-      const resolvedProductId =
-        typeof productId === 'string' && productId.trim().length > 0
-          ? productId
-          : DEFAULT_APPLE_PRODUCT_ID;
-
-      // Resolve product first to surface configuration issues before showing the sheet
-      const products = await RNIap.getSubscriptions([resolvedProductId]).catch(
-        () => [],
-      );
-      if (!products || !Array.isArray(products)) {
-        return { ok: false, error: 'IAP products not available' };
-      }
-      if (products.length === 0) {
+      const products: Product[] = await RNIap.getProducts([
+        PREMIUM_SUBSCRIPTION_PRODUCT_ID,
+      ]).catch(() => []);
+      if (!Array.isArray(products) || products.length === 0) {
         return {
           ok: false,
           error:
@@ -107,6 +113,16 @@ export const subscriptionService = {
       }
       if (typeof RNIap.requestSubscription !== 'function') {
         return { ok: false, error: 'requestSubscription not available' };
+      }
+
+      const [firstProduct] = products;
+      const productIdForPurchase = String(
+        (typeof productId === 'string' && productId.trim().length > 0
+          ? productId.trim()
+          : firstProduct?.productId || PREMIUM_SUBSCRIPTION_PRODUCT_ID) || '',
+      );
+      if (!productIdForPurchase) {
+        return { ok: false, error: 'Invalid product configuration' };
       }
 
       return await new Promise<PurchaseResult>(resolve => {
@@ -147,7 +163,7 @@ export const subscriptionService = {
           try {
             const verified = await this.verifyReceipt(
               'apple',
-              String(resolvedProductId),
+              productIdForPurchase,
               receiptId,
             );
             if (verified.ok && purchase) {
@@ -178,8 +194,8 @@ export const subscriptionService = {
             }
             const matchesProduct =
               !purchase.productId ||
-              purchase.productId === resolvedProductId ||
-              String(purchase.productId) === String(resolvedProductId);
+              purchase.productId === productIdForPurchase ||
+              String(purchase.productId) === productIdForPurchase;
             if (!matchesProduct) {
               return;
             }
@@ -200,8 +216,8 @@ export const subscriptionService = {
               const recent = available
                 .filter(
                   p =>
-                    p?.productId === resolvedProductId ||
-                    String(p?.productId) === String(resolvedProductId),
+                    p?.productId === productIdForPurchase ||
+                    String(p?.productId) === productIdForPurchase,
                 )
                 .sort(
                   (a, b) =>
@@ -233,7 +249,9 @@ export const subscriptionService = {
 
         (async () => {
           try {
-            await RNIap.requestSubscription({ sku: String(resolvedProductId) });
+            await RNIap.requestSubscription({
+              sku: String(products[0]?.productId || productIdForPurchase),
+            });
           } catch (err: any) {
             resolveWith({ ok: false, error: String(err?.message || err) });
           }
@@ -265,7 +283,8 @@ export const subscriptionService = {
         (a, b) =>
           Number(b.transactionDate || 0) - Number(a.transactionDate || 0),
       )[0];
-      const productId = latest?.productId || DEFAULT_APPLE_PRODUCT_ID;
+      const productId =
+        latest?.productId || PREMIUM_SUBSCRIPTION_PRODUCT_ID;
       const origTxId: string | undefined =
         latest?.originalTransactionIdentifierIOS ||
         latest?.transactionId ||

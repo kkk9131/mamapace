@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -22,29 +22,20 @@ const PREMIUM_BENEFITS = [
 export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
   const theme = useTheme();
   const { colors } = theme;
-  const { plan, purchase, restore } = useSubscription();
+  const { products, productsLoading, purchase, restore } = useSubscription();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const insets = useSafeAreaInsets();
 
-  const priceDisplay = useMemo(() => {
-    if (!plan || !plan.price_cents || plan.price_cents <= 0) {
-      return '—';
-    }
-    try {
-      // JPY: minor unit is 1 (no decimals)
-      return `¥${Number(plan.price_cents).toLocaleString('ja-JP')} / 月`;
-    } catch {
-      return `¥${plan.price_cents} / 月`;
-    }
-  }, [plan]);
+  const primaryProduct = products[0];
+  const productTitle = primaryProduct?.title || 'プレミアム（月額）';
+  const priceDisplay = primaryProduct?.localizedPrice
+    ? `${primaryProduct.localizedPrice} / 月`
+    : '—';
 
   const eligible = user?.maternal_verified;
 
   const handlePurchase = async () => {
-    if (!plan) {
-      return;
-    }
     if (!eligible) {
       Alert.alert(
         '申込要件を満たしていません',
@@ -52,9 +43,13 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
       );
       return;
     }
+    if (!primaryProduct) {
+      Alert.alert('商品エラー', '商品情報の取得に失敗しました。');
+      return;
+    }
     setLoading(true);
     try {
-      const res = await purchase(plan?.product_id);
+      const res = await purchase();
       if (!res.ok) {
         Alert.alert('購入エラー', res.error || '不明なエラー');
       } else {
@@ -90,7 +85,7 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
     >
       <View style={{ gap: theme.spacing(2) }}>
         <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>
-          プレミアム（月額）
+          {productTitle}
         </Text>
         <Text style={{ color: colors.subtext }}>
           月額プラン。いつでもキャンセルできます。
@@ -193,7 +188,7 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
         <Pressable
           accessibilityRole="button"
           onPress={handlePurchase}
-          disabled={loading || !eligible}
+          disabled={loading || !eligible || productsLoading || !primaryProduct}
           style={({ pressed }) => [
             {
               backgroundColor: colors.pink,

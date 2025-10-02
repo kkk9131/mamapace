@@ -7,6 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { AppState } from 'react-native';
+import type { Product } from 'react-native-iap';
 
 import { subscriptionService } from '../services/subscriptionService';
 import type {
@@ -22,10 +23,10 @@ type SubscriptionState = {
   status: SubscriptionStatus | null;
   plan: SubscriptionPlan | null;
   expiresAt: string | null;
+  products: Product[];
+  productsLoading: boolean;
   refresh: () => Promise<void>;
-  purchase: (
-    productId?: string | null,
-  ) => Promise<{ ok: boolean; error?: string }>;
+  purchase: () => Promise<{ ok: boolean; error?: string }>;
   restore: () => Promise<{ ok: boolean; error?: string }>;
   hasEntitlement: (key: string) => boolean;
 };
@@ -42,6 +43,8 @@ export function SubscriptionProvider({
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState<boolean>(true);
 
   const refresh = useCallback(async () => {
     if (!user) {
@@ -74,6 +77,31 @@ export function SubscriptionProvider({
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setProductsLoading(true);
+      try {
+        const fetched = await subscriptionService.fetchProducts();
+        if (mounted) {
+          setProducts(fetched);
+        }
+      } catch {
+        if (mounted) {
+          setProducts([]);
+        }
+      } finally {
+        if (mounted) {
+          setProductsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // On app start and when returning to foreground, attempt restore->verify to sync server state
   useEffect(() => {
@@ -110,16 +138,14 @@ export function SubscriptionProvider({
     };
   }, [user, refresh]);
 
-  const purchase = useCallback(
-    async (productId?: string | null) => {
-      const res = await subscriptionService.purchase(productId);
-      if (res.ok) {
-        await refresh();
-      }
-      return res;
-    },
-    [refresh],
-  );
+  const purchase = useCallback(async () => {
+    const primaryProductId = products[0]?.productId || null;
+    const res = await subscriptionService.purchase(primaryProductId);
+    if (res.ok) {
+      await refresh();
+    }
+    return res;
+  }, [products, refresh]);
 
   const restore = useCallback(async () => {
     const res = await subscriptionService.restore();
@@ -142,6 +168,8 @@ export function SubscriptionProvider({
       status,
       plan,
       expiresAt,
+      products,
+      productsLoading,
       refresh,
       purchase,
       restore,
@@ -152,6 +180,8 @@ export function SubscriptionProvider({
       status,
       plan,
       expiresAt,
+      products,
+      productsLoading,
       refresh,
       purchase,
       restore,
