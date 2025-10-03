@@ -26,7 +26,10 @@ export async function triggerCompassionateAiComment(options: {
       console.warn('AI comment function error', error);
       try {
         if (anyErr?.context) {
-          console.warn('AI comment function error context', JSON.stringify(anyErr.context));
+          console.warn(
+            'AI comment function error context',
+            JSON.stringify(anyErr.context),
+          );
           const resp = anyErr.context as Response & {
             json?: () => Promise<any>;
             text?: () => Promise<string>;
@@ -34,7 +37,9 @@ export async function triggerCompassionateAiComment(options: {
           if (resp && typeof resp.json === 'function') {
             const body = await resp
               .json()
-              .catch(async () => (typeof resp.text === 'function' ? await resp.text() : null));
+              .catch(async () =>
+                typeof resp.text === 'function' ? await resp.text() : null,
+              );
             if (body) {
               console.warn('AI comment function error body', body);
             }

@@ -58,15 +58,23 @@ export async function searchUsers(
 
   // username と display_name を両方対象に検索
   const makeBase = () =>
-    client.from('user_profiles').select('id, username, display_name, avatar_emoji');
+    client
+      .from('user_profiles')
+      .select('id, username, display_name, avatar_emoji');
 
   const [byUsername, byDisplayName] = await Promise.all([
     makeBase().ilike('username', q).order('username', { ascending: true }),
-    makeBase().ilike('display_name', q).order('display_name', { ascending: true }),
+    makeBase()
+      .ilike('display_name', q)
+      .order('display_name', { ascending: true }),
   ]);
 
-  if (byUsername.error) throw byUsername.error;
-  if (byDisplayName.error) throw byDisplayName.error;
+  if (byUsername.error) {
+    throw byUsername.error;
+  }
+  if (byDisplayName.error) {
+    throw byDisplayName.error;
+  }
 
   const seen = new Set<string>();
   const merged: any[] = [];

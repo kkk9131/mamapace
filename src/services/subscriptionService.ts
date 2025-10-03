@@ -81,10 +81,14 @@ export const subscriptionService = {
       return [];
     }
     await RNIap.initConnection();
-    const products: Product[] = await RNIap.getProducts([
+    // Use getSubscriptions for auto-renewable subscriptions (StoreKit)
+    const subscriptions: any[] = await RNIap.getSubscriptions([
       PREMIUM_SUBSCRIPTION_PRODUCT_ID,
     ]).catch(() => []);
-    return Array.isArray(products) ? products : [];
+    console.log("Fetched subscriptions from StoreKit:", subscriptions);
+    const result = Array.isArray(subscriptions) ? (subscriptions as unknown as Product[]) : [];
+    console.log("Returning subscriptions array:", result);
+    return result;
   },
 
   // iOS IAP purchase using react-native-iap
@@ -101,10 +105,10 @@ export const subscriptionService = {
 
       await RNIap.initConnection();
 
-      const products: Product[] = await RNIap.getProducts([
+      const subscriptions: any[] = await RNIap.getSubscriptions([
         PREMIUM_SUBSCRIPTION_PRODUCT_ID,
       ]).catch(() => []);
-      if (!Array.isArray(products) || products.length === 0) {
+      if (!Array.isArray(subscriptions) || subscriptions.length === 0) {
         return {
           ok: false,
           error:
@@ -115,7 +119,7 @@ export const subscriptionService = {
         return { ok: false, error: 'requestSubscription not available' };
       }
 
-      const [firstProduct] = products;
+      const [firstProduct] = subscriptions;
       const productIdForPurchase = String(
         (typeof productId === 'string' && productId.trim().length > 0
           ? productId.trim()
@@ -158,6 +162,12 @@ export const subscriptionService = {
         ) => {
           if (!receiptId) {
             resolveWith({ ok: false, error: 'Could not resolve transaction' });
+            return;
+          }
+          // 開発用: シミュレーターではサーバー検証をスキップ
+          const isLocalStoreKit = __DEV__ && RNPlatform.OS === 'ios' && !(globalThis as any).Device?.isDevice;
+          if (isLocalStoreKit) {
+            resolveWith({ ok: true });
             return;
           }
           try {
@@ -250,7 +260,7 @@ export const subscriptionService = {
         (async () => {
           try {
             await RNIap.requestSubscription({
-              sku: String(products[0]?.productId || productIdForPurchase),
+              sku: String(subscriptions[0]?.productId || productIdForPurchase),
             });
           } catch (err: any) {
             resolveWith({ ok: false, error: String(err?.message || err) });

@@ -345,7 +345,7 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
                           updated_at: updated.updated_at,
                         }
                       : s
-                  )
+                  ),
                 );
                 setEditingTitle(false);
               } catch {

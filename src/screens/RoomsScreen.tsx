@@ -427,7 +427,8 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
         )}
         renderItem={({ item }) => {
           const isPremiumOnly = !item.is_public;
-          const canJoinSpace = item.can_join && (item.is_public || canJoinPrivateSpaces);
+          const canJoinSpace =
+            item.can_join && (item.is_public || canJoinPrivateSpaces);
           return (
             <Pressable
               onPress={() => handleJoinSpace(item)}
@@ -438,123 +439,122 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                   overflow: 'hidden',
                   transform: [{ scale: pressed ? 0.98 : 1 }],
                   ...theme.shadow.card,
-                  opacity:
-                    operationLoading || !canJoinSpace ? 0.5 : 1,
+                  opacity: operationLoading || !canJoinSpace ? 0.5 : 1,
                 },
               ]}
             >
-            <BlurView
-              intensity={30}
-              tint="dark"
-              style={{
-                padding: theme.spacing(1.75),
-                backgroundColor: '#ffffff10',
-              }}
-            >
-              <View
+              <BlurView
+                intensity={30}
+                tint="dark"
                 style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
+                  padding: theme.spacing(1.75),
+                  backgroundColor: '#ffffff10',
                 }}
               >
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      color: colors.text,
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                      marginBottom: 4,
-                    }}
-                  >
-                    {item.name}
-                  </Text>
-                  {item.description && (
-                    <Text
-                      style={{
-                        color: colors.subtext,
-                        fontSize: 14,
-                        marginBottom: 8,
-                      }}
-                    >
-                      {item.description}
-                    </Text>
-                  )}
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: colors.subtext,
-                        fontSize: 12,
-                      }}
-                    >
-                      by {item.owner.display_name || item.owner.username}
-                    </Text>
-                    {item.owner?.maternal_verified && (
-                      <VerifiedBadge size={14} />
-                    )}
-                  </View>
-                </View>
-
-                <View
-                  style={{
-                    backgroundColor: canJoinSpace
-                      ? colors.pinkSoft
-                      : colors.subtext + '40',
-                    borderRadius: theme.radius.sm,
-                    paddingHorizontal: theme.spacing(1.25),
-                    paddingVertical: 4,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: canJoinSpace ? '#302126' : colors.subtext,
-                      fontSize: 12,
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    {isPremiumOnly && !canJoinPrivateSpaces
-                      ? 'プレミアム限定'
-                      : canJoinSpace
-                        ? '参加'
-                        : '満員'}
-                  </Text>
-                </View>
-              </View>
-
-              {item.tags.length > 0 && (
                 <View
                   style={{
                     flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    marginTop: 8,
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
                   }}
                 >
-                  {item.tags.slice(0, 3).map((tag, index) => (
-                    <View
-                      key={index}
+                  <View style={{ flex: 1 }}>
+                    <Text
                       style={{
-                        backgroundColor: colors.subtext + '20',
-                        borderRadius: theme.radius.sm,
-                        paddingHorizontal: 8,
-                        paddingVertical: 2,
-                        marginRight: 4,
+                        color: colors.text,
+                        fontSize: 16,
+                        fontWeight: 'bold',
                         marginBottom: 4,
                       }}
                     >
-                      <Text style={{ color: colors.subtext, fontSize: 10 }}>
-                        #{tag}
+                      {item.name}
+                    </Text>
+                    {item.description && (
+                      <Text
+                        style={{
+                          color: colors.subtext,
+                          fontSize: 14,
+                          marginBottom: 8,
+                        }}
+                      >
+                        {item.description}
                       </Text>
+                    )}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: colors.subtext,
+                          fontSize: 12,
+                        }}
+                      >
+                        by {item.owner.display_name || item.owner.username}
+                      </Text>
+                      {item.owner?.maternal_verified && (
+                        <VerifiedBadge size={14} />
+                      )}
                     </View>
-                  ))}
+                  </View>
+
+                  <View
+                    style={{
+                      backgroundColor: canJoinSpace
+                        ? colors.pinkSoft
+                        : colors.subtext + '40',
+                      borderRadius: theme.radius.sm,
+                      paddingHorizontal: theme.spacing(1.25),
+                      paddingVertical: 4,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: canJoinSpace ? '#302126' : colors.subtext,
+                        fontSize: 12,
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      {isPremiumOnly && !canJoinPrivateSpaces
+                        ? 'プレミアム限定'
+                        : canJoinSpace
+                          ? '参加'
+                          : '満員'}
+                    </Text>
+                  </View>
                 </View>
-              )}
-            </BlurView>
+
+                {item.tags.length > 0 && (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      flexWrap: 'wrap',
+                      marginTop: 8,
+                    }}
+                  >
+                    {item.tags.slice(0, 3).map((tag, index) => (
+                      <View
+                        key={index}
+                        style={{
+                          backgroundColor: colors.subtext + '20',
+                          borderRadius: theme.radius.sm,
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          marginRight: 4,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <Text style={{ color: colors.subtext, fontSize: 10 }}>
+                          #{tag}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </BlurView>
             </Pressable>
           );
         }}
@@ -714,7 +714,8 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
             }
             renderItem={({ item }) => {
               const isPremiumOnly = !item.is_public;
-              const canJoinSpace = item.can_join && (item.is_public || canJoinPrivateSpaces);
+              const canJoinSpace =
+                item.can_join && (item.is_public || canJoinPrivateSpaces);
               return (
                 <Pressable
                   onPress={() => handleJoinSpace(item)}
@@ -725,8 +726,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                       overflow: 'hidden',
                       transform: [{ scale: pressed ? 0.98 : 1 }],
                       ...theme.shadow.card,
-                      opacity:
-                        operationLoading || !canJoinSpace ? 0.5 : 1,
+                      opacity: operationLoading || !canJoinSpace ? 0.5 : 1,
                     },
                   ]}
                 >
@@ -738,104 +738,106 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                       backgroundColor: '#ffffff10',
                     }}
                   >
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            color: colors.text,
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                            marginBottom: 4,
+                          }}
+                        >
+                          {item.name}
+                        </Text>
+                        {item.description && (
+                          <Text
+                            style={{
+                              color: colors.subtext,
+                              fontSize: 14,
+                              marginBottom: 8,
+                            }}
+                            numberOfLines={2}
+                          >
+                            {item.description}
+                          </Text>
+                        )}
+                        <View
+                          style={{ flexDirection: 'row', alignItems: 'center' }}
+                        >
+                          <Text
+                            style={{
+                              color: colors.subtext,
+                              fontSize: 12,
+                            }}
+                          >
+                            by {item.owner.display_name || item.owner.username}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View
                         style={{
-                          color: colors.text,
-                          fontSize: 16,
-                          fontWeight: 'bold',
-                          marginBottom: 4,
+                          backgroundColor: canJoinSpace
+                            ? colors.pinkSoft
+                            : colors.subtext + '40',
+                          borderRadius: theme.radius.sm,
+                          paddingHorizontal: theme.spacing(1.25),
+                          paddingVertical: 4,
                         }}
                       >
-                        {item.name}
-                      </Text>
-                      {item.description && (
                         <Text
                           style={{
-                            color: colors.subtext,
-                            fontSize: 14,
-                            marginBottom: 8,
-                          }}
-                          numberOfLines={2}
-                        >
-                          {item.description}
-                        </Text>
-                      )}
-                      <View
-                        style={{ flexDirection: 'row', alignItems: 'center' }}
-                      >
-                        <Text
-                          style={{
-                            color: colors.subtext,
+                            color: canJoinSpace ? '#302126' : colors.subtext,
                             fontSize: 12,
+                            fontWeight: 'bold',
                           }}
                         >
-                          by {item.owner.display_name || item.owner.username}
+                          {isPremiumOnly && !canJoinPrivateSpaces
+                            ? 'プレミアム限定'
+                            : canJoinSpace
+                              ? '参加'
+                              : '満員'}
                         </Text>
                       </View>
                     </View>
 
-                    <View
-                      style={{
-                        backgroundColor: canJoinSpace
-                          ? colors.pinkSoft
-                          : colors.subtext + '40',
-                        borderRadius: theme.radius.sm,
-                        paddingHorizontal: theme.spacing(1.25),
-                        paddingVertical: 4,
-                      }}
-                    >
-                      <Text
+                    {item.tags.length > 0 && (
+                      <View
                         style={{
-                          color: canJoinSpace ? '#302126' : colors.subtext,
-                          fontSize: 12,
-                          fontWeight: 'bold',
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          marginTop: 8,
                         }}
                       >
-                        {isPremiumOnly && !canJoinPrivateSpaces
-                          ? 'プレミアム限定'
-                          : canJoinSpace
-                            ? '参加'
-                            : '満員'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {item.tags.length > 0 && (
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        flexWrap: 'wrap',
-                        marginTop: 8,
-                      }}
-                    >
-                      {item.tags.slice(0, 3).map((tag, index) => (
-                        <View
-                          key={index}
-                          style={{
-                            backgroundColor: colors.subtext + '20',
-                            borderRadius: theme.radius.sm,
-                            paddingHorizontal: 8,
-                            paddingVertical: 2,
-                            marginRight: 4,
-                            marginBottom: 4,
-                          }}
-                        >
-                          <Text style={{ color: colors.subtext, fontSize: 10 }}>
-                            #{tag}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </BlurView>
+                        {item.tags.slice(0, 3).map((tag, index) => (
+                          <View
+                            key={index}
+                            style={{
+                              backgroundColor: colors.subtext + '20',
+                              borderRadius: theme.radius.sm,
+                              paddingHorizontal: 8,
+                              paddingVertical: 2,
+                              marginRight: 4,
+                              marginBottom: 4,
+                            }}
+                          >
+                            <Text
+                              style={{ color: colors.subtext, fontSize: 10 }}
+                            >
+                              #{tag}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </BlurView>
                 </Pressable>
               );
             }}

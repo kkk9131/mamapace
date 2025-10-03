@@ -282,7 +282,7 @@ class SecurityTestFramework {
             return { expectedFailure: true };
           }
         }
-      ),
+      )
     );
 
     // Test 5: Hash generation and verification
@@ -318,7 +318,7 @@ class SecurityTestFramework {
 
           return { hashLength: hash1.length };
         }
-      ),
+      )
     );
 
     return {
@@ -374,7 +374,7 @@ class SecurityTestFramework {
 
           return { validUsername, invalidUsername };
         }
-      ),
+      )
     );
 
     // Test 3: Maternal health ID validation
@@ -407,7 +407,7 @@ class SecurityTestFramework {
             invalidCount: 2,
           };
         }
-      ),
+      )
     );
 
     // Test 4: Password validation
@@ -436,7 +436,7 @@ class SecurityTestFramework {
             weakStrength: weakResult.strength,
           };
         }
-      ),
+      )
     );
 
     // Test 5: Registration request creation (without actual registration)
@@ -468,7 +468,7 @@ class SecurityTestFramework {
 
           return { requestValid: true, privacyCompliant: true };
         }
-      ),
+      )
     );
 
     return {
@@ -518,7 +518,7 @@ class SecurityTestFramework {
 
           return { testedInputs: maliciousInputs.length };
         }
-      ),
+      )
     );
 
     // Test 3: Constraint validation
@@ -574,7 +574,7 @@ class SecurityTestFramework {
             ),
           };
         }
-      ),
+      )
     );
 
     return {
@@ -752,7 +752,7 @@ class SecurityTestFramework {
             stats,
           };
         }
-      ),
+      )
     );
 
     // Test 2: Service initialization status
@@ -775,7 +775,7 @@ class SecurityTestFramework {
 
           return status;
         }
-      ),
+      )
     );
 
     // Test 3: Service statistics collection
@@ -793,7 +793,7 @@ class SecurityTestFramework {
             hasValidationStats: !!stats.validation,
           };
         }
-      ),
+      )
     );
 
     return {
@@ -898,7 +898,7 @@ class SecurityTestFramework {
               .encrypt(`test-data-${i}`, `password-${i}`)
               .then(encrypted =>
                 encryptionService.decrypt(encrypted, `password-${i}`)
-              ),
+              )
           );
         }
 

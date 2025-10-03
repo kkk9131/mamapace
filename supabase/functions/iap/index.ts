@@ -143,20 +143,49 @@ async function fetchAppleEndpoint(url: string, headers: Record<string, string>):
   };
 }
 
+function jsonStringIncludesSandbox(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  return value.toLowerCase().includes('sandbox');
+}
+
 function needsSandboxRetry(attempt: AppleFetchAttempt):
   | { retry: true; reason: string }
   | { retry: false } {
   if (attempt.status === 401 || attempt.status === 403) {
     return { retry: false };
   }
+
   const statusCode = Number(attempt?.json?.status);
   if (!Number.isNaN(statusCode) && statusCode === 21007) {
     return { retry: true, reason: 'status_21007' };
   }
-  const errorCode = attempt?.json?.errorCode || attempt?.json?.errorReason;
+
+  const errorCode = attempt?.json?.errorCode || attempt?.json?.errorCodeString || attempt?.json?.errorReason;
+  const errorMessage =
+    attempt?.json?.errorMessage || attempt?.json?.message || attempt?.json?.statusMessage;
+  const environmentHint =
+    attempt?.json?.environment || attempt?.json?.userInfo?.environment || attempt?.json?.data?.environment;
+
+  if (jsonStringIncludesSandbox(environmentHint)) {
+    return { retry: true, reason: 'env_hint' };
+  }
+
+  if (jsonStringIncludesSandbox(errorCode) || jsonStringIncludesSandbox(errorMessage)) {
+    return { retry: true, reason: 'error_hint' };
+  }
+
   if (!attempt.ok && attempt.status === 404) {
     return { retry: true, reason: String(errorCode || 'not_found') };
   }
+
+  if (!attempt.ok && attempt.status === 409 && jsonStringIncludesSandbox(errorCode)) {
+    return { retry: true, reason: String(errorCode) };
+  }
+
+  if (!attempt.ok && attempt.status === 400 && jsonStringIncludesSandbox(errorMessage)) {
+    return { retry: true, reason: 'bad_request_sandbox_hint' };
+  }
+
   return { retry: false };
 }
 

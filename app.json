@@ -18,8 +18,8 @@
       "icon": "./assets/icon.png",
       "supportsTablet": true,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "プロフィール画像を選択するためにフォトライブラリへアクセスします。",
-        "NSCameraUsageDescription": "プロフィール画像を撮影するためにカメラへアクセスします。",
+        "NSPhotoLibraryUsageDescription": "プロフィール画像の選択や、コミュニティ投稿に写真を添付するためにフォトライブラリを使用します。",
+        "NSCameraUsageDescription": "プロフィール画像を撮影したり、コミュニティ投稿に写真を添付するためにカメラを使用します。",
         "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.kaztrigger.mamapace"

@@ -141,7 +141,7 @@ export default function ChatsListScreen({
             (chats || [])
               .map(c => c.participants?.find(p => p.id !== user?.id)?.id)
               .filter(Boolean) as string[]
-          ),
+          )
         );
         if (ids.length) {
           const { data: profiles } = await getSupabaseClient()
