@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -22,16 +22,21 @@ const PREMIUM_BENEFITS = [
 export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
   const theme = useTheme();
   const { colors } = theme;
-  const { products, productsLoading, purchase, restore } = useSubscription();
+  const { products, plan, purchase, restore } = useSubscription();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const insets = useSafeAreaInsets();
 
   const primaryProduct = products[0];
   const productTitle = primaryProduct?.title || 'プレミアム（月額）';
+  const planPriceCents = Number((plan as any)?.price_cents || 0);
+  const fallbackPrice =
+    planPriceCents > 0
+      ? `¥${Math.round(planPriceCents / 100).toLocaleString('ja-JP')} / 月`
+      : '¥500 / 月';
   const priceDisplay = primaryProduct?.localizedPrice
     ? `${primaryProduct.localizedPrice} / 月`
-    : '—';
+    : fallbackPrice;
 
   const eligible = user?.maternal_verified;
 
@@ -188,7 +193,7 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
         <Pressable
           accessibilityRole="button"
           onPress={handlePurchase}
-          disabled={loading || !eligible || productsLoading || !primaryProduct}
+          disabled={loading}
           style={({ pressed }) => [
             {
               backgroundColor: colors.pink,

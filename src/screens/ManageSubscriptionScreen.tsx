@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, Alert, Linking } from 'react-native';
+import { View, Text, Pressable, Alert, Linking, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/theme';
@@ -63,40 +63,44 @@ export default function ManageSubscriptionScreen({
           </Text>
         )}
       </View>
-      <Pressable
-        accessibilityRole="button"
-        onPress={openAppleManage}
-        style={({ pressed }) => [
-          {
-            backgroundColor: colors.surface,
-            borderRadius: theme.radius.md,
-            paddingVertical: 12,
-            alignItems: 'center',
-            transform: [{ scale: pressed ? 0.98 : 1 }],
-          },
-        ]}
-      >
-        <Text style={{ color: colors.text, fontWeight: '700' }}>
-          Appleで管理を開く
-        </Text>
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        onPress={openGoogleManage}
-        style={({ pressed }) => [
-          {
-            backgroundColor: colors.surface,
-            borderRadius: theme.radius.md,
-            paddingVertical: 12,
-            alignItems: 'center',
-            transform: [{ scale: pressed ? 0.98 : 1 }],
-          },
-        ]}
-      >
-        <Text style={{ color: colors.text, fontWeight: '700' }}>
-          Googleで管理を開く
-        </Text>
-      </Pressable>
+      {Platform.OS === 'ios' && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={openAppleManage}
+          style={({ pressed }) => [
+            {
+              backgroundColor: colors.surface,
+              borderRadius: theme.radius.md,
+              paddingVertical: 12,
+              alignItems: 'center',
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+            },
+          ]}
+        >
+          <Text style={{ color: colors.text, fontWeight: '700' }}>
+            Appleで管理を開く
+          </Text>
+        </Pressable>
+      )}
+      {Platform.OS === 'android' && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={openGoogleManage}
+          style={({ pressed }) => [
+            {
+              backgroundColor: colors.surface,
+              borderRadius: theme.radius.md,
+              paddingVertical: 12,
+              alignItems: 'center',
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+            },
+          ]}
+        >
+          <Text style={{ color: colors.text, fontWeight: '700' }}>
+            Googleで管理を開く
+          </Text>
+        </Pressable>
+      )}
       <Pressable accessibilityRole="button" onPress={onBack}>
         <Text style={{ color: colors.subtext, textAlign: 'center' }}>戻る</Text>
       </Pressable>
