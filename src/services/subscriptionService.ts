@@ -81,14 +81,33 @@ export const subscriptionService = {
       return [];
     }
     await RNIap.initConnection();
+    // Resolve product IDs from server plans + local constant
+    let productIds: string[] = [PREMIUM_SUBSCRIPTION_PRODUCT_ID];
+    try {
+      const plans = await this.listPlans();
+      const unique = new Set<string>(
+        [
+          ...productIds,
+          ...plans
+            .map(p => String((p as any)?.product_id || ''))
+            .filter(id => !!id && id.trim().length > 0),
+        ].map(s => s.trim()),
+      );
+      productIds = Array.from(unique);
+    } catch {
+      // ignore server errors and keep fallback id
+    }
+
     // Use getSubscriptions for auto-renewable subscriptions (StoreKit)
-    const subscriptions: any[] = await RNIap.getSubscriptions([
-      PREMIUM_SUBSCRIPTION_PRODUCT_ID,
-    ]).catch(() => []);
-    console.log("Fetched subscriptions from StoreKit:", subscriptions);
-    const result = Array.isArray(subscriptions) ? (subscriptions as unknown as Product[]) : [];
-    console.log("Returning subscriptions array:", result);
-    return result;
+    const subscriptions: any[] = await RNIap.getSubscriptions(productIds).catch(
+      () => [],
+    );
+    if (Array.isArray(subscriptions) && subscriptions.length > 0) {
+      return subscriptions as unknown as Product[];
+    }
+    // Fallback: some environments may return via getProducts
+    const products: any[] = await RNIap.getProducts(productIds).catch(() => []);
+    return Array.isArray(products) ? (products as unknown as Product[]) : [];
   },
 
   // iOS IAP purchase using react-native-iap
@@ -105,9 +124,24 @@ export const subscriptionService = {
 
       await RNIap.initConnection();
 
-      const subscriptions: any[] = await RNIap.getSubscriptions([
-        PREMIUM_SUBSCRIPTION_PRODUCT_ID,
-      ]).catch(() => []);
+      // Resolve product IDs from server plans + local constant
+      let productIds: string[] = [PREMIUM_SUBSCRIPTION_PRODUCT_ID];
+      try {
+        const plans = await this.listPlans();
+        const unique = new Set<string>(
+          [
+            ...productIds,
+            ...plans
+              .map(p => String((p as any)?.product_id || ''))
+              .filter(id => !!id && id.trim().length > 0),
+          ].map(s => s.trim()),
+        );
+        productIds = Array.from(unique);
+      } catch {}
+
+      const subscriptions: any[] = await RNIap.getSubscriptions(productIds).catch(
+        () => [],
+      );
       if (!Array.isArray(subscriptions) || subscriptions.length === 0) {
         return {
           ok: false,
