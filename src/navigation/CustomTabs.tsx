@@ -91,6 +91,8 @@ function IconTab({
   onPress,
   onLongPress,
   accessibilityLabel,
+  accessibilityHint,
+  sublabel,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   iconOutline: keyof typeof Ionicons.glyphMap;
@@ -98,6 +100,8 @@ function IconTab({
   onPress: () => void;
   onLongPress?: () => void;
   accessibilityLabel: string;
+  accessibilityHint?: string;
+  sublabel?: string;
 }) {
   const { colors } = useTheme();
   const scale = new Animated.Value(1);
@@ -121,6 +125,7 @@ function IconTab({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
       onPress={async () => {
         pulse();
         await Haptics.selectionAsync();
@@ -131,7 +136,7 @@ function IconTab({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        height: 56,
+        height: 68,
       }}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
@@ -142,6 +147,17 @@ function IconTab({
           color={active ? colors.pink : colors.subtext}
         />
       </Animated.View>
+      {sublabel ? (
+        <Text
+          style={{
+            color: colors.subtext,
+            fontSize: 10,
+            marginTop: 4,
+          }}
+        >
+          {sublabel}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -158,6 +174,7 @@ export default function CustomTabs({
   const insets = useSafeAreaInsets();
   const { isAuthenticated, isLoading, user } = useAuth();
   const { handPreference } = useHandPreference();
+  const [showSidebarHint, setShowSidebarHint] = useState(false);
   const [active, setActive] = useState<TabKey>('home');
   const [roomsListKey, setRoomsListKey] = useState<number>(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -176,6 +193,29 @@ export default function CustomTabs({
       }
     })();
   }, [isLoading, isAuthenticated]);
+
+  // One-time hint for long-press to open sidebar
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const flag = await AsyncStorage.getItem('has_seen_sidebar_hint_v1');
+        if (!flag && mounted) {
+          setShowSidebarHint(true);
+          setTimeout(async () => {
+            if (!mounted) return;
+            setShowSidebarHint(false);
+            try {
+              await AsyncStorage.setItem('has_seen_sidebar_hint_v1', '1');
+            } catch {}
+          }, 5000);
+        }
+      } catch {}
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (active === 'roomsList') {
@@ -514,7 +554,7 @@ export default function CustomTabs({
               left: 12,
               right: 12,
               bottom: Math.max(8, insets.bottom ? 4 : 8),
-              height: 56 + (insets.bottom || 0),
+              height: 72 + (insets.bottom || 0),
               borderRadius: 16,
               flexDirection: 'row',
               backgroundColor: colors.cardAlpha,
@@ -544,6 +584,18 @@ export default function CustomTabs({
                 accessibilityLabel={
                   k === 'me' ? 'あなた' : k === 'noti' ? '通知' : 'ホーム'
                 }
+                accessibilityHint={
+                  (handPreference === 'right' && k === 'home') ||
+                  (handPreference === 'left' && k === 'me')
+                    ? '長押しでサイドバーを開きます'
+                    : undefined
+                }
+                sublabel={
+                  (handPreference === 'right' && k === 'home') ||
+                  (handPreference === 'left' && k === 'me')
+                    ? '長押しでサイドバー'
+                    : undefined
+                }
                 active={active === k}
                 onPress={() => setActive(k as TabKey)}
                 onLongPress={
@@ -559,6 +611,54 @@ export default function CustomTabs({
           </View>
         )}
       </View>
+      {/* One-time coach mark bubble */}
+      {showSidebarHint && (
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            left: 12,
+            right: 12,
+            bottom: Math.max(92, (insets.bottom || 0) + 92),
+            alignItems:
+              handPreference === 'right' ? 'flex-end' : 'flex-start',
+          }}
+        >
+          <View
+            style={{
+              maxWidth: 320,
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderWidth: 1,
+              borderRadius: 12,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              ...theme.shadow.card,
+            }}
+          >
+            <Text style={{ color: colors.text, fontWeight: '700' }}>
+              長押しでメニュー
+            </Text>
+            <Text style={{ color: colors.subtext, marginTop: 4, fontSize: 12 }}>
+              {handPreference === 'right'
+                ? 'ホームを長押しでサイドバーが開きます'
+                : 'あなたを長押しでサイドバーが開きます'}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={async () => {
+                setShowSidebarHint(false);
+                try {
+                  await AsyncStorage.setItem('has_seen_sidebar_hint_v1', '1');
+                } catch {}
+              }}
+              style={({ pressed }) => ({ alignSelf: 'flex-end', marginTop: 8, opacity: pressed ? 0.7 : 1 })}
+            >
+              <Text style={{ color: colors.pink, fontWeight: '700' }}>OK</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </AuthGuard>
   );
 }
