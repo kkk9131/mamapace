@@ -30,9 +30,13 @@ export default function PaywallScreen({ onClose }: { onClose?: () => void }) {
   const primaryProduct = products[0];
   const productTitle = primaryProduct?.title || 'プレミアム（月額）';
   const planPriceCents = Number((plan as any)?.price_cents || 0);
+  const planCurrency = String((plan as any)?.currency || 'JPY').toUpperCase();
+  // JPYなどゼロ少数通貨は分母1、それ以外は100
+  const zeroDecimalCurrencies = new Set(['JPY', 'KRW', 'VND']);
+  const minorUnit = zeroDecimalCurrencies.has(planCurrency) ? 1 : 100;
   const fallbackPrice =
     planPriceCents > 0
-      ? `¥${Math.round(planPriceCents / 100).toLocaleString('ja-JP')} / 月`
+      ? `¥${Math.round(planPriceCents / minorUnit).toLocaleString('ja-JP')} / 月`
       : '¥500 / 月';
   const priceDisplay = primaryProduct?.localizedPrice
     ? `${primaryProduct.localizedPrice} / 月`
