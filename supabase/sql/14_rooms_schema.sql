@@ -107,23 +107,7 @@ CREATE INDEX idx_room_messages_expires_at ON public.room_messages(expires_at) WH
 CREATE INDEX idx_room_messages_deleted_at ON public.room_messages(deleted_at) WHERE deleted_at IS NOT NULL;
 CREATE INDEX idx_room_messages_report_count ON public.room_messages(report_count) WHERE report_count > 0;
 
--- 5) Subscriptions table - For paid user check
-DROP TABLE IF EXISTS public.subscriptions CASCADE;
-CREATE TABLE public.subscriptions (
-  user_id uuid PRIMARY KEY REFERENCES public.user_profiles(id) ON DELETE CASCADE,
-  plan text NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro', 'premium')),
-  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused', 'canceled', 'expired')),
-  current_period_start timestamptz NOT NULL DEFAULT now(),
-  current_period_end timestamptz NOT NULL DEFAULT now() + interval '1 month',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
--- Indexes for subscriptions
-CREATE INDEX idx_subscriptions_plan_status ON public.subscriptions(plan, status);
-CREATE INDEX idx_subscriptions_current_period_end ON public.subscriptions(current_period_end);
-
--- 6) Anonymous slots table (optional) - Time-based anonymous room management
+-- 5) Anonymous slots table (optional) - Time-based anonymous room management
 DROP TABLE IF EXISTS public.anonymous_slots CASCADE;
 CREATE TABLE public.anonymous_slots (
   id text PRIMARY KEY, -- Format: 'anon_YYYYMMDD_HH'
@@ -179,19 +163,6 @@ CREATE INDEX idx_message_reports_created_at ON public.message_reports(created_at
 -- =====================================================
 -- HELPER FUNCTIONS
 -- =====================================================
-
--- Function to check if user is paid user
-CREATE OR REPLACE FUNCTION public.is_paid_user(user_uuid uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER
-AS $$
-  SELECT COALESCE(
-    (SELECT plan != 'free' AND status = 'active' AND current_period_end > now()
-     FROM public.subscriptions 
-     WHERE user_id = user_uuid), 
-    false
-  );
-$$;
 
 -- Function to get current anonymous room slot ID
 CREATE OR REPLACE FUNCTION public.get_current_anon_slot_id()
@@ -328,16 +299,6 @@ CREATE TRIGGER trigger_room_messages_updated_at
   BEFORE UPDATE ON public.room_messages
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
-CREATE TRIGGER trigger_subscriptions_updated_at
-  BEFORE UPDATE ON public.subscriptions
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 -- =====================================================
 -- INITIAL DATA
 -- =====================================================
-
--- Insert default subscriptions for existing users (as free users)
-INSERT INTO public.subscriptions (user_id, plan, status)
-SELECT id, 'free', 'active' 
-FROM public.user_profiles 
-WHERE id NOT IN (SELECT user_id FROM public.subscriptions);

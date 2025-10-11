@@ -9,7 +9,6 @@ ALTER TABLE public.spaces ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.channels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.channel_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.room_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.anonymous_slots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rate_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.message_reports ENABLE ROW LEVEL SECURITY;
@@ -35,12 +34,11 @@ CREATE POLICY "spaces_select_policy" ON public.spaces
     )
   );
 
--- INSERT: Only paid users can create spaces
+-- INSERT: Authenticated users can create spaces
 CREATE POLICY "spaces_insert_policy" ON public.spaces
   FOR INSERT WITH CHECK (
     auth.role() = 'authenticated' AND
-    auth.uid() = owner_id AND
-    public.is_paid_user(auth.uid()) = true
+    auth.uid() = owner_id
   );
 
 -- UPDATE: Only owner or space moderators can update
@@ -279,38 +277,6 @@ CREATE POLICY "room_messages_delete_policy" ON public.room_messages
       ))
       -- Note: Anonymous messages auto-delete via TTL
     )
-  );
-
--- =====================================================
--- SUBSCRIPTIONS POLICIES
--- =====================================================
-
--- SELECT: Users can only see their own subscription
-CREATE POLICY "subscriptions_select_policy" ON public.subscriptions
-  FOR SELECT USING (
-    auth.role() = 'authenticated' AND
-    user_id = auth.uid()
-  );
-
--- INSERT: Users can only create their own subscription
-CREATE POLICY "subscriptions_insert_policy" ON public.subscriptions
-  FOR INSERT WITH CHECK (
-    auth.role() = 'authenticated' AND
-    user_id = auth.uid()
-  );
-
--- UPDATE: Users can only update their own subscription
-CREATE POLICY "subscriptions_update_policy" ON public.subscriptions
-  FOR UPDATE USING (
-    auth.role() = 'authenticated' AND
-    user_id = auth.uid()
-  );
-
--- DELETE: Users can only delete their own subscription
-CREATE POLICY "subscriptions_delete_policy" ON public.subscriptions
-  FOR DELETE USING (
-    auth.role() = 'authenticated' AND
-    user_id = auth.uid()
   );
 
 -- =====================================================

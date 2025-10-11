@@ -32,7 +32,6 @@ import {
   OptimisticRoomMessage,
   getCurrentAnonymousSlotId,
 } from '../types/room';
-import { useSubscription } from '../contexts/SubscriptionContext';
 
 // =====================================================
 // SPACE HOOKS
@@ -168,19 +167,10 @@ export function useSpaceOperations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { hasEntitlement } = useSubscription();
-  const isPremium = hasEntitlement('premium');
-
   const createSpace = useCallback(
     async (request: CreateSpaceRequest) => {
       setLoading(true);
       setError(null);
-
-      if (request.is_public === false && !isPremium) {
-        setLoading(false);
-        setError('非公開ルームの作成はプレミアム会員限定です');
-        return null;
-      }
 
       const response = await roomService.createSpace(request);
       setLoading(false);
@@ -192,7 +182,7 @@ export function useSpaceOperations() {
 
       return response.data;
     },
-    [isPremium],
+    [],
   );
 
   const joinSpace = useCallback(async (spaceId: string) => {
@@ -707,7 +697,7 @@ export function useChatList() {
 }
 
 // =====================================================
-// SUBSCRIPTION HOOK - REMOVED
+// SPACE PERMISSIONS HOOK
 // All users can now create spaces and use all features
 // =====================================================
 
@@ -715,13 +705,10 @@ export function useChatList() {
  * Hook for space creation permission - now always returns true
  */
 export function useSpacePermissions() {
-  const { hasEntitlement } = useSubscription();
-  const isPremium = hasEntitlement('premium');
-
   return {
     canCreateSpaces: true,
-    canCreatePrivateSpaces: isPremium,
-    canJoinPrivateSpaces: isPremium,
+    canCreatePrivateSpaces: true,
+    canJoinPrivateSpaces: true,
     loading: false,
     error: null,
   };

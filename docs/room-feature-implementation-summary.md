@@ -21,7 +21,6 @@ The room feature implements a Discord-like space/channel system with the followi
 - `channels` - Chat timelines (1 per space in V1)
 - `channel_members` - User membership with roles (owner/moderator/member)
 - `room_messages` - Messages for both channels and anonymous rooms
-- `subscriptions` - Paid user validation for space creation
 - `anonymous_slots` - Time-based anonymous room management
 - `rate_limits` - Anonymous room slow mode enforcement
 - `message_reports` - Auto-moderation system
@@ -38,14 +37,14 @@ The room feature implements a Discord-like space/channel system with the followi
 **Access Control:**
 - **Public Spaces**: Viewable by all authenticated users, instant join
 - **Private Spaces**: Members only, requires approval (V1.1 feature)
-- **Space Creation**: Paid users only (`is_paid_user()` function)
+- **Space Creation**: Authenticated users can create spaces
 - **Message Visibility**: Based on membership for channels, open for anonymous
 - **Moderation**: Owner/moderator permissions for content management
 
 ### 3. API Functions (`/supabase/sql/16_rooms_rpcs.sql`)
 
 **Space Management:**
-- `create_space()` - Creates space with paid user validation
+- `create_space()` - Creates a space and default channel
 - `search_public_spaces()` - Search by name and tags
 - `join_public_space()` - Instant join for public spaces
 - `get_chat_list_with_new()` - Chat list with NEW badge info
@@ -73,7 +72,7 @@ The room feature implements a Discord-like space/channel system with the followi
 - Member join/leave events
 - Typing indicators
 - Space and channel updates
-- Security checks for subscription permissions
+- Security checks for membership permissions
 
 ### 5. Frontend Implementation
 
@@ -96,7 +95,7 @@ The room feature implements a Discord-like space/channel system with the followi
 - `useChannelMessages()` - Channel messaging with real-time
 - `useAnonymousRoom()` - Anonymous room functionality
 - `useChatList()` - Chat list with NEW badges
-- `useSubscription()` - Paid user status
+- `useSpacePermissions()` - Capability flags for creating/joining spaces
 - `useModeration()` - Message reporting
 
 #### Screen Components
@@ -106,7 +105,7 @@ The room feature implements a Discord-like space/channel system with the followi
 - Search functionality for public spaces
 - Filter categories
 - Anonymous room access
-- Create space button (paid users only)
+- Create space button
 
 **ChannelScreen** (`/src/screens/ChannelScreen.tsx`):
 - Real-time message display
@@ -119,7 +118,6 @@ The room feature implements a Discord-like space/channel system with the followi
 - Space creation form with validation
 - Public/private selection
 - Tag management
-- Paid user verification
 - Character limits and constraints
 
 **AnonRoomScreen** (`/src/screens/AnonRoomScreen.tsx`):
@@ -143,12 +141,6 @@ The room feature implements a Discord-like space/channel system with the followi
 - Rate limiting: 10 seconds between posts, max 6/minute
 - Auto-delete after 1 hour
 - Real-time updates
-
-### ✅ Paid User Gating
-- `is_paid_user()` function checks subscription
-- RLS policy enforcement
-- UI shows create button only for paid users
-- Subscription status display
 
 ### ✅ Auto-Moderation
 - 3 reports trigger auto-masking

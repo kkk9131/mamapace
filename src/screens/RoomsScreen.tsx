@@ -125,13 +125,6 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
 
   // Handle join space
   const handleJoinSpace = async (space: SpaceWithOwner) => {
-    if (!space.is_public && !canJoinPrivateSpaces) {
-      Alert.alert(
-        'プレミアム限定',
-        '非公開ルームへの参加はプレミアム会員限定の機能です。',
-      );
-      return;
-    }
     if (!space.can_join) {
       Alert.alert('参加できません', 'このルームは満員かすでに参加済みです');
       return;
@@ -518,8 +511,8 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                         fontWeight: 'bold',
                       }}
                     >
-                      {isPremiumOnly && !canJoinPrivateSpaces
-                        ? 'プレミアム限定'
+                      {isPremiumOnly
+                        ? '招待制'
                         : canJoinSpace
                           ? '参加'
                           : '満員'}
@@ -799,8 +792,8 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
                             fontWeight: 'bold',
                           }}
                         >
-                          {isPremiumOnly && !canJoinPrivateSpaces
-                            ? 'プレミアム限定'
+                          {isPremiumOnly
+                            ? '招待制'
                             : canJoinSpace
                               ? '参加'
                               : '満員'}

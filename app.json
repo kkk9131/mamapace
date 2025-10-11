@@ -46,7 +46,8 @@
         "projectId": "ab86b0c9-4b94-4fab-8fb6-2d52a54d042c"
       },
       "SUPABASE_URL": "https://xxnslcwktufssamircxf.supabase.co",
-      "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4bnNsY3drdHVmc3NhbWlyY3hmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1NzMzMDIsImV4cCI6MjA3MDE0OTMwMn0.sBQxs6L0-mDDqdqzK0gQmk-lDcDQ-l5IztdA5tUo3JM"
+      "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4bnNsY3drdHVmc3NhbWlyY3hmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1NzMzMDIsImV4cCI6MjA3MDE0OTMwMn0.sBQxs6L0-mDDqdqzK0gQmk-lDcDQ-l5IztdA5tUo3JM",
+      "EXPO_PUBLIC_SUPABASE_FUNCTIONS_URL": "https://xxnslcwktufssamircxf.supabase.co/functions/v1"
     },
     "plugins": [
       "expo-secure-store",

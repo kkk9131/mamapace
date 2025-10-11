@@ -44,8 +44,6 @@ import CreateSpaceScreen from '../screens/CreateSpaceScreen';
 import AnonRoomV2Screen from '../screens/AnonRoomV2Screen';
 import TutorialScreen from '../screens/TutorialScreen';
 import OnboardingPrompt from '../components/OnboardingPrompt';
-import PaywallScreen from '../screens/PaywallScreen';
-import ManageSubscriptionScreen from '../screens/ManageSubscriptionScreen';
 
 import Sidebar from './Sidebar';
 
@@ -71,8 +69,6 @@ type TabKey =
   | 'devAnonV2'
   | 'aiChat'
   | 'tutorial'
-  | 'paywall'
-  | 'manageSubscription'
   | 'search';
 
 const tabs = [
@@ -436,8 +432,6 @@ export default function CustomTabs({
                 // and show login screen due to !isAuthenticated check above
               }}
               onOpenBlockedUsers={() => setActive('blockedList')}
-              onOpenPaywall={() => setActive('paywall')}
-              onOpenManageSubscription={() => setActive('manageSubscription')}
             />
           ) : active === 'blockedList' ? (
             <BlockedUsersListScreen
@@ -447,10 +441,6 @@ export default function CustomTabs({
                 setActive('userProfile');
               }}
             />
-          ) : active === 'paywall' ? (
-            <PaywallScreen onClose={() => setActive('settings')} />
-          ) : active === 'manageSubscription' ? (
-            <ManageSubscriptionScreen onBack={() => setActive('settings')} />
           ) : active === 'roomsList' ? (
             <ErrorBoundary>
               <RoomsListScreen

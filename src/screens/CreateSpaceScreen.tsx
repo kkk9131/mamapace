@@ -20,7 +20,7 @@ import {
 import { BlurView } from 'expo-blur';
 
 import { useTheme } from '../theme/theme';
-import { useSpaceOperations, useSpacePermissions } from '../hooks/useRooms';
+import { useSpaceOperations } from '../hooks/useRooms';
 import { CreateSpaceRequest, RoomConstraints } from '../types/room';
 
 interface CreateSpaceScreenProps {
@@ -48,7 +48,6 @@ export default function CreateSpaceScreen({
 
   // Hooks
   const { loading, error, createSpace } = useSpaceOperations();
-  const { canCreatePrivateSpaces } = useSpacePermissions();
 
   // Animation
   useEffect(() => {
@@ -97,14 +96,6 @@ export default function CreateSpaceScreen({
       return;
     }
 
-    if (!isPublic && !canCreatePrivateSpaces) {
-      Alert.alert(
-        'プレミアム限定',
-        '非公開ルームの作成はプレミアム会員限定の機能です。'
-      );
-      return;
-    }
-
     const request: CreateSpaceRequest = {
       name: name.trim(),
       description: description.trim() || undefined,
@@ -126,13 +117,6 @@ export default function CreateSpaceScreen({
   // All users can create spaces - no restriction needed
 
   const handleSelectVisibility = (nextPublic: boolean) => {
-    if (!nextPublic && !canCreatePrivateSpaces) {
-      Alert.alert(
-        'プレミアム限定',
-        '非公開ルームの作成はプレミアム会員限定の機能です。'
-      );
-      return;
-    }
     setIsPublic(nextPublic);
   };
 
@@ -485,14 +469,12 @@ export default function CreateSpaceScreen({
 
               <Pressable
                 onPress={() => handleSelectVisibility(false)}
-                disabled={!canCreatePrivateSpaces}
                 style={({ pressed }) => [
                   {
                     flex: 1,
                     borderRadius: theme.radius.lg,
                     overflow: 'hidden',
                     marginLeft: 8,
-                    opacity: !canCreatePrivateSpaces ? 0.4 : 1,
                     transform: [{ scale: pressed ? 0.98 : 1 }],
                   },
                 ]}
@@ -534,17 +516,6 @@ export default function CreateSpaceScreen({
                 </BlurView>
               </Pressable>
             </View>
-            {!canCreatePrivateSpaces && (
-              <Text
-                style={{
-                  color: colors.subtext,
-                  fontSize: 12,
-                  marginTop: 8,
-                }}
-              >
-                非公開ルームはプレミアム会員のみ作成できます。
-              </Text>
-            )}
           </View>
 
           {/* Max Members (Optional) */}

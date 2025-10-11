@@ -27,11 +27,6 @@ BEGIN
     RETURN jsonb_build_object('error', 'Authentication required');
   END IF;
 
-  -- Check if user is paid user
-  IF NOT public.is_paid_user(auth.uid()) THEN
-    RETURN jsonb_build_object('error', 'Paid subscription required to create spaces');
-  END IF;
-
   -- Set default max_members based on space type
   v_default_max_members := CASE 
     WHEN p_is_public THEN COALESCE(p_max_members, 500)

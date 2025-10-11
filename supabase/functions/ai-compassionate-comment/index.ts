@@ -12,7 +12,6 @@ type Env = {
   DAILY_LIMIT?: string; // optional override, default 3
 };
 
-const PREMIUM_STATUSES = new Set(['active', 'in_trial', 'in_grace']);
 const FREE_COMMENT_DAILY_LIMIT = Number(Deno.env.get('AI_COMMENT_FREE_DAILY_LIMIT') || 1);
 
 interface RequestBody {
@@ -103,30 +102,6 @@ async function generateCompassionateText(apiKey: string, postText: string): Prom
   return clampText((out || '').trim(), 280);
 }
 
-async function userHasPremiumSubscription(supabase: any, userId: string): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .from('user_subscriptions')
-      .select('status, current_period_end')
-      .eq('user_id', userId)
-      .order('current_period_end', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error || !data) return false;
-    const status = String(data.status || '').toLowerCase();
-    if (!PREMIUM_STATUSES.has(status)) {
-      return false;
-    }
-    const endAt = data.current_period_end ? Date.parse(data.current_period_end) : null;
-    if (Number.isFinite(endAt) && endAt !== null && endAt < Date.now()) {
-      return false;
-    }
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
 function startOfTodayIso(): string {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
@@ -188,7 +163,6 @@ Deno.serve(async (req) => {
       return jsonResponse(401, { error: 'Unauthorized' }, allowedOrigin);
     }
     const requesterId = userData.user.id;
-    const isPremiumUser = await userHasPremiumSubscription(supabase, requesterId);
 
     const body: RequestBody = await req.json();
     const postId = body?.postId;
@@ -206,7 +180,7 @@ Deno.serve(async (req) => {
     if (postErr) throw new Error(`db_fetch_post: ${postErr.message || JSON.stringify(postErr)}`);
     if (!post) return jsonResponse(404, { error: 'Post not found' }, allowedOrigin);
 
-    if (!isPremiumUser && FREE_COMMENT_DAILY_LIMIT > 0) {
+    if (FREE_COMMENT_DAILY_LIMIT > 0) {
       try {
         const { count: usageToday, error: usageErr } = await supabase
           .from('ai_comment_requests')

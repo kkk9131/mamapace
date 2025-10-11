@@ -47,7 +47,6 @@ const CONFIG = {
 
 const needsSearch = (messages: ChatMessage[]) => needsSearchHelper(messages, CONFIG.SEARCH_MIN_QUERY_LEN);
 
-const PREMIUM_STATUSES = new Set(['active', 'in_trial', 'in_grace']);
 const FREE_CHAT_DAILY_LIMIT = Number(Deno.env.get('AI_FREE_DAILY_LIMIT') || 3);
 
 async function googleSearch(query: string): Promise<{ title: string; link: string; source: string }[]> {
@@ -95,28 +94,6 @@ function buildSystemPrompt(): string {
 const toGeminiContents = (systemPrompt: string, history: ChatMessage[]) => toContents(systemPrompt, history, CONFIG.MAX_USER_INPUT);
 
 const formatWithSources = (text: string, sources: { title: string; source: string }[]) => formatSources(text, sources);
-
-async function userHasPremiumSubscription(supabase: any, userId: string): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .from('user_subscriptions')
-      .select('status, current_period_end')
-      .eq('user_id', userId)
-      .order('current_period_end', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error || !data) return false;
-    const status = String(data.status || '').toLowerCase();
-    if (!PREMIUM_STATUSES.has(status)) return false;
-    const endAt = data.current_period_end ? Date.parse(data.current_period_end) : null;
-    if (Number.isFinite(endAt) && endAt !== null && endAt < Date.now()) {
-      return false;
-    }
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
 
 function startOfTodayIso(): string {
   const now = new Date();
@@ -209,7 +186,6 @@ Deno.serve(async (req) => {
       return json(401, { error: 'Unauthorized' }, allowedOrigin);
     }
     const userId = userData.user.id;
-    const isPremiumUser = await userHasPremiumSubscription(supabase, userId);
 
     // Bound history and total input size
     let history = messages.slice(-CONFIG.MAX_HISTORY).map(m => ({
@@ -283,7 +259,7 @@ Deno.serve(async (req) => {
       sessionIds.push(sessionId);
     }
 
-    if (!isPremiumUser && FREE_CHAT_DAILY_LIMIT > 0 && sessionIds.length > 0) {
+    if (FREE_CHAT_DAILY_LIMIT > 0 && sessionIds.length > 0) {
       try {
         const { count: dailyCount, error: dailyErr } = await supabase
           .from('ai_chat_messages')

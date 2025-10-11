@@ -22,7 +22,6 @@ import {
   updateAISessionTitle,
   getAISession,
 } from '../services/aiChatSessionService';
-import { useSubscription } from '../contexts/SubscriptionContext';
 
 interface AIChatBotScreenProps {
   onBack?: () => void;
@@ -38,8 +37,6 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
   const theme = useTheme();
   const { colors, spacing, radius, shadow } = theme;
   const insets = useSafeAreaInsets();
-  const { hasEntitlement } = useSubscription();
-  const isPremium = hasEntitlement('premium');
   const [messages, setMessages] = useState<ChatItem[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,16 +49,10 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
   const [titleInput, setTitleInput] = useState<string>('');
   const [freeLimitReached, setFreeLimitReached] = useState(false);
 
-  useEffect(() => {
-    if (isPremium) {
-      setFreeLimitReached(false);
-    }
-  }, [isPremium]);
-
   const showFreeLimitAlert = useCallback(() => {
     Alert.alert(
-      'AIチャットの無料枠',
-      '無料プランではAIチャットは1日3通までご利用いただけます。プレミアムにアップグレードすると無制限にご利用いただけます。'
+      'AIチャットの上限',
+      '今日はこれ以上AIチャットを送信できません。明日またお試しください。'
     );
   }, []);
 
@@ -69,7 +60,7 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
     if (!input.trim() || loading) {
       return;
     }
-    if (!isPremium && freeLimitReached) {
+    if (freeLimitReached) {
       showFreeLimitAlert();
       return;
     }
@@ -104,9 +95,6 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
         setMessages(prev => prev.filter(m => m.id !== userMsg.id));
         Alert.alert('エラー', res.error || 'AI応答の生成に失敗しました');
         return;
-      }
-      if (!isPremium) {
-        setFreeLimitReached(false);
       }
       const aiMsg: ChatItem = {
         id: `a_${Date.now() + 1}`,

@@ -220,7 +220,7 @@ revoke all on function public.join_room(uuid) from public;
 grant execute on function public.join_room(uuid) to authenticated;
 ```
 
-M1では「案1（RLS）」だけでも可。既存クライアントが `channel_members` を直接操作しているため案1が無改修で効きやすい。今後の課金/招待ロジックの拡張を見据えるなら案2を推奨。
+M1では「案1（RLS）」だけでも可。既存クライアントが `channel_members` を直接操作しているため案1が無改修で効きやすい。今後の招待ロジックの拡張を見据えるなら案2を推奨。
 
 ---
 
@@ -287,7 +287,6 @@ M1では「案1（RLS）」だけでも可。既存クライアントが `channe
 ## 将来拡張（M2以降の前提に配慮）
 
 - 管理者承認フロー: `verify_maternal_id` を管理者専用に切り替え、`set_maternal_id` では `verified=false` のまま保管する運用に変更可能。
-- 課金ゲート連動: `join_room` RPC にサブスク要件を追加してもよい（M1では未実装）。
 - 監査証跡: `maternal_id_*` 更新の監査テーブル追加を検討。
 
 ---
