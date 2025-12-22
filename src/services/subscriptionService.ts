@@ -179,7 +179,7 @@ export const subscriptionService = {
 
       return await this.verifyReceipt(
         'apple',
-        latest.productId || 'com.mamapace.premium.monthly',
+        latest.productId || 'com.mamapace.premium.monthly1',
         transactionId
       );
     } catch (e: any) {

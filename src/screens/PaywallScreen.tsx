@@ -6,6 +6,7 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,7 +28,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
   const theme = useTheme();
   const { colors, spacing, radius } = theme;
   const insets = useSafeAreaInsets();
-  const { plan, purchase, restore, isPremium } = useSubscription();
+  const { plan, subscription, purchase, restore, isPremium } = useSubscription();
   const [loading, setLoading] = useState(false);
 
   const priceDisplay = plan?.price_jpy
@@ -73,44 +74,141 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
 
   if (isPremium) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: colors.bg,
-          justifyContent: 'center',
-          alignItems: 'center',
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.bg }}
+        contentContainerStyle={{
           padding: spacing(2),
+          paddingTop: insets.top + spacing(1),
+          paddingBottom: insets.bottom + spacing(4),
         }}
       >
-        <Text style={{ fontSize: 48, marginBottom: spacing(2) }}>✨</Text>
-        <Text
+        {/* Header */}
+        <View style={{ alignItems: 'center', marginBottom: spacing(3) }}>
+          <Text style={{ fontSize: 48, marginBottom: spacing(1) }}>👑</Text>
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 24,
+              fontWeight: '800',
+            }}
+          >
+            プレミアム会員
+          </Text>
+          <Text style={{ color: colors.subtext, marginTop: spacing(0.5) }}>
+            すべての特典をご利用中です
+          </Text>
+        </View>
+
+        {/* Status Card */}
+        <View
           style={{
-            color: colors.text,
-            fontSize: 20,
-            fontWeight: '700',
-            marginBottom: spacing(1),
+            backgroundColor: colors.pink + '20',
+            borderRadius: radius.lg,
+            padding: spacing(2),
+            marginBottom: spacing(3),
+            borderWidth: 2,
+            borderColor: colors.pink,
           }}
         >
-          プレミアム会員です
-        </Text>
-        <Text style={{ color: colors.subtext, textAlign: 'center' }}>
-          すべての特典をご利用いただけます
-        </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing(1) }}>
+            <Text style={{ fontSize: 24, marginRight: spacing(1) }}>✨</Text>
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>
+              有効なサブスクリプション
+            </Text>
+          </View>
+          <Text style={{ color: colors.subtext }}>
+            {subscription?.current_period_end
+              ? `次回更新日: ${new Date(subscription.current_period_end).toLocaleDateString('ja-JP')}`
+              : `プラン: ${plan?.display_name || 'ママプレミアム'}`}
+          </Text>
+        </View>
+
+        {/* Benefits */}
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: radius.lg,
+            padding: spacing(2),
+            marginBottom: spacing(3),
+          }}
+        >
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 16,
+              fontWeight: '700',
+              marginBottom: spacing(1.5),
+            }}
+          >
+            ご利用中の特典
+          </Text>
+          {PREMIUM_BENEFITS.map((benefit, index) => (
+            <View
+              key={index}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: spacing(1),
+                borderTopWidth: index > 0 ? 1 : 0,
+                borderTopColor: colors.bg,
+              }}
+            >
+              <Text style={{ fontSize: 20, marginRight: spacing(1) }}>
+                {benefit.icon}
+              </Text>
+              <Text style={{ color: colors.text, flex: 1 }}>{benefit.text}</Text>
+              <Text style={{ color: colors.pink, fontSize: 16 }}>✓</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Manage Subscription Button */}
+        <Pressable
+          onPress={async () => {
+            try {
+              await Linking.openURL('https://apps.apple.com/account/subscriptions');
+            } catch (e) {
+              Alert.alert('エラー', 'App Storeを開けませんでした');
+            }
+          }}
+          style={({ pressed }) => ({
+            backgroundColor: colors.surface,
+            borderRadius: radius.md,
+            paddingVertical: spacing(1.5),
+            alignItems: 'center',
+            marginBottom: spacing(1.5),
+            transform: [{ scale: pressed ? 0.98 : 1 }],
+          })}
+        >
+          <Text style={{ color: colors.text, fontWeight: '600' }}>
+            サブスクリプションを管理
+          </Text>
+        </Pressable>
+
+        {/* Close Button */}
         {onClose && (
           <Pressable
             onPress={onClose}
-            style={{
-              marginTop: spacing(3),
-              paddingHorizontal: spacing(3),
-              paddingVertical: spacing(1.5),
-              backgroundColor: colors.surface,
-              borderRadius: radius.md,
-            }}
+            style={{ alignItems: 'center', paddingVertical: spacing(1) }}
           >
-            <Text style={{ color: colors.text, fontWeight: '600' }}>閉じる</Text>
+            <Text style={{ color: colors.subtext }}>閉じる</Text>
           </Pressable>
         )}
-      </View>
+
+        {/* Info */}
+        <Text
+          style={{
+            color: colors.subtext,
+            fontSize: 10,
+            textAlign: 'center',
+            marginTop: spacing(2),
+            lineHeight: 16,
+          }}
+        >
+          サブスクリプションの解約・変更はApp Storeの設定から行えます。
+          更新の24時間前までにキャンセルしない限り、自動的に更新されます。
+        </Text>
+      </ScrollView>
     );
   }
 
