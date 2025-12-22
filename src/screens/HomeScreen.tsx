@@ -12,8 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/theme';
 import PostCard from '../components/PostCard';
-import { PostSkeletonCard } from '../components/Skeleton';
 import { PostWithMeta } from '../types/post';
+import CustomActivityIndicator from '../components/CustomActivityIndicator';
 import {
   fetchHomeFeed,
   fetchHomeFeedFiltered,
@@ -24,6 +24,7 @@ import { notifyError } from '../utils/notify';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
 import { useBlockedList } from '../hooks/useBlock';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { getFeatureFlag } from '../services/featureFlagService';
 import appConfig from '../config/appConfig';
 
@@ -32,7 +33,6 @@ export default function HomeScreen({
   commentDeltas,
   onCompose,
   onOpenPost,
-  onOpenProfileEdit,
   onOpenUser,
 }: {
   refreshKey?: number;
@@ -53,6 +53,32 @@ export default function HomeScreen({
     }).start();
   }, [fade]);
 
+  const [items, setItems] = useState<PostWithMeta[]>([]);
+  const { blocked } = useBlockedList();
+  const { isAdFree } = useSubscription();
+  const filteredItems = useMemo(
+    () => {
+      let result = items.filter(i => !blocked.includes(i.user_id));
+      // プレミアムユーザーは広告を非表示
+      if (isAdFree) {
+        result = result.filter(i => !i.is_ad);
+      }
+      return result;
+    },
+    [items, blocked, isAdFree]
+  );
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [useFiltered, setUseFiltered] = useState<boolean>(
+    appConfig.useFilteredViews,
+  );
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const endReached = useRef(false);
+  const { user } = useAuth();
+  const { handPreference } = useHandPreference();
+  const insets = useSafeAreaInsets();
+  const loadingRef = useRef<boolean>(false);
+
   // Resolve feature flag (local override or remote) for filtered views
   useEffect(() => {
     let mounted = true;
@@ -65,7 +91,7 @@ export default function HomeScreen({
         if (mounted) {
           setUseFiltered(v);
         }
-      } catch {}
+      } catch { }
     })();
     return () => {
       mounted = false;
@@ -74,10 +100,26 @@ export default function HomeScreen({
 
   // Re-fetch when feature flag changes to ensure server-side filtering is applied
   // Fix race: if a load is in progress when the flag flips, wait for it to settle
-  const loadingRef = useRef<boolean>(false);
   useEffect(() => {
     loadingRef.current = loading;
   }, [loading]);
+
+  const load = async (opts?: { refresh?: boolean }) => {
+    if (loading) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const before = opts?.refresh ? null : cursor;
+      const res = useFiltered
+        ? await fetchHomeFeedFiltered({ before })
+        : await fetchHomeFeed({ before });
+      setItems(prev => (opts?.refresh ? res.items : [...prev, ...res.items]));
+      setCursor(res.nextCursor);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -105,40 +147,6 @@ export default function HomeScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useFiltered]);
 
-  const [items, setItems] = useState<PostWithMeta[]>([]);
-  const { blocked } = useBlockedList();
-  const filteredItems = useMemo(
-    () => items.filter(i => !blocked.includes(i.user_id)),
-    [items, blocked]
-  );
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [useFiltered, setUseFiltered] = useState<boolean>(
-    appConfig.useFilteredViews,
-  );
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const endReached = useRef(false);
-  const { user } = useAuth();
-  const { handPreference } = useHandPreference();
-  const insets = useSafeAreaInsets();
-
-  const load = async (opts?: { refresh?: boolean }) => {
-    if (loading) {
-      return;
-    }
-    setLoading(true);
-    try {
-      const before = opts?.refresh ? null : cursor;
-      const res = useFiltered
-        ? await fetchHomeFeedFiltered({ before })
-        : await fetchHomeFeed({ before });
-      setItems(prev => (opts?.refresh ? res.items : [...prev, ...res.items]));
-      setCursor(res.nextCursor);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     load({ refresh: true });
   }, [refreshKey]);
@@ -163,13 +171,13 @@ export default function HomeScreen({
                 prev.map(p =>
                   p.id === postId
                     ? {
-                        ...p,
-                        comment_summary: {
-                          count: (p.comment_summary.count || 0) + 1,
-                        },
-                      }
+                      ...p,
+                      comment_summary: {
+                        count: (p.comment_summary.count || 0) + 1,
+                      },
+                    }
                     : p
-                )
+                ),
               );
             }
           )
@@ -185,16 +193,16 @@ export default function HomeScreen({
                 prev.map(p =>
                   p.id === postId
                     ? {
-                        ...p,
-                        comment_summary: {
-                          count: Math.max(
-                            0,
-                            (p.comment_summary.count || 0) - 1
-                          ),
-                        },
-                      }
+                      ...p,
+                      comment_summary: {
+                        count: Math.max(
+                          0,
+                          (p.comment_summary.count || 0) - 1
+                        ),
+                      },
+                    }
                     : p
-                )
+                ),
               );
             }
           )
@@ -210,17 +218,17 @@ export default function HomeScreen({
                 prev.map(p =>
                   p.id === postId
                     ? {
-                        ...p,
-                        reaction_summary: (() => {
-                          const base = p.reaction_summary || {
-                            reactedByMe: false,
-                            count: 0,
-                          };
-                          return { ...base, count: (base.count || 0) + 1 };
-                        })(),
-                      }
+                      ...p,
+                      reaction_summary: (() => {
+                        const base = p.reaction_summary || {
+                          reactedByMe: false,
+                          count: 0,
+                        };
+                        return { ...base, count: (base.count || 0) + 1 };
+                      })(),
+                    }
                     : p
-                )
+                ),
               );
             }
           )
@@ -236,30 +244,30 @@ export default function HomeScreen({
                 prev.map(p =>
                   p.id === postId
                     ? {
-                        ...p,
-                        reaction_summary: (() => {
-                          const base = p.reaction_summary || {
-                            reactedByMe: false,
-                            count: 0,
-                          };
-                          return {
-                            ...base,
-                            count: Math.max(0, (base.count || 0) - 1),
-                          };
-                        })(),
-                      }
+                      ...p,
+                      reaction_summary: (() => {
+                        const base = p.reaction_summary || {
+                          reactedByMe: false,
+                          count: 0,
+                        };
+                        return {
+                          ...base,
+                          count: Math.max(0, (base.count || 0) - 1),
+                        };
+                      })(),
+                    }
                     : p
-                )
+                ),
               );
             }
           )
           .subscribe();
-      } catch {}
+      } catch { }
     })();
     return () => {
       try {
         channel && getSupabaseClient().removeChannel(channel);
-      } catch {}
+      } catch { }
     };
   }, []);
 
@@ -324,6 +332,39 @@ export default function HomeScreen({
 
   // Deletion is restricted to "あなた"画面（MyPostsListScreen）
 
+  /* Scroll-linked FAB Animation */
+  // const scrollY = useRef(new Animated.Value(0)).current; // Not strictly needed for logic below
+  const fabScale = useRef(new Animated.Value(1)).current;
+  const lastOffsetY = useRef(0);
+  const fabVisible = useRef(true);
+
+  const onScroll = (e: any) => {
+    const currentY = e.nativeEvent.contentOffset.y;
+    const dy = currentY - lastOffsetY.current;
+
+    // Hide on scroll down (if moving significant amount)
+    if (dy > 20 && fabVisible.current && currentY > 50) {
+      fabVisible.current = false;
+      Animated.spring(fabScale, {
+        toValue: 0,
+        useNativeDriver: true,
+        speed: 20,
+        bounciness: 0,
+      }).start();
+    }
+    // Show on scroll up
+    else if ((dy < -20 || currentY < 50) && !fabVisible.current) {
+      fabVisible.current = true;
+      Animated.spring(fabScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 20,
+        bounciness: 4,
+      }).start();
+    }
+    lastOffsetY.current = currentY;
+  };
+
   return (
     <Animated.View
       style={{
@@ -333,7 +374,6 @@ export default function HomeScreen({
         opacity: fade,
       }}
     >
-      {/* Removed top quick tabs (元気/眠い/しんどい/幸せ) */}
       <FlatList
         data={filteredItems}
         keyExtractor={i => i.id}
@@ -345,11 +385,12 @@ export default function HomeScreen({
         ItemSeparatorComponent={() => (
           <View style={{ height: theme.spacing(2) }} />
         )}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         renderItem={({ item }) => (
           <PostCard
             post={item}
             isOwner={item.user_id === user?.id}
-            // No deletion on Home; only on "あなた" screen
             commentDelta={commentDeltas?.[item.id] || 0}
             onOpenComments={id => onOpenPost && onOpenPost(id)}
             onToggleLike={handleToggleLike}
@@ -366,58 +407,59 @@ export default function HomeScreen({
           />
         }
         ListEmptyComponent={
-          !loading
-            ? () => (
-                <View style={{ alignItems: 'center', paddingTop: 80 }}>
-                  <Text style={{ color: colors.subtext }}>
-                    まだポストがありません
-                  </Text>
-                </View>
-              )
-            : () => (
-                <View
-                  style={{
-                    paddingHorizontal: theme.spacing(2),
-                    gap: theme.spacing(1.5),
-                  }}
-                >
-                  {[1, 2, 3].map(i => (
-                    <View key={i} style={{ marginBottom: theme.spacing(1.5) }}>
-                      <PostSkeletonCard />
-                    </View>
-                  ))}
-                </View>
-              )
+          !loading ? (
+            <View style={{ alignItems: 'center', paddingTop: 80 }}>
+              <Text style={{ color: colors.subtext }}>まだポストがありません</Text>
+            </View>
+          ) : (
+            <View
+              style={{
+                paddingTop: 80,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <CustomActivityIndicator size={40} />
+            </View>
+          )
         }
       />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="投稿を作成"
-        onPress={async () => {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          onCompose && onCompose();
-        }}
-        style={({ pressed }) => [
+      <Animated.View
+        style={[
           {
             position: 'absolute',
             ...(handPreference === 'left' ? { left: 20 } : { right: 20 }),
-            // Keep FAB above the tab bar (56) + bottom inset with a small gap
             bottom: (insets.bottom || 0) + 56 + 16,
-            backgroundColor: colors.pink,
-            borderRadius: 28,
-            width: 56,
-            height: 56,
-            alignItems: 'center',
-            justifyContent: 'center',
-            transform: [{ scale: pressed ? 0.97 : 1 }],
-            ...theme.shadow.card,
+            zIndex: 100,
+            transform: [{ scale: fabScale }],
           },
         ]}
       >
-        <Text style={{ color: '#23181D', fontWeight: '700', fontSize: 24 }}>
-          ＋
-        </Text>
-      </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="投稿を作成"
+          onPress={async () => {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            onCompose && onCompose();
+          }}
+          style={({ pressed }) => [
+            {
+              backgroundColor: colors.pink,
+              borderRadius: 28,
+              width: 56,
+              height: 56,
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+              ...theme.shadow.card,
+            },
+          ]}
+        >
+          <Text style={{ color: '#23181D', fontWeight: '700', fontSize: 24 }}>
+            ＋
+          </Text>
+        </Pressable>
+      </Animated.View>
     </Animated.View>
   );
 }

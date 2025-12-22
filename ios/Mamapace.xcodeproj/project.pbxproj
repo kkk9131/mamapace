@@ -8,31 +8,28 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		31514CA8C20B5D9FDFB45458 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C34A81F6CA6A5223B43D6FA9 /* PrivacyInfo.xcprivacy */; };
+		2B63EA3AF6A391C7770CD2BC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 732900DD6075C8A05C3F47F1 /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		492DFB522E8F4F6F00F3F074 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 492DFB512E8F4F6F00F3F074 /* StoreKit.framework */; };
-		892166259BDA3BAF87BA5130 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6101AD1B72561BD78FB24A31 /* ExpoModulesProvider.swift */; };
+		5208BA05DB04B6F714412249 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3441E4C51DB9CBC45BD5200 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		D847F49AE4B631B48B8975A6 /* libPods-Mamapace.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CF32204B80CE3C757FE5C944 /* libPods-Mamapace.a */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
-		FA5827595428E89B923E5D51 /* libPods-Mamapace.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F5EBB77B0AD654CC3F14007D /* libPods-Mamapace.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		04B3D2DF65A8950D24118DF5 /* Pods-Mamapace.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Mamapace.release.xcconfig"; path = "Target Support Files/Pods-Mamapace/Pods-Mamapace.release.xcconfig"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* Mamapace.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Mamapace.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Mamapace/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Mamapace/Info.plist; sourceTree = "<group>"; };
-		492DFB512E8F4F6F00F3F074 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
-		492DFB532E8F51CF00F3F074 /* Mamapace.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = Mamapace.storekit; path = Mamapace/Mamapace.storekit; sourceTree = "<group>"; };
-		6101AD1B72561BD78FB24A31 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Mamapace/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		732900DD6075C8A05C3F47F1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Mamapace/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Mamapace/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		C34A81F6CA6A5223B43D6FA9 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = Mamapace/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		D210A1D7591BD6C57326F9AD /* Pods-Mamapace.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Mamapace.release.xcconfig"; path = "Target Support Files/Pods-Mamapace/Pods-Mamapace.release.xcconfig"; sourceTree = "<group>"; };
-		D4AAF60BC6C20B75C85F7D0A /* Pods-Mamapace.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Mamapace.debug.xcconfig"; path = "Target Support Files/Pods-Mamapace/Pods-Mamapace.debug.xcconfig"; sourceTree = "<group>"; };
+		CF32204B80CE3C757FE5C944 /* libPods-Mamapace.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Mamapace.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D3441E4C51DB9CBC45BD5200 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Mamapace/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		E409538DCB73DE5E59214343 /* Pods-Mamapace.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Mamapace.debug.xcconfig"; path = "Target Support Files/Pods-Mamapace/Pods-Mamapace.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Mamapace/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Mamapace-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Mamapace-Bridging-Header.h"; path = "Mamapace/Mamapace-Bridging-Header.h"; sourceTree = "<group>"; };
-		F5EBB77B0AD654CC3F14007D /* libPods-Mamapace.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Mamapace.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -40,22 +37,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FA5827595428E89B923E5D51 /* libPods-Mamapace.a in Frameworks */,
-				492DFB522E8F4F6F00F3F074 /* StoreKit.framework in Frameworks */,
+				D847F49AE4B631B48B8975A6 /* libPods-Mamapace.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		064D16760128F2B78020D319 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				221F420CCACB454B22FCE851 /* Mamapace */,
-			);
-			name = ExpoModulesProviders;
-			sourceTree = "<group>";
-		};
 		13B07FAE1A68108700A75B9A /* Mamapace */ = {
 			isa = PBXGroup;
 			children = (
@@ -65,15 +53,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				C34A81F6CA6A5223B43D6FA9 /* PrivacyInfo.xcprivacy */,
-			);
-			name = Mamapace;
-			sourceTree = "<group>";
-		};
-		221F420CCACB454B22FCE851 /* Mamapace */ = {
-			isa = PBXGroup;
-			children = (
-				6101AD1B72561BD78FB24A31 /* ExpoModulesProvider.swift */,
+				732900DD6075C8A05C3F47F1 /* PrivacyInfo.xcprivacy */,
 			);
 			name = Mamapace;
 			sourceTree = "<group>";
@@ -81,20 +61,28 @@
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				492DFB512E8F4F6F00F3F074 /* StoreKit.framework */,
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				F5EBB77B0AD654CC3F14007D /* libPods-Mamapace.a */,
+				CF32204B80CE3C757FE5C944 /* libPods-Mamapace.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		5C9204137F20FA6DE96BCBBF /* Pods */ = {
+		4F6F091771967EF917E70E5D /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				D4AAF60BC6C20B75C85F7D0A /* Pods-Mamapace.debug.xcconfig */,
-				D210A1D7591BD6C57326F9AD /* Pods-Mamapace.release.xcconfig */,
+				E409538DCB73DE5E59214343 /* Pods-Mamapace.debug.xcconfig */,
+				04B3D2DF65A8950D24118DF5 /* Pods-Mamapace.release.xcconfig */,
 			);
+			name = Pods;
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		7DA8FEEC2E38DC02C49186CF /* Mamapace */ = {
+			isa = PBXGroup;
+			children = (
+				D3441E4C51DB9CBC45BD5200 /* ExpoModulesProvider.swift */,
+			);
+			name = Mamapace;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -107,13 +95,12 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
-				492DFB532E8F51CF00F3F074 /* Mamapace.storekit */,
 				13B07FAE1A68108700A75B9A /* Mamapace */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				5C9204137F20FA6DE96BCBBF /* Pods */,
-				064D16760128F2B78020D319 /* ExpoModulesProviders */,
+				4F6F091771967EF917E70E5D /* Pods */,
+				B48F295B3B12BE8A4F2174E8 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -126,6 +113,14 @@
 				13B07F961A680F5B00A75B9A /* Mamapace.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B48F295B3B12BE8A4F2174E8 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				7DA8FEEC2E38DC02C49186CF /* Mamapace */,
+			);
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
@@ -145,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Mamapace" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				707C29985A01D75EF07B5965 /* [Expo] Configure project */,
+				BB8AD070E5663FCDE2151B24 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				CA3B8E1F2B73031C2AC53A10 /* [CP] Embed Pods Frameworks */,
+				33047410D791A67B0750E329 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -172,6 +167,8 @@
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1250;
+						DevelopmentTeam = "JT9CNSVHX7";
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -201,7 +198,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				31514CA8C20B5D9FDFB45458 /* PrivacyInfo.xcprivacy in Resources */,
+				2B63EA3AF6A391C7770CD2BC /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -245,24 +242,23 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		707C29985A01D75EF07B5965 /* [Expo] Configure project */ = {
+		33047410D791A67B0750E329 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputFileListPaths = (
-			);
 			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Mamapace/Pods-Mamapace-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
 			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
+			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Mamapace/expo-configure-project.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Mamapace/Pods-Mamapace-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -306,23 +302,24 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Mamapace/Pods-Mamapace-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		CA3B8E1F2B73031C2AC53A10 /* [CP] Embed Pods Frameworks */ = {
+		BB8AD070E5663FCDE2151B24 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Mamapace/Pods-Mamapace-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			inputFileListPaths = (
 			);
-			name = "[CP] Embed Pods Frameworks";
+			inputPaths = (
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
 			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Mamapace/Pods-Mamapace-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Mamapace/expo-configure-project.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -332,7 +329,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				892166259BDA3BAF87BA5130 /* ExpoModulesProvider.swift in Sources */,
+				5208BA05DB04B6F714412249 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -341,13 +338,12 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D4AAF60BC6C20B75C85F7D0A /* Pods-Mamapace.debug.xcconfig */;
+			baseConfigurationReference = E409538DCB73DE5E59214343 /* Pods-Mamapace.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Mamapace/Mamapace.entitlements;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = JT9CNSVHX7;
+				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -359,7 +355,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -373,25 +369,27 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
+				DEVELOPMENT_TEAM = "JT9CNSVHX7";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 			};
 			name = Debug;
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D210A1D7591BD6C57326F9AD /* Pods-Mamapace.release.xcconfig */;
+			baseConfigurationReference = 04B3D2DF65A8950D24118DF5 /* Pods-Mamapace.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Mamapace/Mamapace.entitlements;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = JT9CNSVHX7;
+				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = Mamapace/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -404,6 +402,9 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
+				DEVELOPMENT_TEAM = "JT9CNSVHX7";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 			};
 			name = Release;
 		};
@@ -462,7 +463,10 @@
 				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = "$(inherited)  ";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					" ",
+				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
@@ -517,7 +521,10 @@
 				);
 				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
 				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_LDFLAGS = "$(inherited)  ";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					" ",
+				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				USE_HERMES = true;

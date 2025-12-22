@@ -58,6 +58,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
   const [selectedSpaceName, setSelectedSpaceName] = useState<string>('');
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>('');
   const [selectedSpace, setSelectedSpace] = useState<any>(null);
+  const [selectedSpaceTags, setSelectedSpaceTags] = useState<string[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [activeChatUserName, setActiveChatUserName] = useState<string | null>(
     null
@@ -138,7 +139,7 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
       // NOTE: Joined rooms list is not shown on this screen anymore
       // Navigate based on channel availability
       if (result.channel_id) {
-        handleChannelSelect(result.channel_id, space.name, space.id);
+        handleChannelSelect(result.channel_id, space.name, space.id, space.tags);
       } else {
         setSelectedSpaceId(space.id);
         setSelectedSpaceName(space.name);
@@ -153,11 +154,13 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
   const handleChannelSelect = (
     channelId: string,
     spaceName: string,
-    spaceId?: string
+    spaceId?: string,
+    tags: string[] = []
   ) => {
     setSelectedChannelId(channelId);
     setSelectedSpaceName(spaceName);
     setSelectedSpaceId(spaceId || '');
+    setSelectedSpaceTags(tags);
     if (onNavigateToChannel) {
       onNavigateToChannel(channelId, spaceName);
     } else {
@@ -182,7 +185,9 @@ export default function RoomsScreen({ onNavigateToChannel }: RoomsScreenProps) {
       <ChannelScreen
         channelId={selectedChannelId}
         spaceName={selectedSpaceName}
+
         spaceId={selectedSpaceId || undefined}
+        tags={selectedSpaceTags}
         isPrivateSpace={true} // Temporarily always show invite button for testing
         onBack={() => {
           // Ensure immediate display when returning to prevent blank screen

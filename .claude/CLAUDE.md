@@ -79,14 +79,6 @@ npm run detox:test
 - `SUPABASE_URL`: Supabase プロジェクトURL
 - `SUPABASE_ANON_KEY`: Supabase 匿名キー
 
-## 現在のタスク
-feature/real-time-chatブランチでリアルタイムチャット機能を実装中:
-1. Supabase Realtimeを使用した1対1チャット
-2. メッセージの送受信
-3. 既読機能
-4. タイピングインジケーター
-5. プッシュ通知対応
-
 ## 注意事項
 - Expo管理ワークフローを使用
 - TypeScript厳格モードで開発

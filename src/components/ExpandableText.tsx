@@ -1,5 +1,12 @@
-import { useState } from 'react';
-import { View, Text, Pressable, TextStyle, ViewStyle } from 'react-native';
+import { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  TextStyle,
+  ViewStyle,
+  Linking,
+} from 'react-native';
 
 import { useTheme } from '../theme/theme';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
@@ -47,6 +54,9 @@ interface ExpandableTextProps {
   collapseAccessibilityLabel?: string;
 }
 
+// URL正規表現パターン
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+
 export default function ExpandableText({
   text,
   maxLines = 3,
@@ -75,6 +85,40 @@ export default function ExpandableText({
     setExpanded(newExpanded);
     onExpandChange?.(newExpanded);
   };
+
+  const handleLinkPress = async (url: string) => {
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      }
+    } catch (error) {
+      console.error('Failed to open URL:', error);
+    }
+  };
+
+  // テキストをパースしてURLをリンクに変換
+  const parsedContent = useMemo(() => {
+    if (!safeText) return null;
+
+    const parts = safeText.split(URL_REGEX);
+    return parts.map((part, index) => {
+      if (URL_REGEX.test(part)) {
+        // Reset regex lastIndex
+        URL_REGEX.lastIndex = 0;
+        return (
+          <Text
+            key={index}
+            style={{ color: colors.pink, textDecorationLine: 'underline' }}
+            onPress={() => handleLinkPress(part)}
+          >
+            {part}
+          </Text>
+        );
+      }
+      return part;
+    });
+  }, [safeText, colors.pink]);
 
   const defaultTextStyle: TextStyle = {
     color: colors.text,
@@ -110,7 +154,7 @@ export default function ExpandableText({
         style={[defaultTextStyle, textStyle]}
         numberOfLines={expanded ? undefined : maxLines}
       >
-        {safeText}
+        {parsedContent}
       </Text>
       {isLongText && (
         <Pressable

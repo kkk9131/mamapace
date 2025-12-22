@@ -4,6 +4,7 @@ import { Alert, Linking } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { SubscriptionProvider } from '../contexts/SubscriptionContext';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { getMyProfile } from '../services/profileService';
 
@@ -180,13 +181,15 @@ export default function RootNavigator() {
 
   return (
     <AuthProvider>
-      <NavigationContainer>
-        <AuthLinkHandler onNavigate={tab => setNavigateTo(tab)} />
-        <CustomTabs
-          navigateTo={navigateTo}
-          onNavigateConsumed={() => setNavigateTo(null)}
-        />
-      </NavigationContainer>
+      <SubscriptionProvider>
+        <NavigationContainer>
+          <AuthLinkHandler onNavigate={tab => setNavigateTo(tab)} />
+          <CustomTabs
+            navigateTo={navigateTo}
+            onNavigateConsumed={() => setNavigateTo(null)}
+          />
+        </NavigationContainer>
+      </SubscriptionProvider>
     </AuthProvider>
   );
 }

@@ -45,6 +45,7 @@ export async function fetchHomeFeed(
     body: row.body,
     created_at: row.created_at,
     attachments: row.attachments || [],
+    is_ad: row.is_ad ?? false,
     reaction_summary: {
       count: Number(row.reaction_count ?? 0),
       reactedByMe: false,
@@ -85,6 +86,7 @@ export async function fetchHomeFeedFiltered(
     body: row.body,
     created_at: row.created_at,
     attachments: row.attachments || [],
+    is_ad: row.is_ad ?? false,
     reaction_summary: {
       count: Number(row.reaction_count ?? 0),
       reactedByMe: false,

@@ -34,6 +34,7 @@ import { sessionManager, initializeSessionManager } from './sessionManager';
 import secureSessionStore from './secureSessionStore';
 import { encryptionService, initializeEncryption } from './encryptionService';
 import { validationService } from './validationService';
+import { getMyProfile } from './profileService';
 
 // =====================================================
 // CONFIGURATION
@@ -272,6 +273,13 @@ class AuthService {
           result.refresh_token,
           result.expires_at
         );
+        // Sync with Supabase client
+        if (result.session_token && result.refresh_token) {
+          await client.auth.setSession({
+            access_token: result.session_token,
+            refresh_token: result.refresh_token,
+          });
+        }
       } else if (!appConfig.useServerHashing) {
         await sessionManager.createSession(
           result.user,
@@ -398,6 +406,13 @@ class AuthService {
           result.refresh_token,
           result.expires_at
         );
+        // Sync with Supabase client
+        if (result.session_token && result.refresh_token) {
+          await client.auth.setSession({
+            access_token: result.session_token,
+            refresh_token: result.refresh_token,
+          });
+        }
       } else if (!appConfig.useServerHashing) {
         await sessionManager.createSession(
           result.user,
@@ -451,7 +466,54 @@ class AuthService {
     ) {
       // Phase 2: restore from secure store
       const sess = await secureSessionStore.getSession();
-      return sess.user;
+
+      // If we have tokens, hydrate Supabase client
+      if (sess.sessionToken && sess.refreshToken) {
+        secureLogger.info('Hydrating Supabase session from secure store');
+        const client = supabaseClient.getClient();
+        const { error } = await client.auth.setSession({
+          access_token: sess.sessionToken,
+          refresh_token: sess.refreshToken,
+        });
+
+        if (error) {
+          secureLogger.warn('Failed to hydrate Supabase session', { error });
+          // Consider clearing session if invalid?
+          // For now, let validateSessionToken or subsequent calls fail/handle it
+        }
+      }
+
+      if (sess.user) {
+        return sess.user;
+      }
+
+      // Fallback: check Supabase's built-in session (for email auth users)
+      secureLogger.info('No session in secure store, checking Supabase Auth');
+      const client = supabaseClient.getClient();
+      const { data: supaSession, error: supaError } =
+        await client.auth.getSession();
+
+      if (supaError) {
+        secureLogger.warn('Failed to get Supabase session', {
+          error: supaError,
+        });
+        return null;
+      }
+
+      if (supaSession?.session?.user) {
+        secureLogger.info('Found Supabase Auth session, restoring profile');
+        try {
+          const profile = await getMyProfile();
+          return profile;
+        } catch (profileError) {
+          secureLogger.warn('Failed to get profile from Supabase session', {
+            error: profileError,
+          });
+          return null;
+        }
+      }
+
+      return null;
     }
 
     try {

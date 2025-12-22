@@ -106,7 +106,7 @@ export default function InviteFollowersScreen({
         follower.id === userId
           ? { ...follower, selected: !follower.selected }
           : follower
-      )
+      ),
     );
   };
 

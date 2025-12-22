@@ -153,7 +153,7 @@ export default function NotificationsScreen() {
                     setItems(prev =>
                       prev.map(p =>
                         p.id === item.id ? { ...p, read: false } : p,
-                      ),
+                      )
                     );
                   }
                 }

@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme/theme';
 import { sendAIChat } from '../services/aiChatService';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import {
   listAISessions,
   fetchAIMessages,
@@ -25,6 +26,7 @@ import {
 
 interface AIChatBotScreenProps {
   onBack?: () => void;
+  onOpenPaywall?: () => void;
 }
 
 interface ChatItem {
@@ -33,10 +35,11 @@ interface ChatItem {
   content: string;
 }
 
-export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
+export default function AIChatBotScreen({ onBack, onOpenPaywall }: AIChatBotScreenProps) {
   const theme = useTheme();
   const { colors, spacing, radius, shadow } = theme;
   const insets = useSafeAreaInsets();
+  const { canUseUnlimitedAIChat } = useSubscription();
   const [messages, setMessages] = useState<ChatItem[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,15 +55,23 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
   const showFreeLimitAlert = useCallback(() => {
     Alert.alert(
       'AIチャットの上限',
-      '今日はこれ以上AIチャットを送信できません。明日またお試しください。'
+      '今日はこれ以上AIチャットを送信できません。プレミアム会員になると無制限でご利用いただけます。',
+      [
+        { text: 'あとで', style: 'cancel' },
+        {
+          text: 'プレミアムを見る',
+          onPress: () => onOpenPaywall && onOpenPaywall(),
+        },
+      ]
     );
-  }, []);
+  }, [onOpenPaywall]);
 
   const send = async () => {
     if (!input.trim() || loading) {
       return;
     }
-    if (freeLimitReached) {
+    // プレミアム会員は制限なし
+    if (freeLimitReached && !canUseUnlimitedAIChat) {
       showFreeLimitAlert();
       return;
     }
@@ -86,7 +97,7 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
           ? res.text
           : '出力に失敗しました。時間をおいて再試行してください。';
       if (!res.ok) {
-        if (res.error === 'free_daily_limit') {
+        if (res.error === 'free_daily_limit' && !canUseUnlimitedAIChat) {
           setFreeLimitReached(true);
           setMessages(prev => prev.filter(m => m.id !== userMsg.id));
           showFreeLimitAlert();
@@ -333,7 +344,7 @@ export default function AIChatBotScreen({ onBack }: AIChatBotScreenProps) {
                           updated_at: updated.updated_at,
                         }
                       : s
-                  ),
+                  )
                 );
                 setEditingTitle(false);
               } catch {

@@ -20,6 +20,7 @@
         "expo-blur": "~14.1.5",
         "expo-device": "~7.1.4",
         "expo-haptics": "~14.1.4",
+        "expo-image": "~2.4.1",
         "expo-image-manipulator": "~13.1.7",
         "expo-image-picker": "~16.1.4",
         "expo-linear-gradient": "~14.1.5",
@@ -33,7 +34,8 @@
         "react-native": "0.79.5",
         "react-native-gesture-handler": "~2.24.0",
         "react-native-get-random-values": "^1.11.0",
-        "react-native-iap": "^12.10.1",
+        "react-native-iap": "^12.15.5",
+        "react-native-image-viewing": "^0.2.2",
         "react-native-safe-area-context": "5.4.0",
         "react-native-screens": "~4.11.1",
         "react-native-url-polyfill": "^2.0.0",
@@ -7992,6 +7994,23 @@
         "expo": "*"
       }
     },
+    "node_modules/expo-image": {
+      "version": "2.4.1",
+      "resolved": "https://registry.npmjs.org/expo-image/-/expo-image-2.4.1.tgz",
+      "integrity": "sha512-yHp0Cy4ylOYyLR21CcH6i70DeRyLRPc0yAIPFPn4BT/BpkJNaX5QMXDppcHa58t4WI3Bb8QRJRLuAQaeCtDF8A==",
+      "license": "MIT",
+      "peerDependencies": {
+        "expo": "*",
+        "react": "*",
+        "react-native": "*",
+        "react-native-web": "*"
+      },
+      "peerDependenciesMeta": {
+        "react-native-web": {
+          "optional": true
+        }
+      }
+    },
     "node_modules/expo-image-loader": {
       "version": "5.1.0",
       "resolved": "https://registry.npmjs.org/expo-image-loader/-/expo-image-loader-5.1.0.tgz",
@@ -13375,9 +13394,9 @@
       }
     },
     "node_modules/react-native-iap": {
-      "version": "12.16.4",
-      "resolved": "https://registry.npmjs.org/react-native-iap/-/react-native-iap-12.16.4.tgz",
-      "integrity": "sha512-3l3/k5ho2hzVCyfwlPRTrdn4gY1ku3dZFN9qJ7giZUBGr3wffciL5WRKxVUs7jQAXOgAtea9JexrMrgvEXSO/w==",
+      "version": "12.15.5",
+      "resolved": "https://registry.npmjs.org/react-native-iap/-/react-native-iap-12.15.5.tgz",
+      "integrity": "sha512-Pmqoj0Ge0oEor+HuKkBkYSXau+5boRRvzQHB5G9Dz1S16NA2eiVzT+LO1mk9IhRabK3PS5P7kJJtyCdQ+hfMRQ==",
       "license": "MIT",
       "peerDependencies": {
         "expo": ">=47.0.0",
@@ -13388,6 +13407,16 @@
         "expo": {
           "optional": true
         }
+      }
+    },
+    "node_modules/react-native-image-viewing": {
+      "version": "0.2.2",
+      "resolved": "https://registry.npmjs.org/react-native-image-viewing/-/react-native-image-viewing-0.2.2.tgz",
+      "integrity": "sha512-osWieG+p/d2NPbAyonOMubttajtYEYiRGQaJA54slFxZ69j1V4/dCmcrVQry47ktVKy8/qpFwCpW1eT6MH5T2Q==",
+      "license": "MIT",
+      "peerDependencies": {
+        "react": ">=16.11.0",
+        "react-native": ">=0.61.3"
       }
     },
     "node_modules/react-native-is-edge-to-edge": {

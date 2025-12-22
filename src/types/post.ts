@@ -4,6 +4,7 @@ export interface Post {
   body: string;
   created_at: string;
   attachments?: Attachment[];
+  is_ad?: boolean;
 }
 
 export interface ReactionSummary {

@@ -4,10 +4,10 @@ import {
   Text,
   Pressable,
   Animated,
-  Image,
-  Modal,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
+import ImageViewing from 'react-native-image-viewing';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 
@@ -22,7 +22,7 @@ import { notifyError, notifyInfo } from '../utils/notify';
 import VerifiedBadge from './VerifiedBadge';
 import ExpandableText from './ExpandableText';
 
-export default function PostCard({
+function PostCard({
   post,
   onOpenComments,
   onOpenUser,
@@ -186,6 +186,8 @@ export default function PostCard({
                   borderRadius: 14,
                   marginRight: 8,
                 }}
+                contentFit="cover"
+                transition={200}
               />
             ) : (
               <Text
@@ -282,6 +284,8 @@ export default function PostCard({
                     <Image
                       source={{ uri: att.url }}
                       style={{ width: '100%', height: '100%' }}
+                      contentFit="cover"
+                      transition={300}
                     />
                   ) : (
                     <View
@@ -450,32 +454,43 @@ export default function PostCard({
         </View>
       </BlurView>
 
-      {/* Simple viewer */}
-      <Modal
+      {/* Full screen viewer */}
+      <ImageViewing
+        images={
+          post.attachments?.map(a => ({ uri: a.url || '' })) || []
+        }
+        imageIndex={viewer.index}
         visible={viewer.visible}
-        transparent
-        animationType="fade"
         onRequestClose={() => setViewer({ visible: false, index: 0 })}
-      >
-        <Pressable
-          style={{
-            flex: 1,
-            backgroundColor: '#000000CC',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          onPress={() => setViewer({ visible: false, index: 0 })}
-        >
-          {post.attachments?.[viewer.index]?.url ? (
-            <Image
-              source={{ uri: post.attachments[viewer.index].url }}
-              style={{ width: '90%', height: '70%', resizeMode: 'contain' }}
-            />
-          ) : null}
-        </Pressable>
-      </Modal>
+        swipeToCloseEnabled={true}
+        doubleTapToZoomEnabled={true}
+        FooterComponent={({ imageIndex }) => (
+          <View style={{ padding: 20, paddingBottom: 40, alignItems: 'center' }}>
+            <Text style={{ color: '#FFF' }}>
+              {imageIndex + 1} / {post.attachments?.length || 0}
+            </Text>
+          </View>
+        )}
+      />
 
       {/* メニューはボタンハンドラーでAlertを発火 */}
     </View>
   );
 }
+
+// Memoize PostCard to prevent unnecessary re-renders
+export default React.memo(PostCard, (prev, next) => {
+  return (
+    prev.post.id === next.post.id &&
+    prev.post.created_at === next.post.created_at &&
+    prev.commentDelta === next.commentDelta &&
+    prev.reactionDelta === next.reactionDelta &&
+    prev.isOwner === next.isOwner &&
+    // Deep compare relevant parts of post if needed, but id/created_at should suffice for most
+    // Compare summary counts
+    prev.post.reaction_summary?.count === next.post.reaction_summary?.count &&
+    prev.post.reaction_summary?.reactedByMe ===
+    next.post.reaction_summary?.reactedByMe &&
+    prev.post.comment_summary?.count === next.post.comment_summary?.count
+  );
+});

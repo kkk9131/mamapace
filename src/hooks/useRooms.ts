@@ -167,23 +167,20 @@ export function useSpaceOperations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createSpace = useCallback(
-    async (request: CreateSpaceRequest) => {
-      setLoading(true);
-      setError(null);
+  const createSpace = useCallback(async (request: CreateSpaceRequest) => {
+    setLoading(true);
+    setError(null);
 
-      const response = await roomService.createSpace(request);
-      setLoading(false);
+    const response = await roomService.createSpace(request);
+    setLoading(false);
 
-      if (!response.success) {
-        setError(response.error);
-        return null;
-      }
+    if (!response.success) {
+      setError(response.error);
+      return null;
+    }
 
-      return response.data;
-    },
-    [],
-  );
+    return response.data;
+  }, []);
 
   const joinSpace = useCallback(async (spaceId: string) => {
     setLoading(true);
@@ -357,7 +354,7 @@ export function useChannelMessages(channelId: string | null) {
             (msg as OptimisticRoomMessage).tempId === tempId
               ? { ...msg, error: response.error }
               : msg
-          )
+          ),
         );
         return null;
       }
@@ -414,7 +411,7 @@ export function useChannelMessages(channelId: string | null) {
           setMessages(prev =>
             prev.map(msg =>
               msg.id === updatedMessage.id ? updatedMessage : msg
-            )
+            ),
           );
         }
       )
@@ -678,7 +675,7 @@ export function useChatList() {
           item.channel_id === channelId
             ? { ...item, has_new: false, unread_count: 0 }
             : item
-        )
+        ),
       );
     }
   }, []);

@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useHandPreference } from '../contexts/HandPreferenceContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import OnboardingTutorial from '../components/OnboardingTutorial';
 import { notificationPreferencesService } from '../services/notificationPreferencesService';
 import { createBatchUpdater } from '../utils/batchUpdate';
@@ -27,14 +28,18 @@ import { accountDeletionService } from '../services/accountDeletionService';
 export default function SettingsScreen({
   onLogoutNavigate,
   onOpenBlockedUsers,
+  onOpenPaywall,
 }: {
   onLogoutNavigate?: () => void;
   onOpenBlockedUsers?: () => void;
+  onOpenPaywall?: () => void;
 }) {
   const theme = useTheme();
   const { colors } = theme;
   const fade = useRef(new Animated.Value(1)).current; // 初期値を1に設定してフラッシュを防ぐ
   const { logout, refreshToken, user } = useAuth();
+  const { isPremium, plan, subscription, restore } = useSubscription();
+  const [restoring, setRestoring] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [prefs, setPrefs] = useState({
     allow_message: true,
@@ -51,7 +56,7 @@ export default function SettingsScreen({
           ? notificationPreferencesService.update(user.id, patch as any)
           : Promise.resolve(false),
       300
-    )
+    ),
   );
 
   useEffect(() => {
@@ -210,6 +215,127 @@ export default function SettingsScreen({
         </View>
 
         <View style={{ gap: theme.spacing(1.25) }}>
+          {/* Premium Section */}
+          <Section title="プレミアム">
+            {isPremium ? (
+              <View style={{ gap: theme.spacing(1) }}>
+                <View
+                  style={{
+                    backgroundColor: colors.pink + '20',
+                    borderRadius: theme.radius.md,
+                    padding: theme.spacing(1.5),
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.pink,
+                  }}
+                >
+                  <Text style={{ fontSize: 24, marginRight: theme.spacing(1) }}>👑</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontWeight: '700' }}>
+                      プレミアム会員
+                    </Text>
+                    <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                      {subscription?.current_period_end
+                        ? `次回更新: ${new Date(subscription.current_period_end).toLocaleDateString('ja-JP')}`
+                        : 'すべての特典をご利用中'}
+                    </Text>
+                  </View>
+                </View>
+                <Pressable
+                  onPress={async () => {
+                    try {
+                      // App Storeのサブスクリプション管理ページを開く
+                      await Linking.openURL('https://apps.apple.com/account/subscriptions');
+                    } catch (e) {
+                      Alert.alert('エラー', 'App Storeを開けませんでした');
+                    }
+                  }}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: colors.surface,
+                      borderRadius: theme.radius.md,
+                      paddingVertical: 12,
+                      alignItems: 'center',
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                    },
+                  ]}
+                >
+                  <Text style={{ color: colors.text, fontWeight: '600' }}>
+                    サブスクリプションを管理
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={{ gap: theme.spacing(1) }}>
+                <Pressable
+                  onPress={() => onOpenPaywall && onOpenPaywall()}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: colors.pink,
+                      borderRadius: theme.radius.md,
+                      paddingVertical: 14,
+                      paddingHorizontal: theme.spacing(1.5),
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                      ...theme.shadow.card,
+                    },
+                  ]}
+                >
+                  <Text style={{ fontSize: 20, marginRight: 8 }}>👑</Text>
+                  <View>
+                    <Text style={{ color: '#23181D', fontWeight: '800', fontSize: 16 }}>
+                      ママプレミアムに登録
+                    </Text>
+                    <Text style={{ color: '#23181D', fontSize: 12, opacity: 0.8 }}>
+                      ¥{plan?.price_jpy?.toLocaleString() || '500'}/月 • AI無制限 • 広告なし
+                    </Text>
+                  </View>
+                </Pressable>
+                <Pressable
+                  onPress={async () => {
+                    if (restoring) return;
+                    setRestoring(true);
+                    try {
+                      const result = await restore();
+                      if (result.ok) {
+                        Alert.alert('復元完了', '購入が復元されました');
+                      } else {
+                        Alert.alert('復元できませんでした', result.error || '購入履歴が見つかりません');
+                      }
+                    } catch (e: any) {
+                      Alert.alert('エラー', e?.message || '復元に失敗しました');
+                    } finally {
+                      setRestoring(false);
+                    }
+                  }}
+                  disabled={restoring}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: colors.surface,
+                      borderRadius: theme.radius.md,
+                      paddingVertical: 12,
+                      alignItems: 'center',
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                      opacity: restoring ? 0.6 : 1,
+                    },
+                  ]}
+                >
+                  {restoring ? (
+                    <ActivityIndicator color={colors.text} size="small" />
+                  ) : (
+                    <Text style={{ color: colors.text, fontWeight: '600' }}>
+                      購入を復元
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            )}
+          </Section>
+          <View style={{ height: theme.spacing(2) }} />
+
           <Section title="通知" collapsible initialOpen={false}>
             <View style={{ gap: 8 }}>
               <ToggleRow

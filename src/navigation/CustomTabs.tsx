@@ -44,8 +44,11 @@ import CreateSpaceScreen from '../screens/CreateSpaceScreen';
 import AnonRoomV2Screen from '../screens/AnonRoomV2Screen';
 import TutorialScreen from '../screens/TutorialScreen';
 import OnboardingPrompt from '../components/OnboardingPrompt';
+import PaywallScreen from '../screens/PaywallScreen';
 
 import Sidebar from './Sidebar';
+
+import AnimatedScreenWrapper from '../components/AnimatedScreenWrapper';
 
 type TabKey =
   | 'me'
@@ -69,7 +72,12 @@ type TabKey =
   | 'devAnonV2'
   | 'aiChat'
   | 'tutorial'
-  | 'search';
+  | 'search'
+  | 'createRoom'
+  | 'chats'
+  | 'login'
+  | 'signup'
+  | 'paywall';
 
 const tabs = [
   { key: 'me', label: 'あなた', Component: ProfileScreen },
@@ -185,7 +193,7 @@ export default function CustomTabs({
           if (!flag) {
             setShowOnboarding(true);
           }
-        } catch {}
+        } catch { }
       }
     })();
   }, [isLoading, isAuthenticated]);
@@ -199,14 +207,16 @@ export default function CustomTabs({
         if (!flag && mounted) {
           setShowSidebarHint(true);
           setTimeout(async () => {
-            if (!mounted) return;
+            if (!mounted) {
+              return;
+            }
             setShowSidebarHint(false);
             try {
               await AsyncStorage.setItem('has_seen_sidebar_hint_v1', '1');
-            } catch {}
+            } catch { }
           }, 5000);
         }
-      } catch {}
+      } catch { }
     })();
     return () => {
       mounted = false;
@@ -228,14 +238,14 @@ export default function CustomTabs({
       let parsedUnknown: unknown;
       try {
         parsedUnknown = JSON.parse(navigateTo);
-      } catch {}
+      } catch { }
       const parsed = parsedUnknown as
         | {
-            screen?: string;
-            chat_id?: string;
-            post_id?: string;
-            user_id?: string;
-          }
+          screen?: string;
+          chat_id?: string;
+          post_id?: string;
+          user_id?: string;
+        }
         | undefined;
       if (parsed && parsed.screen) {
         const s = String(parsed.screen);
@@ -323,332 +333,352 @@ export default function CustomTabs({
           }}
         />
         <View style={{ flex: 1 }}>
-          {active === 'home' ? (
-            <HomeScreen
-              refreshKey={homeRefreshKey}
-              onCompose={() => setActive('compose')}
-              onOpenPost={postId => {
-                setActivePostId(postId);
-                setActive('comments');
-              }}
-              onOpenProfileEdit={() => setActive('profileEdit')}
-              onOpenUser={userId => {
-                setActiveUserId(userId);
-                setActive('userProfile');
-              }}
-            />
-          ) : active === 'search' ? (
-            <SearchScreen
-              onOpenUser={userId => {
-                setActiveUserId(userId);
-                setActive('userProfile');
-              }}
-              onOpenPost={postId => {
-                setActivePostId(postId);
-                setActive('comments');
-              }}
-            />
-          ) : active === 'rooms' ? (
-            <ErrorBoundary>
-              <RoomsScreen />
-            </ErrorBoundary>
-          ) : active === 'createRoom' ? (
-            <CreateSpaceScreen
-              onSuccess={() => {
-                setActive('rooms');
-              }}
-              onCancel={() => setActive('rooms')}
-            />
-          ) : active === 'chats' ? (
-            <ErrorBoundary>
-              <ChatsListScreen
-                onOpen={(chatId: string, userName: string) => {
-                  setActiveChatId(chatId);
-                  setActiveChatUserName(userName);
-                  setChatReturnTo('chats');
-                  setActive('chat');
+          <AnimatedScreenWrapper
+            key={active}
+            type={
+              // Customize animation type based on transition if needed
+              // For now, default fade is subtle and nice for tabs
+              // Use slide for 'chat' or detail views if desired
+              ['loading', 'splash'].includes(active) ? 'none' : 'fade'
+            }
+          >
+            {active === 'home' ? (
+              <HomeScreen
+                refreshKey={homeRefreshKey}
+                onCompose={() => setActive('compose')}
+                onOpenPost={postId => {
+                  setActivePostId(postId);
+                  setActive('comments');
                 }}
-                onOpenFollowers={() => setActive('followers')}
-                onOpenAIChat={() => setActive('aiChat')}
-              />
-            </ErrorBoundary>
-          ) : active === 'anon' ? (
-            // Redirect to home if anon is accessed directly
-            (() => {
-              setActive('home');
-              return (
-                <HomeScreen
-                  refreshKey={homeRefreshKey}
-                  onCompose={() => setActive('compose')}
-                  onOpenPost={postId => {
-                    setActivePostId(postId);
-                    setActive('comments');
-                  }}
-                  onOpenProfileEdit={() => setActive('profileEdit')}
-                  onOpenUser={userId => {
-                    setActiveUserId(userId);
-                    setActive('userProfile');
-                  }}
-                />
-              );
-            })()
-          ) : active === 'chat' ? (
-            activeChatId ? (
-              <ChatScreen
-                chatId={activeChatId}
-                userName={activeChatUserName || 'ユーザー'}
-                onBack={() => {
-                  setActiveChatId(null);
-                  setActiveChatUserName(null);
-                  setActive(chatReturnTo as TabKey);
-                }}
-                onNavigateToUser={(userId: string) => {
+                onOpenProfileEdit={() => setActive('profileEdit')}
+                onOpenUser={userId => {
                   setActiveUserId(userId);
                   setActive('userProfile');
                 }}
               />
-            ) : (
-              <ChatsListScreen
-                onOpen={(chatId: string, userName: string) => {
-                  setActiveChatId(chatId);
-                  setActiveChatUserName(userName);
-                  setChatReturnTo('chats');
-                  setActive('chat');
+            ) : active === 'search' ? (
+              <SearchScreen
+                onOpenUser={userId => {
+                  setActiveUserId(userId);
+                  setActive('userProfile');
                 }}
-              />
-            )
-          ) : active === 'devAnonV2' ? (
-            __DEV__ ? (
-              <AnonRoomV2Screen onCompose={() => setActive('compose')} />
-            ) : (
-              <HomeScreen />
-            )
-          ) : active === 'noti' ? (
-            <NotificationsScreen />
-          ) : active === 'settings' ? (
-            <SettingsScreen
-              onLogoutNavigate={() => {
-                // Logout will be handled by AuthContext, which will trigger re-render
-                // and show login screen due to !isAuthenticated check above
-              }}
-              onOpenBlockedUsers={() => setActive('blockedList')}
-            />
-          ) : active === 'blockedList' ? (
-            <BlockedUsersListScreen
-              onBack={() => setActive('settings')}
-              onOpenUser={(userId: string) => {
-                setActiveUserId(userId);
-                setActive('userProfile');
-              }}
-            />
-          ) : active === 'roomsList' ? (
-            <ErrorBoundary>
-              <RoomsListScreen
-                refreshKey={roomsListKey}
-                onBack={() => setActive('me')}
-              />
-            </ErrorBoundary>
-          ) : active === 'comment' ? (
-            activePostId ? (
-              <CommentComposeScreen
-                postId={activePostId}
-                onPosted={() => {
+                onOpenPost={postId => {
+                  setActivePostId(postId);
                   setActive('comments');
-                  setCommentsRefreshKey((k: number) => k + 1);
                 }}
-                onClose={() => setActive('comments')}
               />
-            ) : null
-          ) : active === 'comments' ? (
-            activePostId ? (
-              <CommentsListScreen
-                refreshKey={commentsRefreshKey}
-                postId={activePostId}
-                onCompose={() => setActive('comment')}
+            ) : active === 'rooms' ? (
+              <ErrorBoundary>
+                <RoomsScreen />
+              </ErrorBoundary>
+            ) : active === 'createRoom' ? (
+              <CreateSpaceScreen
+                onSuccess={() => {
+                  setActive('rooms');
+                }}
+                onCancel={() => setActive('rooms')}
+              />
+            ) : active === 'chats' ? (
+              <ErrorBoundary>
+                <ChatsListScreen
+                  onOpen={(chatId: string, userName: string) => {
+                    setActiveChatId(chatId);
+                    setActiveChatUserName(userName);
+                    setChatReturnTo('chats');
+                    setActive('chat');
+                  }}
+                  onOpenFollowers={() => setActive('followers')}
+                  onOpenAIChat={() => setActive('aiChat')}
+                />
+              </ErrorBoundary>
+            ) : active === 'anon' ? (
+              // Redirect to home if anon is accessed directly
+              (() => {
+                setActive('home');
+                return (
+                  <HomeScreen
+                    refreshKey={homeRefreshKey}
+                    onCompose={() => setActive('compose')}
+                    onOpenPost={postId => {
+                      setActivePostId(postId);
+                      setActive('comments');
+                    }}
+                    onOpenProfileEdit={() => setActive('profileEdit')}
+                    onOpenUser={userId => {
+                      setActiveUserId(userId);
+                      setActive('userProfile');
+                    }}
+                  />
+                );
+              })()
+            ) : active === 'chat' ? (
+              activeChatId ? (
+                <ChatScreen
+                  chatId={activeChatId}
+                  userName={activeChatUserName || 'ユーザー'}
+                  onBack={() => {
+                    setActiveChatId(null);
+                    setActiveChatUserName(null);
+                    setActive(chatReturnTo as TabKey);
+                  }}
+                  onNavigateToUser={(userId: string) => {
+                    setActiveUserId(userId);
+                    setActive('userProfile');
+                  }}
+                />
+              ) : (
+                <ChatsListScreen
+                  onOpen={(chatId: string, userName: string) => {
+                    setActiveChatId(chatId);
+                    setActiveChatUserName(userName);
+                    setChatReturnTo('chats');
+                    setActive('chat');
+                  }}
+                />
+              )
+            ) : active === 'devAnonV2' ? (
+              __DEV__ ? (
+                <AnonRoomV2Screen onCompose={() => setActive('compose')} />
+              ) : (
+                <HomeScreen />
+              )
+            ) : active === 'noti' ? (
+              <NotificationsScreen />
+            ) : active === 'settings' ? (
+              <SettingsScreen
+                onLogoutNavigate={() => {
+                  // Logout will be handled by AuthContext, which will trigger re-render
+                  // and show login screen due to !isAuthenticated check above
+                }}
+                onOpenBlockedUsers={() => setActive('blockedList')}
+                onOpenPaywall={() => setActive('paywall')}
+              />
+            ) : active === 'blockedList' ? (
+              <BlockedUsersListScreen
+                onBack={() => setActive('settings')}
                 onOpenUser={(userId: string) => {
                   setActiveUserId(userId);
                   setActive('userProfile');
                 }}
               />
-            ) : null
-          ) : active === 'followers' ? (
-            <FollowersListScreen
-              onNavigateToChat={(chatId: string, userName: string) => {
-                setActiveChatId(chatId);
-                setActiveChatUserName(userName);
-                setChatReturnTo('followers');
-                setActive('chat');
-              }}
-              onOpenUser={(userId: string) => {
-                setActiveUserId(userId);
-                setActive('userProfile');
-              }}
-            />
-          ) : active === 'following' ? (
-            <FollowingListScreen
-              onNavigateToChat={(chatId: string, userName: string) => {
-                setActiveChatId(chatId);
-                setActiveChatUserName(userName);
-                setChatReturnTo('following');
-                setActive('chat');
-              }}
-              onOpenUser={(userId: string) => {
-                setActiveUserId(userId);
-                setActive('userProfile');
-              }}
-            />
-          ) : active === 'liked' ? (
-            <LikedPostsListScreen
-              onOpen={postId => {
-                setActivePostId(postId);
-                setActive('comments');
-              }}
-            />
-          ) : active === 'myPosts' ? (
-            <MyPostsListScreen />
-          ) : active === 'profileEdit' ? (
-            <ProfileEditScreen navigation={{ goBack: () => setActive('me') }} />
-          ) : active === 'userProfile' ? (
-            activeUserId ? (
-              <UserProfileScreen
-                userId={activeUserId}
-                onBack={() => {
-                  setActiveUserId(null);
-                  setActive('home');
-                }}
+            ) : active === 'paywall' ? (
+              <PaywallScreen onClose={() => setActive('settings')} />
+            ) : active === 'roomsList' ? (
+              <ErrorBoundary>
+                <RoomsListScreen
+                  refreshKey={roomsListKey}
+                  onBack={() => setActive('me')}
+                />
+              </ErrorBoundary>
+            ) : active === 'comment' ? (
+              activePostId ? (
+                <CommentComposeScreen
+                  postId={activePostId}
+                  onPosted={() => {
+                    setActive('comments');
+                    setCommentsRefreshKey((k: number) => k + 1);
+                  }}
+                  onClose={() => setActive('comments')}
+                />
+              ) : null
+            ) : active === 'comments' ? (
+              activePostId ? (
+                <CommentsListScreen
+                  refreshKey={commentsRefreshKey}
+                  postId={activePostId}
+                  onCompose={() => setActive('comment')}
+                  onOpenUser={(userId: string) => {
+                    setActiveUserId(userId);
+                    setActive('userProfile');
+                  }}
+                />
+              ) : null
+            ) : active === 'followers' ? (
+              <FollowersListScreen
                 onNavigateToChat={(chatId: string, userName: string) => {
                   setActiveChatId(chatId);
                   setActiveChatUserName(userName);
-                  setChatReturnTo('userProfile');
+                  setChatReturnTo('followers');
                   setActive('chat');
                 }}
+                onOpenUser={(userId: string) => {
+                  setActiveUserId(userId);
+                  setActive('userProfile');
+                }}
               />
-            ) : null
-          ) : active === 'aiChat' ? (
-            <ErrorBoundary>
-              <AIChatBotScreen onBack={() => setActive('chats')} />
-            </ErrorBoundary>
-          ) : active === 'tutorial' ? (
-            <TutorialScreen onClose={() => setActive('home')} />
-          ) : (
-            <ProfileScreen
-              onNavigate={(key: string) => setActive(key as TabKey)}
-            />
+            ) : active === 'following' ? (
+              <FollowingListScreen
+                onNavigateToChat={(chatId: string, userName: string) => {
+                  setActiveChatId(chatId);
+                  setActiveChatUserName(userName);
+                  setChatReturnTo('following');
+                  setActive('chat');
+                }}
+                onOpenUser={(userId: string) => {
+                  setActiveUserId(userId);
+                  setActive('userProfile');
+                }}
+              />
+            ) : active === 'liked' ? (
+              <LikedPostsListScreen
+                onOpen={postId => {
+                  setActivePostId(postId);
+                  setActive('comments');
+                }}
+              />
+            ) : active === 'myPosts' ? (
+              <MyPostsListScreen />
+            ) : active === 'profileEdit' ? (
+              <ProfileEditScreen navigation={{ goBack: () => setActive('me') }} />
+            ) : active === 'userProfile' ? (
+              activeUserId ? (
+                <UserProfileScreen
+                  userId={activeUserId}
+                  onBack={() => {
+                    setActiveUserId(null);
+                    setActive('home');
+                  }}
+                  onNavigateToChat={(chatId: string, userName: string) => {
+                    setActiveChatId(chatId);
+                    setActiveChatUserName(userName);
+                    setChatReturnTo('userProfile');
+                    setActive('chat');
+                  }}
+                />
+              ) : null
+            ) : active === 'aiChat' ? (
+              <ErrorBoundary>
+                <AIChatBotScreen
+                  onBack={() => setActive('chats')}
+                  onOpenPaywall={() => setActive('paywall')}
+                />
+              </ErrorBoundary>
+            ) : active === 'tutorial' ? (
+              <TutorialScreen onClose={() => setActive('home')} />
+            ) : (
+              <ProfileScreen
+                onNavigate={(key: string) => setActive(key as TabKey)}
+              />
+            )}
+          </AnimatedScreenWrapper>
+
+          {/* Hide tab bar when in chat mode */}
+          {active !== 'chat' && (
+            <View
+              style={{
+                position: 'absolute',
+                left: 12,
+                right: 12,
+                bottom: Math.max(8, insets.bottom ? 4 : 8),
+                height: 72 + (insets.bottom || 0),
+                borderRadius: 16,
+                flexDirection: 'row',
+                backgroundColor: colors.cardAlpha,
+                borderColor: colors.border,
+                borderWidth: 1,
+                overflow: 'hidden',
+                paddingBottom: insets.bottom || 0,
+              }}
+            >
+              {(['me', 'noti', 'home'] as const).map(k => (
+                <IconTab
+                  key={k}
+                  icon={
+                    k === 'me'
+                      ? 'person'
+                      : k === 'noti'
+                        ? 'notifications'
+                        : 'home'
+                  }
+                  iconOutline={
+                    k === 'me'
+                      ? 'person-outline'
+                      : k === 'noti'
+                        ? 'notifications-outline'
+                        : 'home-outline'
+                  }
+                  accessibilityLabel={
+                    k === 'me' ? 'あなた' : k === 'noti' ? '通知' : 'ホーム'
+                  }
+                  accessibilityHint={
+                    (handPreference === 'right' && k === 'home') ||
+                      (handPreference === 'left' && k === 'me')
+                      ? '長押しでサイドバーを開きます'
+                      : undefined
+                  }
+                  sublabel={
+                    (handPreference === 'right' && k === 'home') ||
+                      (handPreference === 'left' && k === 'me')
+                      ? '長押しでサイドバー'
+                      : undefined
+                  }
+                  active={active === k}
+                  onPress={() => setActive(k as TabKey)}
+                  onLongPress={
+                    (handPreference === 'right' && k === 'home') ||
+                      (handPreference === 'left' && k === 'me')
+                      ? () => setSidebarOpen(true)
+                      : __DEV__ && k === 'noti'
+                        ? () => setActive('devAnonV2')
+                        : undefined
+                  }
+                />
+              ))}
+            </View>
           )}
         </View>
-        {/* Hide tab bar when in chat mode */}
-        {active !== 'chat' && (
+        {/* One-time coach mark bubble */}
+        {showSidebarHint && (
           <View
+            pointerEvents="box-none"
             style={{
               position: 'absolute',
               left: 12,
               right: 12,
-              bottom: Math.max(8, insets.bottom ? 4 : 8),
-              height: 72 + (insets.bottom || 0),
-              borderRadius: 16,
-              flexDirection: 'row',
-              backgroundColor: colors.cardAlpha,
-              borderColor: colors.border,
-              borderWidth: 1,
-              overflow: 'hidden',
-              paddingBottom: insets.bottom || 0,
+              bottom: Math.max(92, (insets.bottom || 0) + 92),
+              alignItems: handPreference === 'right' ? 'flex-end' : 'flex-start',
             }}
           >
-            {(['me', 'noti', 'home'] as const).map(k => (
-              <IconTab
-                key={k}
-                icon={
-                  k === 'me'
-                    ? 'person'
-                    : k === 'noti'
-                      ? 'notifications'
-                      : 'home'
-                }
-                iconOutline={
-                  k === 'me'
-                    ? 'person-outline'
-                    : k === 'noti'
-                      ? 'notifications-outline'
-                      : 'home-outline'
-                }
-                accessibilityLabel={
-                  k === 'me' ? 'あなた' : k === 'noti' ? '通知' : 'ホーム'
-                }
-                accessibilityHint={
-                  (handPreference === 'right' && k === 'home') ||
-                  (handPreference === 'left' && k === 'me')
-                    ? '長押しでサイドバーを開きます'
-                    : undefined
-                }
-                sublabel={
-                  (handPreference === 'right' && k === 'home') ||
-                  (handPreference === 'left' && k === 'me')
-                    ? '長押しでサイドバー'
-                    : undefined
-                }
-                active={active === k}
-                onPress={() => setActive(k as TabKey)}
-                onLongPress={
-                  (handPreference === 'right' && k === 'home') ||
-                  (handPreference === 'left' && k === 'me')
-                    ? () => setSidebarOpen(true)
-                    : __DEV__ && k === 'noti'
-                      ? () => setActive('devAnonV2')
-                      : undefined
-                }
-              />
-            ))}
+            <View
+              style={{
+                maxWidth: 320,
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderRadius: 12,
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+                ...theme.shadow.card,
+              }}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700' }}>
+                長押しでメニュー
+              </Text>
+              <Text style={{ color: colors.subtext, marginTop: 4, fontSize: 12 }}>
+                {handPreference === 'right'
+                  ? 'ホームを長押しでサイドバーが開きます'
+                  : 'あなたを長押しでサイドバーが開きます'}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={async () => {
+                  setShowSidebarHint(false);
+                  try {
+                    await AsyncStorage.setItem('has_seen_sidebar_hint_v1', '1');
+                  } catch { }
+                }}
+                style={({ pressed }) => ({
+                  alignSelf: 'flex-end',
+                  marginTop: 8,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Text style={{ color: colors.pink, fontWeight: '700' }}>OK</Text>
+              </Pressable>
+            </View>
           </View>
         )}
       </View>
-      {/* One-time coach mark bubble */}
-      {showSidebarHint && (
-        <View
-          pointerEvents="box-none"
-          style={{
-            position: 'absolute',
-            left: 12,
-            right: 12,
-            bottom: Math.max(92, (insets.bottom || 0) + 92),
-            alignItems:
-              handPreference === 'right' ? 'flex-end' : 'flex-start',
-          }}
-        >
-          <View
-            style={{
-              maxWidth: 320,
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderWidth: 1,
-              borderRadius: 12,
-              paddingVertical: 10,
-              paddingHorizontal: 12,
-              ...theme.shadow.card,
-            }}
-          >
-            <Text style={{ color: colors.text, fontWeight: '700' }}>
-              長押しでメニュー
-            </Text>
-            <Text style={{ color: colors.subtext, marginTop: 4, fontSize: 12 }}>
-              {handPreference === 'right'
-                ? 'ホームを長押しでサイドバーが開きます'
-                : 'あなたを長押しでサイドバーが開きます'}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={async () => {
-                setShowSidebarHint(false);
-                try {
-                  await AsyncStorage.setItem('has_seen_sidebar_hint_v1', '1');
-                } catch {}
-              }}
-              style={({ pressed }) => ({ alignSelf: 'flex-end', marginTop: 8, opacity: pressed ? 0.7 : 1 })}
-            >
-              <Text style={{ color: colors.pink, fontWeight: '700' }}>OK</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
     </AuthGuard>
   );
 }

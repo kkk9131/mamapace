@@ -57,6 +57,7 @@ interface ChannelScreenProps {
   onMembers?: () => void; // Called when members button is pressed
   onNavigateToChat?: (chatId: string, userName: string) => void; // Navigate to direct chat
   onOpenUser?: (userId: string) => void; // Navigate to user profile
+  tags?: string[]; // Space tags to determine special behaviors like read-only
 }
 
 export default function ChannelScreen({
@@ -70,6 +71,7 @@ export default function ChannelScreen({
   onMembers,
   onNavigateToChat,
   onOpenUser,
+  tags = [],
 }: ChannelScreenProps) {
   const theme = useTheme();
   const { colors } = theme;
@@ -750,198 +752,173 @@ export default function ChannelScreen({
           />
 
           {/* Message Input */}
-          <View
-            style={{
-              padding: theme.spacing(2),
-              paddingBottom: Platform.OS === 'ios' ? 90 : 20,
-            }}
-          >
+          {tags.some(t => t.replace(/^#/, '') === 'official') && !isOwner ? (
             <View
               style={{
-                borderRadius: theme.radius.lg,
-                overflow: 'hidden',
+                padding: theme.spacing(2),
+                paddingBottom: Platform.OS === 'ios' ? 90 : 20,
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <BlurView
-                intensity={30}
-                tint="dark"
+              <Text style={{ color: colors.subtext, fontSize: 14 }}>
+                公式ルームのため、管理者のみ投稿できます
+              </Text>
+            </View>
+          ) : (
+            <View
+              style={{
+                padding: theme.spacing(2),
+                paddingBottom: Platform.OS === 'ios' ? 90 : 20,
+              }}
+            >
+              <View
                 style={{
-                  backgroundColor: '#ffffff10',
-                  flexDirection:
-                    handPreference === 'left' ? 'row-reverse' : 'row',
-                  alignItems: 'flex-end',
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
+                  borderRadius: theme.radius.lg,
+                  overflow: 'hidden',
                 }}
               >
-                {/* 添付ボタン */}
-                <Pressable
-                  onPress={async () => {
-                    try {
-                      const perm =
-                        await ImagePicker.requestMediaLibraryPermissionsAsync();
-                      if (!perm.granted) {
-                        Alert.alert(
-                          '権限',
-                          '写真ライブラリへのアクセスが必要です',
-                        );
-                        return;
-                      }
-                      const res = await ImagePicker.launchImageLibraryAsync({
-                        allowsMultipleSelection: true,
-                        mediaTypes: imagesOnlyMediaTypes(),
-                        selectionLimit: 4,
-                        quality: 1,
-                      });
-                      if (res.canceled) {
-                        return;
-                      }
-                      const picked =
-                        res.assets?.map(a => ({ uri: a.uri })) || [];
-                      setImages(prev => [...prev, ...picked].slice(0, 4));
-                    } catch {}
-                  }}
-                  style={({ pressed }) => ({
-                    width: 32,
-                    height: 32,
-                    borderRadius: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 8,
-                    backgroundColor: pressed ? '#ffffff20' : '#ffffff14',
-                  })}
-                >
-                  <Ionicons
-                    name="images-outline"
-                    size={18}
-                    color={colors.text}
-                  />
-                </Pressable>
-                <Pressable
-                  onPress={async () => {
-                    try {
-                      const perm =
-                        await ImagePicker.requestCameraPermissionsAsync();
-                      if (!perm.granted) {
-                        Alert.alert('権限', 'カメラへのアクセスが必要です');
-                        return;
-                      }
-                      const res = await ImagePicker.launchCameraAsync({
-                        mediaTypes: imageOnlyMediaTypeSingle(),
-                        quality: 1,
-                      });
-                      if (res.canceled) {
-                        return;
-                      }
-                      const picked =
-                        res.assets?.map(a => ({ uri: a.uri })) || [];
-                      setImages(prev => [...prev, ...picked].slice(0, 4));
-                    } catch {}
-                  }}
-                  style={({ pressed }) => ({
-                    width: 32,
-                    height: 32,
-                    borderRadius: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 8,
-                    backgroundColor: pressed ? '#ffffff20' : '#ffffff14',
-                  })}
-                >
-                  <Ionicons
-                    name="camera-outline"
-                    size={18}
-                    color={colors.text}
-                  />
-                </Pressable>
-                <TextInput
+                <BlurView
+                  intensity={30}
+                  tint="dark"
                   style={{
-                    flex: 1,
-                    color: colors.text,
-                    fontSize: 16,
-                    maxHeight: 100,
-                    textAlignVertical: 'top',
-                  }}
-                  placeholder="メッセージを入力..."
-                  placeholderTextColor={colors.subtext}
-                  value={messageText}
-                  onChangeText={setMessageText}
-                  multiline
-                  returnKeyType="send"
-                  onSubmitEditing={handleSendMessage}
-                  blurOnSubmit={false}
-                />
-
-                <Pressable
-                  onPress={handleSendMessage}
-                  disabled={
-                    (!messageText.trim() && images.length === 0) || exitLoading
-                  }
-                  style={({ pressed }) => [
-                    {
-                      backgroundColor:
-                        messageText.trim() || images.length > 0
-                          ? colors.pink
-                          : colors.subtext + '40',
-                      borderRadius: theme.radius.md,
-                      paddingHorizontal: 16,
-                      paddingVertical: 8,
-                      ...(handPreference === 'left'
-                        ? { marginRight: 8 }
-                        : { marginLeft: 8 }),
-                      transform: [{ scale: pressed ? 0.95 : 1 }],
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={
-                      messageText.trim() || images.length > 0
-                        ? 'send'
-                        : 'send-outline'
-                    }
-                    size={20}
-                    color={
-                      messageText.trim() || images.length > 0
-                        ? '#23181D'
-                        : colors.subtext
-                    }
-                  />
-                </Pressable>
-              </BlurView>
-              {images.length > 0 && (
-                <View
-                  style={{
+                    backgroundColor: '#ffffff10',
+                    flexDirection:
+                      handPreference === 'left' ? 'row-reverse' : 'row',
+                    alignItems: 'flex-end',
                     paddingHorizontal: 16,
-                    paddingTop: 8,
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    gap: 6,
+                    paddingVertical: 12,
                   }}
                 >
-                  {images.map((img, idx) => (
-                    <Pressable
-                      key={idx}
-                      onPress={() =>
-                        setImages(prev => prev.filter((_, i) => i !== idx))
+                  {/* 添付ボタン */}
+                  <Pressable
+                    onPress={async () => {
+                      try {
+                        const perm =
+                          await ImagePicker.requestMediaLibraryPermissionsAsync();
+                        if (!perm.granted) {
+                          Alert.alert(
+                            '権限',
+                            '写真ライブラリへのアクセスが必要です',
+                          );
+                          return;
+                        }
+                        const res = await ImagePicker.launchImageLibraryAsync({
+                          allowsMultipleSelection: true,
+                          mediaTypes: imagesOnlyMediaTypes(),
+                          selectionLimit: 4,
+                          quality: 1,
+                        });
+                        if (res.canceled) {
+                          return;
+                        }
+                        const picked =
+                          res.assets?.map(a => ({ uri: a.uri })) || [];
+                        setImages(prev => [...prev, ...picked].slice(0, 4));
+                      } catch (e: any) {
+                        Alert.alert('エラー', '画像選択に失敗しました');
                       }
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 8,
-                        overflow: 'hidden',
-                        backgroundColor: '#ffffff12',
-                      }}
-                    >
-                      <Image
-                        source={{ uri: img.uri }}
-                        style={{ width: '100%', height: '100%' }}
-                      />
-                    </Pressable>
-                  ))}
-                </View>
-              )}
+                    }}
+                    style={({ pressed }) => [
+                      {
+                        backgroundColor: '#ffffff10',
+                        borderRadius: theme.radius.md,
+                        padding: 10,
+                        ...(handPreference === 'left'
+                          ? { marginLeft: 8 }
+                          : { marginRight: 8 }),
+                        transform: [{ scale: pressed ? 0.95 : 1 }],
+                      },
+                    ]}
+                  >
+                    <Ionicons name="attach" size={20} color={colors.text} />
+                  </Pressable>
+
+                  {/* テキスト入力 */}
+                  <TextInput
+                    value={messageText}
+                    onChangeText={setMessageText}
+                    placeholder="メッセージを入力..."
+                    placeholderTextColor={colors.subtext}
+                    style={{
+                      flex: 1,
+                      color: colors.text,
+                      fontSize: 16,
+                      maxHeight: 100,
+                    }}
+                    multiline
+                  />
+
+                  {/* 送信ボタン */}
+                  <Pressable
+                    onPress={handleSendMessage}
+                    disabled={!messageText.trim() && images.length === 0}
+                    style={({ pressed }) => [
+                      {
+                        backgroundColor:
+                          messageText.trim() || images.length > 0
+                            ? colors.pink
+                            : colors.subtext + '40',
+                        borderRadius: theme.radius.md,
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        ...(handPreference === 'left'
+                          ? { marginRight: 8 }
+                          : { marginLeft: 8 }),
+                        transform: [{ scale: pressed ? 0.95 : 1 }],
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        messageText.trim() || images.length > 0
+                          ? 'send'
+                          : 'send-outline'
+                      }
+                      size={20}
+                      color={
+                        messageText.trim() || images.length > 0
+                          ? '#23181D'
+                          : colors.subtext
+                      }
+                    />
+                  </Pressable>
+                </BlurView>
+                {images.length > 0 && (
+                  <View
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingTop: 8,
+                      flexDirection: 'row',
+                      flexWrap: 'wrap',
+                      gap: 6,
+                    }}
+                  >
+                    {images.map((img, idx) => (
+                      <Pressable
+                        key={idx}
+                        onPress={() =>
+                          setImages(prev => prev.filter((_, i) => i !== idx))
+                        }
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 8,
+                          overflow: 'hidden',
+                          backgroundColor: '#ffffff12',
+                        }}
+                      >
+                        <Image
+                          source={{ uri: img.uri }}
+                          style={{ width: '100%', height: '100%' }}
+                        />
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Menu Modal - only show if spaceId is available */}
           {showMenu && spaceId && (
@@ -1305,8 +1282,8 @@ export default function ChannelScreen({
                           handleStartChat(
                             item.user_id,
                             item.user?.display_name ||
-                              item.user?.username ||
-                              'ユーザー'
+                            item.user?.username ||
+                            'ユーザー'
                           )
                         }
                         style={({ pressed }) => ({
@@ -1390,9 +1367,9 @@ export default function ChannelScreen({
             </View>
           )}
         </KeyboardAvoidingView>
-      </Animated.View>
+      </Animated.View >
       {/* Simple image viewer modal */}
-      <Modal
+      < Modal
         visible={imageViewer.visible}
         transparent
         animationType="fade"
@@ -1416,7 +1393,7 @@ export default function ChannelScreen({
             />
           ) : null}
         </Pressable>
-      </Modal>
+      </Modal >
     </>
   );
 }
