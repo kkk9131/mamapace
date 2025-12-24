@@ -355,20 +355,45 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
         </Pressable>
       )}
 
-      {/* Terms */}
-      <Text
-        style={{
-          color: colors.subtext,
-          fontSize: 10,
-          textAlign: 'center',
-          marginTop: spacing(2),
-          lineHeight: 16,
-        }}
-      >
-        登録すると、利用規約とプライバシーポリシーに同意したことになります。
-        サブスクリプションは自動更新されます。更新の24時間前までにキャンセルしない限り、
-        同じ価格で自動的に更新されます。
-      </Text>
+      {/* Terms and Legal Links */}
+      <View style={{ marginTop: spacing(2), alignItems: 'center' }}>
+        <Text
+          style={{
+            color: colors.subtext,
+            fontSize: 10,
+            textAlign: 'center',
+            lineHeight: 16,
+          }}
+        >
+          登録すると、
+          <Text
+            style={{ color: colors.pink, textDecorationLine: 'underline' }}
+            onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}
+          >
+            利用規約
+          </Text>
+          と
+          <Text
+            style={{ color: colors.pink, textDecorationLine: 'underline' }}
+            onPress={() => Linking.openURL('https://mama-pace.com/privacy.html')}
+          >
+            プライバシーポリシー
+          </Text>
+          に同意したことになります。
+        </Text>
+        <Text
+          style={{
+            color: colors.subtext,
+            fontSize: 10,
+            textAlign: 'center',
+            lineHeight: 16,
+            marginTop: spacing(0.5),
+          }}
+        >
+          サブスクリプションは自動更新されます。更新の24時間前までにキャンセルしない限り、
+          同じ価格で自動的に更新されます。
+        </Text>
+      </View>
     </ScrollView>
   );
 }
