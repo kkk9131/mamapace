@@ -79,7 +79,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
         contentContainerStyle={{
           padding: spacing(2),
           paddingTop: insets.top + spacing(1),
-          paddingBottom: insets.bottom + spacing(4),
+          paddingBottom: insets.bottom + spacing(12),
         }}
       >
         {/* Header */}
@@ -218,7 +218,7 @@ export default function PaywallScreen({ onClose }: PaywallScreenProps) {
       contentContainerStyle={{
         padding: spacing(2),
         paddingTop: insets.top + spacing(1),
-        paddingBottom: insets.bottom + spacing(4),
+        paddingBottom: insets.bottom + spacing(12),
       }}
     >
       {/* Header */}
