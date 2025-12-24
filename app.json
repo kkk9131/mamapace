@@ -14,7 +14,7 @@
       "backgroundColor": "#0E0F12"
     },
     "ios": {
-      "buildNumber": "3",
+      "buildNumber": "4",
       "icon": "./assets/icon.png",
       "supportsTablet": true,
       "infoPlist": {
